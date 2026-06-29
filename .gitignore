@@ -1,0 +1,38 @@
+# dependencies
+node_modules/
+.pnpm-store/
+
+# build outputs
+dist/
+.next/
+out/
+.expo/
+expo-dist/
+*.tsbuildinfo
+
+# turbo
+.turbo/
+
+# test / coverage
+coverage/
+playwright-report/
+test-results/
+
+# prisma
+packages/db/prisma/*.db
+
+# env (never commit secrets)
+.env
+.env.*
+!.env.example
+
+# expo generated
+apps/mobile/expo-env.d.ts
+apps/mobile/.expo/
+
+# misc
+.DS_Store
+*.log
+.idea/
+.vscode/*
+!.vscode/extensions.json

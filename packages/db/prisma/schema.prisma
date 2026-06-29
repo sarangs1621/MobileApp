@@ -1,0 +1,16 @@
+// Prisma schema — M0 FOUNDATION ONLY.
+//
+// There are intentionally NO application models yet (M0 is infrastructure-only).
+// The full, reviewed schema (School, User, Student, Attendance, Exam, etc.) is
+// defined in the Developer PRD §6 and lands per milestone starting at M1.
+//
+// `prisma validate` passes with a generator + datasource and zero models.
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}

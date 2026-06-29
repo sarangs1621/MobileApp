@@ -1,0 +1,9 @@
+node_modules
+dist
+.next
+.expo
+expo-dist
+.turbo
+coverage
+pnpm-lock.yaml
+**/*.md
