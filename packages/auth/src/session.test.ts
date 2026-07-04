@@ -5,6 +5,7 @@ import {
   onAuthStateChange,
   refreshSession,
   resetPassword,
+  restoreSession,
   getSession,
   signInWithOtp,
   signInWithPassword,
@@ -153,6 +154,34 @@ describe("session state", () => {
     const { supabase } = fakeSupabase(failure);
     await expect(signOut(supabase)).rejects.toEqual(failure.error);
     await expect(refreshSession(supabase)).rejects.toEqual(failure.error);
+  });
+
+  it("restoreSession adopts stored tokens onto a fresh client (app-restart path)", async () => {
+    const session = { access_token: "restored" } as Session;
+    const setSession = vi.fn(async () => ({ data: { session }, error: null }));
+    const supabase = { auth: { setSession } } as unknown as SupabaseClient;
+    await expect(restoreSession(supabase, { accessToken: "at", refreshToken: "rt" })).resolves.toBe(
+      session,
+    );
+    expect(setSession).toHaveBeenCalledWith({ access_token: "at", refresh_token: "rt" });
+  });
+
+  it("restoreSession throws when the tokens are rejected or yield no session", async () => {
+    const rejected = {
+      auth: {
+        setSession: vi.fn(async () => ({ data: { session: null }, error: { message: "invalid" } })),
+      },
+    } as unknown as SupabaseClient;
+    await expect(restoreSession(rejected, { accessToken: "x", refreshToken: "y" })).rejects.toEqual(
+      { message: "invalid" },
+    );
+
+    const empty = {
+      auth: { setSession: vi.fn(async () => ({ data: { session: null }, error: null })) },
+    } as unknown as SupabaseClient;
+    await expect(restoreSession(empty, { accessToken: "x", refreshToken: "y" })).rejects.toThrow(
+      "Session could not be restored",
+    );
   });
 
   it("signOut resolves when the session is cleared", async () => {
