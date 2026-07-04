@@ -8,7 +8,7 @@ _The single always-load file. Keep under 2 pages. Update when a step completes._
 
 ## Current Step
 
-**Step 9 — Security Review** (next). Steps 1–8 complete.
+**Step 10 — Tests** (next). Steps 1–9 complete.
 
 ## Completed
 
@@ -21,6 +21,8 @@ _The single always-load file. Keep under 2 pages. Update when a step completes._
 - ✓ M1 Step 6 — Business layer (`updateProfile`, `setRole`, `disableUser`, `enableUser` + audit-in-tx)
 - ✓ M1 Step 7 — Mobile auth (splash/gate/login/OTP/session/logout/role shell)
 - ✓ M1 Step 8 — Web auth (login/forgot/OTP/protected layout/middleware/logout/dashboard)
+- ✓ Workflow — Intelligent context loading system (`.claude/START_HERE.md` router + `docs/architecture_index.md`; docs only, no code changed)
+- ✓ M1 Step 9 — Security review (`docs/SECURITY_REVIEW_M1.md`): fixed OTP `shouldCreateUser:false` (SMS-pumping/user-creation hole) + added web security headers; Supabase dashboard config checklist pending provisioning
 
 ## Frozen Modules (read-only — see workflow.md)
 
@@ -57,4 +59,4 @@ M1 auth fully implemented on web + mobile; verified **typecheck 14/14, lint 14/1
 
 ## Next Task
 
-**M1 Step 9 — Security Review** (JWT, storage, cookies, session, rate-limit, CSRF, logging, Supabase config).
+**M1 Step 10 — Tests** (auth/authz/permission/route-protection/session/edge cases).
