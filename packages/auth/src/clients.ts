@@ -1,11 +1,12 @@
 import {
   createBrowserClient as createSsrBrowserClient,
   createServerClient as createSsrServerClient,
+  type CookieMethodsServer,
 } from "@supabase/ssr";
 import { createClient, type SupabaseClient } from "@supabase/supabase-js";
 
-/** Cookie adapter shape required by the SSR server client (provided by the host app). */
-type ServerCookies = NonNullable<Parameters<typeof createSsrServerClient>[2]>["cookies"];
+/** Cookie adapter (getAll/setAll) the host app provides to the SSR server client. */
+export type ServerCookieMethods = CookieMethodsServer;
 
 /** Browser (Next client components). */
 export function createBrowserClient(url: string, anonKey: string): SupabaseClient {
@@ -16,7 +17,7 @@ export function createBrowserClient(url: string, anonKey: string): SupabaseClien
 export function createServerClient(
   url: string,
   anonKey: string,
-  cookies: ServerCookies,
+  cookies: CookieMethodsServer,
 ): SupabaseClient {
   return createSsrServerClient(url, anonKey, { cookies });
 }

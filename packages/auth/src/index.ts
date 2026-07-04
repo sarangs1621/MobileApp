@@ -10,5 +10,16 @@ export {
   type SupabaseStorage,
 } from "./clients";
 export { getAuthUser, type AuthUser } from "./context";
-export { signOut, refreshSession } from "./session";
+export {
+  signInWithPassword,
+  signInWithOtp,
+  verifyOtp,
+  resetPassword,
+  updatePassword,
+  getSession,
+  onAuthStateChange,
+  signOut,
+  refreshSession,
+  type Session,
+} from "./session";
 export { hasRole } from "./rbac";

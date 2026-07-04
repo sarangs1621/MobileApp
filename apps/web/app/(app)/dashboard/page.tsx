@@ -1,0 +1,71 @@
+"use client";
+
+import { signOut } from "@repo/auth";
+import { useRouter } from "next/navigation";
+import { useEffect } from "react";
+
+import { getSupabaseClient } from "@/src/lib/supabase/client";
+import { trpc } from "@/src/trpc/react";
+
+/**
+ * Dashboard placeholder. Resolves the DB profile (`auth.me`), activates a
+ * first-time INVITED account (`auth.registerProfile`), shows the role, and logs
+ * out. No CRUD — feature screens arrive in later milestones.
+ */
+export default function DashboardPage() {
+  const router = useRouter();
+  const me = trpc.auth.me.useQuery();
+  const utils = trpc.useUtils();
+  const register = trpc.auth.registerProfile.useMutation({
+    onSuccess: () => {
+      void utils.auth.me.invalidate();
+    },
+  });
+
+  useEffect(() => {
+    if (me.data?.status === "INVITED" && register.isIdle) {
+      register.mutate();
+    }
+  }, [me.data?.status, register]);
+
+  async function handleLogout() {
+    await signOut(getSupabaseClient());
+    router.replace("/login");
+    router.refresh();
+  }
+
+  if (me.isError) {
+    return (
+      <main className="mx-auto flex min-h-screen max-w-md flex-col justify-center p-6">
+        <p className="text-center text-destructive">
+          Your account isn’t set up yet. Please contact the school office.
+        </p>
+      </main>
+    );
+  }
+
+  if (me.isLoading || me.data?.status !== "ACTIVE" || register.isPending) {
+    return (
+      <main className="flex min-h-screen items-center justify-center p-6">
+        <p className="text-muted-foreground">Loading…</p>
+      </main>
+    );
+  }
+
+  return (
+    <main className="mx-auto flex min-h-screen max-w-2xl flex-col justify-center gap-4 p-6">
+      <h1 className="text-3xl font-semibold text-foreground">School Portal</h1>
+      <p className="text-muted-foreground">
+        Signed in as <span className="font-medium text-foreground">{me.data.role}</span>. Your
+        dashboard appears here once features are enabled.
+      </p>
+      <button
+        type="button"
+        onClick={() => void handleLogout()}
+        className="min-h-11 self-start rounded-md border border-border px-4 py-2 font-medium text-foreground"
+      >
+        Log out
+      </button>
+    </main>
+  );
+}

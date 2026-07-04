@@ -1,10 +1,91 @@
-import type { SupabaseClient } from "@supabase/supabase-js";
+import type { Session, SupabaseClient } from "@supabase/supabase-js";
 
 /**
- * Session helpers. Token refresh is otherwise automatic — the browser/Expo
- * clients use `autoRefreshToken`, and the web SSR client refreshes via cookies —
- * so these are for the explicit logout / manual-refresh procedures only.
+ * Session & credential operations — the ONLY place the app performs Supabase auth
+ * calls (Code Quality: no direct Supabase calls outside auth infrastructure).
+ * Token refresh is otherwise automatic (browser/Expo `autoRefreshToken`, web SSR).
  */
+
+export type { Session };
+
+/** Staff sign-in with email + password. */
+export async function signInWithPassword(
+  supabase: SupabaseClient,
+  params: { email: string; password: string },
+): Promise<void> {
+  const { error } = await supabase.auth.signInWithPassword(params);
+  if (error) {
+    throw error;
+  }
+}
+
+/** Parent sign-in step 1 — request an SMS OTP for a phone number. */
+export async function signInWithOtp(
+  supabase: SupabaseClient,
+  params: { phone: string },
+): Promise<void> {
+  const { error } = await supabase.auth.signInWithOtp({ phone: params.phone });
+  if (error) {
+    throw error;
+  }
+}
+
+/** Parent sign-in step 2 — verify the SMS OTP code. */
+export async function verifyOtp(
+  supabase: SupabaseClient,
+  params: { phone: string; token: string },
+): Promise<void> {
+  const { error } = await supabase.auth.verifyOtp({
+    phone: params.phone,
+    token: params.token,
+    type: "sms",
+  });
+  if (error) {
+    throw error;
+  }
+}
+
+/** Staff password recovery — send a reset email (optionally with a return URL). */
+export async function resetPassword(
+  supabase: SupabaseClient,
+  email: string,
+  redirectTo?: string,
+): Promise<void> {
+  const { error } = await supabase.auth.resetPasswordForEmail(
+    email,
+    redirectTo ? { redirectTo } : undefined,
+  );
+  if (error) {
+    throw error;
+  }
+}
+
+/** Set a new password (used from the recovery-session update-password screen). */
+export async function updatePassword(supabase: SupabaseClient, newPassword: string): Promise<void> {
+  const { error } = await supabase.auth.updateUser({ password: newPassword });
+  if (error) {
+    throw error;
+  }
+}
+
+/** Current session (verified locally; use for token/session state, not authz). */
+export async function getSession(supabase: SupabaseClient): Promise<Session | null> {
+  const { data } = await supabase.auth.getSession();
+  return data.session;
+}
+
+/** Subscribe to auth state changes; returns an unsubscribe function. */
+export function onAuthStateChange(
+  supabase: SupabaseClient,
+  callback: (session: Session | null) => void,
+): () => void {
+  const { data } = supabase.auth.onAuthStateChange((_event, session) => {
+    callback(session);
+  });
+  return () => {
+    data.subscription.unsubscribe();
+  };
+}
 
 /** Sign out: clears the Supabase session (and its refresh token). */
 export async function signOut(supabase: SupabaseClient): Promise<void> {

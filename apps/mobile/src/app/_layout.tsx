@@ -1,15 +1,30 @@
-import { LocaleProvider } from "@repo/i18n";
-import { ThemeProvider } from "@repo/ui";
 import { Stack } from "expo-router";
+import { ActivityIndicator, View } from "react-native";
+
+import { Providers } from "../providers";
+import { useAuthStore } from "../stores/auth-store";
 
 import "../../global.css";
 
+/** Splash / gate: show a loader until the session is restored, then the navigator. */
+function RootGate() {
+  const status = useAuthStore((state) => state.status);
+
+  if (status === "loading") {
+    return (
+      <View className="flex-1 items-center justify-center bg-background">
+        <ActivityIndicator />
+      </View>
+    );
+  }
+
+  return <Stack screenOptions={{ headerShown: false }} />;
+}
+
 export default function RootLayout() {
   return (
-    <ThemeProvider>
-      <LocaleProvider locale="en">
-        <Stack screenOptions={{ headerShown: false }} />
-      </LocaleProvider>
-    </ThemeProvider>
+    <Providers>
+      <RootGate />
+    </Providers>
   );
 }
