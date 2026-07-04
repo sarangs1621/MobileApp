@@ -4,11 +4,12 @@ _The single always-load file. Keep under 2 pages. Update when a step completes._
 
 ## Current Milestone
 
-**M1.5 — Infrastructure Provisioning — ✅ COMPLETE** (M1 approved & frozen 2026-07-05)
+**M2 — Academic Foundation** (kicked off 2026-07-05; scope = academic structure only — see `docs/milestones/M2.md`)
 
 ## Current Step
 
-**M1.5 complete — stop; M2 starts only on explicit approval.**
+**M2 Steps 1–2 complete** (requirements analysis; DB schema + live migration with
+probed constraints). Next: Step 3 (RLS). 10-step workflow; stop after Step 10.
 
 ## Completed
 
@@ -64,4 +65,5 @@ M1 auth fully implemented, security-reviewed, tested, and documented on web + mo
 
 ## Next Task
 
-**M2 kickoff — pending explicit user approval.**
+**M2 Step 3 — RLS planning + policies** (admin-manage / teacher-own-assignment-read
+/ parent-none; document every policy + the app-enforced-authz caveat).
