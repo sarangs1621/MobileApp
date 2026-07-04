@@ -19,12 +19,20 @@ export async function signInWithPassword(
   }
 }
 
-/** Parent sign-in step 1 — request an SMS OTP for a phone number. */
+/**
+ * Parent sign-in step 1 — request an SMS OTP for a phone number.
+ * `shouldCreateUser: false` — accounts are pre-provisioned (ADR-001, no public
+ * signup); without it supabase-js defaults to true, letting anyone holding the
+ * public anon key create auth users and trigger SMS to arbitrary numbers.
+ */
 export async function signInWithOtp(
   supabase: SupabaseClient,
   params: { phone: string },
 ): Promise<void> {
-  const { error } = await supabase.auth.signInWithOtp({ phone: params.phone });
+  const { error } = await supabase.auth.signInWithOtp({
+    phone: params.phone,
+    options: { shouldCreateUser: false },
+  });
   if (error) {
     throw error;
   }
