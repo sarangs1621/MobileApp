@@ -4,7 +4,7 @@
 
 ## Current Step
 
-**Step 1 (requirements analysis) ✅ — next: Step 2 (database design).**
+**Steps 1–2 ✅ — next: Step 3 (RLS planning + policies).**
 
 ## Scope (M2)
 

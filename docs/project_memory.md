@@ -8,7 +8,8 @@ _The single always-load file. Keep under 2 pages. Update when a step completes._
 
 ## Current Step
 
-**M2 Step 1 (requirements analysis) complete — awaiting go-ahead for Step 2 (database design).** 10-step workflow; stop after Step 10 for approval.
+**M2 Steps 1–2 complete** (requirements analysis; DB schema + live migration with
+probed constraints). Next: Step 3 (RLS). 10-step workflow; stop after Step 10.
 
 ## Completed
 
@@ -64,5 +65,5 @@ M1 auth fully implemented, security-reviewed, tested, and documented on web + mo
 
 ## Next Task
 
-**M2 Step 2 — Database design** (AcademicYear, AcademicTerm, Class, Section,
-Subject, TeacherAssignment; decisions locked in Step 1 — see `docs/milestones/M2.md`).
+**M2 Step 3 — RLS planning + policies** (admin-manage / teacher-own-assignment-read
+/ parent-none; document every policy + the app-enforced-authz caveat).
