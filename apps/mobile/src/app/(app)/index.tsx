@@ -1,24 +1,39 @@
+import { PERMISSIONS } from "@repo/constants";
+import { can } from "@repo/core";
+import { Link, type Href } from "expo-router";
 import { Pressable, Text, View } from "react-native";
 
 import { trpc } from "../../lib/trpc";
 import { useAuthStore } from "../../stores/auth-store";
 
 /**
- * Role-aware placeholder home. Feature screens (attendance, marks, …) arrive in
- * later milestones; M1 only proves the authenticated, role-aware shell + logout.
+ * Role-aware placeholder home. M2 adds read-only academic-structure links for
+ * roles holding ACADEMIC_READ (admins + teachers); parents/accountants see the
+ * M1 shell unchanged. Feature screens (attendance, marks, …) arrive in later
+ * milestones.
  */
 export default function AppHome() {
   const me = trpc.auth.me.useQuery();
   const logout = useAuthStore((state) => state.logout);
   const role = me.data?.role;
+  const canReadAcademic = role !== undefined && can(role, PERMISSIONS.ACADEMIC_READ);
 
   return (
     <View className="flex-1 items-center justify-center gap-4 bg-background p-6">
       <Text className="text-2xl font-semibold text-foreground">School Portal</Text>
       <Text className="text-center text-muted-foreground">
-        Signed in{role ? ` as ${role}` : ""}. Your dashboard appears here once
-        features are enabled.
+        Signed in{role ? ` as ${role}` : ""}. Your dashboard appears here once features are enabled.
       </Text>
+
+      {canReadAcademic ? (
+        <View className="w-full gap-2">
+          <Text className="text-sm font-medium text-muted-foreground">Academic structure</Text>
+          <NavLink href="/academic/years" label="Academic years" />
+          <NavLink href="/academic/classes" label="Classes" />
+          <NavLink href="/academic/subjects" label="Subjects" />
+          <NavLink href="/academic/assignments" label="Teacher assignments" />
+        </View>
+      ) : null}
 
       <Pressable
         accessibilityRole="button"
@@ -30,5 +45,18 @@ export default function AppHome() {
         <Text className="font-medium text-foreground">Log out</Text>
       </Pressable>
     </View>
+  );
+}
+
+function NavLink({ href, label }: { href: Href; label: string }) {
+  return (
+    <Link href={href} asChild>
+      <Pressable
+        accessibilityRole="button"
+        className="min-h-11 justify-center rounded-md border border-border bg-card px-4 py-3"
+      >
+        <Text className="font-medium text-foreground">{label}</Text>
+      </Pressable>
+    </Link>
   );
 }
