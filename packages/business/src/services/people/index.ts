@@ -58,3 +58,10 @@ export {
   type UploadDocumentInput,
   type ReplaceDocumentInput,
 } from "./student-document.service";
+export {
+  mintDocumentUploadUrl,
+  mintDocumentDownloadUrl,
+  type StoragePort,
+  type MintUploadUrlInput,
+  type MintedUploadUrl,
+} from "./document-storage.service";

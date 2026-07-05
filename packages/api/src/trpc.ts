@@ -84,6 +84,22 @@ export const protectedProcedure = baseProcedure.use(({ ctx, next }) => {
 });
 
 /**
+ * Protected + requires the host-wired `StoragePort` (signed-URL minting,
+ * ADR-004). Hosts without storage (tests, misconfigured envs) get a clean
+ * PRECONDITION_FAILED instead of a null-access 500. Authorization for WHAT may
+ * be minted stays in the business layer.
+ */
+export const storageProcedure = protectedProcedure.use(({ ctx, next }) => {
+  if (!ctx.storage) {
+    throw new TRPCError({
+      code: "PRECONDITION_FAILED",
+      message: "File storage is not configured",
+    });
+  }
+  return next({ ctx: { storage: ctx.storage } });
+});
+
+/**
  * Onboarding path only: authenticated with an `INVITED` **or** `ACTIVE` profile
  * (`DISABLED` rejected). The seam `auth.registerProfile`/`auth.me` run on, so a
  * first-time INVITED user isn't locked out by the ACTIVE-only gate.

@@ -13,3 +13,5 @@ export {
 export { createContext, type Context, type CreateContextOptions } from "./context";
 // Server-side readiness check for the web `/api/ready` route (keeps apps off @repo/db).
 export { checkReadiness, type ReadinessReport } from "@repo/business";
+// Host-implemented signed-URL port (ADR-004) — keeps apps off @repo/business.
+export type { StoragePort } from "@repo/business";

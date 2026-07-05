@@ -42,3 +42,13 @@ export const MAX_PAGE_SIZE = 100;
 
 /** Canonical timezone — store UTC, render IST (Dev PRD §2). */
 export const APP_TIMEZONE = "Asia/Kolkata";
+
+/**
+ * Private Supabase Storage buckets (ADR-004). Bytes are never publicly
+ * addressable — access is via short-lived signed URLs minted server-side after
+ * a business-layer authz check. Paths are namespaced by `schoolId/…`.
+ */
+export const STORAGE_BUCKETS = {
+  STUDENT_DOCUMENTS: "student-documents",
+} as const;
+export type StorageBucketKey = (typeof STORAGE_BUCKETS)[keyof typeof STORAGE_BUCKETS];

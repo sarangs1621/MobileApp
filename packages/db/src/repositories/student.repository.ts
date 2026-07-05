@@ -35,9 +35,9 @@ export interface UpdateStudentInput {
 }
 
 export interface StudentListFilter {
-  status?: "ACTIVE" | "ARCHIVED" | "GRADUATED" | "WITHDRAWN";
+  status?: "ACTIVE" | "ARCHIVED" | "GRADUATED" | "WITHDRAWN" | undefined;
   /** Case-insensitive match on first/last name or admission number. */
-  search?: string;
+  search?: string | undefined;
 }
 
 /** Persistence for `Student` (ADR-003). No authorization/business rules. */

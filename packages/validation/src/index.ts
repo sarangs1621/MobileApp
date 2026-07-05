@@ -149,7 +149,10 @@ const documentTypeSchema = z.enum([
 ]);
 const shortText = (max: number) => z.string().trim().min(1).max(max);
 const phoneSchema = z.string().trim().min(3).max(20);
-const aadhaarSchema = z.string().trim().regex(/^\d{12}$/, "Aadhaar must be 12 digits");
+const aadhaarSchema = z
+  .string()
+  .trim()
+  .regex(/^\d{12}$/, "Aadhaar must be 12 digits");
 
 /* Student */
 export const createStudentInput = z.object({
@@ -273,3 +276,9 @@ export const createStudentDocumentInput = z.object({
   ...documentMeta,
 });
 export const replaceStudentDocumentInput = z.object({ id: idSchema, ...documentMeta });
+
+/** Mint a one-time signed upload URL (path is namespaced server-side — ADR-004). */
+export const mintDocumentUploadUrlInput = z.object({
+  studentId: idSchema,
+  fileName: shortText(255),
+});
