@@ -14,6 +14,8 @@ import {
   getStudent,
   linkParent,
   listDocuments,
+  mintDocumentDownloadUrl,
+  mintDocumentUploadUrl,
   listEnrollmentsByStudent,
   listGuardians,
   listParents,
@@ -39,6 +41,7 @@ import {
   idInput,
   linkParentInput,
   listStudentsInput,
+  mintDocumentUploadUrlInput,
   promoteInput,
   replaceStudentDocumentInput,
   sectionRosterInput,
@@ -51,7 +54,7 @@ import {
   withdrawInput,
 } from "@repo/validation";
 
-import { protectedProcedure, router } from "../trpc";
+import { protectedProcedure, router, storageProcedure } from "../trpc";
 
 /**
  * People-management procedures (M3). Thin transport only — validate (Zod) then
@@ -166,4 +169,15 @@ export const studentDocumentRouter = router({
   delete: protectedProcedure
     .input(idInput)
     .mutation(({ ctx, input }) => deleteDocument(createServiceContext(ctx.user), input.id)),
+  /** Signed-URL minting (ADR-004) — authz runs in the service BEFORE any URL exists. */
+  uploadUrl: storageProcedure
+    .input(mintDocumentUploadUrlInput)
+    .mutation(({ ctx, input }) =>
+      mintDocumentUploadUrl(createServiceContext(ctx.user), ctx.storage, input),
+    ),
+  downloadUrl: storageProcedure
+    .input(idInput)
+    .mutation(({ ctx, input }) =>
+      mintDocumentDownloadUrl(createServiceContext(ctx.user), ctx.storage, input.id),
+    ),
 });

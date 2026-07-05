@@ -4,6 +4,7 @@ import { fetchRequestHandler } from "@trpc/server/adapters/fetch";
 import { cookies } from "next/headers";
 
 import { env } from "@/src/env";
+import { createStoragePort } from "@/src/lib/storage";
 
 /** Extract a bearer token from the Authorization header (the mobile path). */
 function getBearerToken(req: Request): string | undefined {
@@ -37,7 +38,7 @@ function handler(req: Request): Promise<Response> {
         },
       );
       const authUser = await getAuthUser(supabase, getBearerToken(req));
-      return createContext({ authUser });
+      return createContext({ authUser, storage: createStoragePort() });
     },
   });
 }

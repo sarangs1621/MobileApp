@@ -1,23 +1,29 @@
 import type { AuthUser } from "@repo/auth";
-import { resolvePrincipal, type Principal } from "@repo/business";
+import { resolvePrincipal, type Principal, type StoragePort } from "@repo/business";
 
 /**
  * Per-request tRPC context. The host (Next route handler) verifies the identity
  * (Supabase) and passes the `AuthUser` in; the context then loads the DB profile
  * via the business layer to build the authoritative `Principal` (role/schoolId/
  * status from the DB, never the JWT — ADR-002). `api` never imports `@repo/db`.
+ * The host may also inject a `StoragePort` (service-role signed-URL minting,
+ * ADR-004); document upload/download procedures require it.
  */
 export interface Context {
   user: Principal | null;
+  /** Absent when the host wires no storage (tests, hosts without documents). */
+  storage?: StoragePort | null | undefined;
 }
 
 export interface CreateContextOptions {
   authUser: AuthUser | null;
+  storage?: StoragePort | undefined;
 }
 
-export async function createContext({ authUser }: CreateContextOptions): Promise<Context> {
+export async function createContext({ authUser, storage }: CreateContextOptions): Promise<Context> {
+  const storagePort = storage ?? null;
   if (!authUser) {
-    return { user: null };
+    return { user: null, storage: storagePort };
   }
-  return { user: await resolvePrincipal(authUser.userId) };
+  return { user: await resolvePrincipal(authUser.userId), storage: storagePort };
 }

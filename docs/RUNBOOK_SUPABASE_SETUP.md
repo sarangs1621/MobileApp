@@ -79,6 +79,21 @@ for unknown phones · staff email login · super-admin bootstrap · INVITED→AC
 activation (idempotent) · session restoration · token refresh · logout · parent
 test-OTP login · parent provisioning + activation.
 
+## 3b. Storage buckets (M3 — student documents)
+
+Create the **private** bucket the document feature uses (ADR-004: no public
+buckets; access is via short-lived signed URLs minted server-side after a
+business-layer authz check):
+
+- Dashboard → Storage → New bucket → name **`student-documents`** → Public **OFF**.
+- Or via API: `POST /storage/v1/bucket` with `{"name":"student-documents","public":false}`
+  (service-role key).
+
+No storage RLS policies are added for clients: browsers only ever touch the
+bucket with single-use signed upload URLs / expiring signed read URLs, both
+minted by the server (`studentDocument.uploadUrl` / `.downloadUrl`). Keep the
+bucket private; never enable public access.
+
 ## 4. Ongoing user provisioning
 
 Single-user Admin-API provisioning (M1 decision D3) until the admin UI lands (M2+):
