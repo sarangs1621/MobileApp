@@ -2,11 +2,16 @@ import { DEFAULT_PAGE_SIZE, MAX_PAGE_SIZE } from "@repo/constants";
 import { describe, expect, it } from "vitest";
 
 import {
+  createAcademicYearInput,
+  createSectionInput,
+  createTeacherAssignmentInput,
   cursorPaginationInput,
   idSchema,
+  istDateSchema,
   setRoleInput,
   sortDirSchema,
   updateProfileInput,
+  updateSubjectInput,
   userIdInput,
 } from "./index";
 
@@ -55,5 +60,51 @@ describe("pagination & sorting primitives", () => {
     expect(sortDirSchema.parse(undefined)).toBe("asc");
     expect(sortDirSchema.parse("desc")).toBe("desc");
     expect(sortDirSchema.safeParse("descending").success).toBe(false);
+  });
+});
+
+describe("academic input schemas (M2 edge cases)", () => {
+  it("istDateSchema parses YYYY-MM-DD to a UTC-midnight Date", () => {
+    expect(istDateSchema.parse("2026-06-01")).toEqual(new Date("2026-06-01T00:00:00.000Z"));
+  });
+
+  it("istDateSchema rejects malformed and impossible calendar dates", () => {
+    expect(istDateSchema.safeParse("01-06-2026").success).toBe(false); // wrong order
+    expect(istDateSchema.safeParse("2026-6-1").success).toBe(false); // not zero-padded
+    expect(istDateSchema.safeParse("2026-13-01").success).toBe(false); // month 13
+    expect(istDateSchema.safeParse("2026-02-30").success).toBe(false); // rolls over
+    expect(istDateSchema.safeParse("2026-06-01T00:00:00Z").success).toBe(false); // timestamp
+  });
+
+  it("createAcademicYearInput trims the name and keeps status optional", () => {
+    const parsed = createAcademicYearInput.parse({
+      name: "  2026-27  ",
+      startDate: "2026-06-01",
+      endDate: "2027-03-31",
+    });
+    expect(parsed.name).toBe("2026-27");
+    expect(parsed.status).toBeUndefined();
+    expect(
+      createAcademicYearInput.safeParse({
+        name: "2026-27",
+        startDate: "2026-06-01",
+        endDate: "2027-03-31",
+        status: "OPEN",
+      }).success,
+    ).toBe(false);
+  });
+
+  it("name fields reject empty/whitespace-only and overlong values", () => {
+    expect(createSectionInput.safeParse({ classId: "c-1", name: "   " }).success).toBe(false);
+    expect(updateSubjectInput.safeParse({ id: "s-1", name: "x".repeat(121) }).success).toBe(false);
+  });
+
+  it("createTeacherAssignmentInput requires all three references", () => {
+    expect(createTeacherAssignmentInput.safeParse({ teacherId: "t", subjectId: "s" }).success).toBe(
+      false,
+    );
+    expect(
+      createTeacherAssignmentInput.parse({ teacherId: "t", subjectId: "s", sectionId: "x" }),
+    ).toEqual({ teacherId: "t", subjectId: "s", sectionId: "x" });
   });
 });

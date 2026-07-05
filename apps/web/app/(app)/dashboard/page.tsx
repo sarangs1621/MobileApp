@@ -1,6 +1,9 @@
 "use client";
 
 import { signOut } from "@repo/auth";
+import { PERMISSIONS } from "@repo/constants";
+import { can } from "@repo/core";
+import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useEffect } from "react";
 
@@ -59,6 +62,14 @@ export default function DashboardPage() {
         Signed in as <span className="font-medium text-foreground">{me.data.role}</span>. Your
         dashboard appears here once features are enabled.
       </p>
+      {can(me.data.role, PERMISSIONS.ACADEMIC_READ) ? (
+        <Link
+          href="/academic/years"
+          className="min-h-11 self-start rounded-md border border-border px-4 py-2 font-medium text-foreground"
+        >
+          Academic structure
+        </Link>
+      ) : null}
       <button
         type="button"
         onClick={() => void handleLogout()}
