@@ -9,6 +9,13 @@ import {
   teacherAssignmentRouter,
 } from "./routers/academic";
 import { authRouter } from "./routers/auth";
+import {
+  enrollmentRouter,
+  parentRouter,
+  studentDocumentRouter,
+  studentRouter,
+  teacherProfileRouter,
+} from "./routers/people";
 import { publicProcedure, router } from "./trpc";
 
 /**
@@ -32,6 +39,11 @@ export const appRouter = router({
   section: sectionRouter,
   subject: subjectRouter,
   teacherAssignment: teacherAssignmentRouter,
+  student: studentRouter,
+  parent: parentRouter,
+  teacherProfile: teacherProfileRouter,
+  enrollment: enrollmentRouter,
+  studentDocument: studentDocumentRouter,
 });
 
 export type AppRouter = typeof appRouter;

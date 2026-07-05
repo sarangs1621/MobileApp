@@ -42,7 +42,7 @@ export interface UpdateStudentInput {
 /** Read students in scope (admin → all; teacher → own-section; parent → own children). */
 export async function listStudents(
   ctx: ServiceContext,
-  filter?: { status?: StudentDto["status"]; search?: string },
+  filter?: { status?: StudentDto["status"] | undefined; search?: string | undefined },
 ): Promise<StudentDto[]> {
   assertCan(ctx.user, PERMISSIONS.STUDENT_READ);
   const ids = await accessibleStudentIds(ctx);
@@ -76,7 +76,10 @@ export async function createStudent(
   if (await ctx.repositories.students.findByAdmissionNo(ctx.user.schoolId, input.admissionNo)) {
     throw new ConflictError(`Admission number "${input.admissionNo}" is already in use`);
   }
-  if (input.aadhaar && (await ctx.repositories.students.findByAadhaar(ctx.user.schoolId, input.aadhaar))) {
+  if (
+    input.aadhaar &&
+    (await ctx.repositories.students.findByAadhaar(ctx.user.schoolId, input.aadhaar))
+  ) {
     throw new ConflictError("That Aadhaar number is already on another student");
   }
 
