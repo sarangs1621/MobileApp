@@ -188,3 +188,98 @@ export interface StudentDocumentDto {
   uploadedByUserId: string;
   uploadedAt: IsoUtcString;
 }
+
+/* ---- Attendance Management (M4 — ADR-011) ---- */
+
+export type AttendanceSessionTypeKey = "DAILY" | "SUBJECT";
+export type AttendanceSessionStatusKey = "DRAFT" | "SUBMITTED" | "LOCKED";
+export type AttendanceStatusKey = "PRESENT" | "ABSENT" | "LATE" | "HALF_DAY" | "LEAVE";
+export type LeaveStatusKey = "PENDING" | "APPROVED" | "REJECTED" | "CANCELLED";
+export type CorrectionStatusKey = "PENDING" | "APPROVED" | "REJECTED";
+export type HolidayTypeKey = "NATIONAL" | "SCHOOL" | "FESTIVAL" | "EMERGENCY_CLOSURE";
+
+export interface AttendanceSessionDto {
+  id: string;
+  schoolId: string;
+  academicYearId: string;
+  sectionId: string;
+  subjectId: string | null;
+  sessionType: AttendanceSessionTypeKey;
+  date: IstDateString;
+  status: AttendanceSessionStatusKey;
+  createdByStaffId: string;
+  submittedByStaffId: string | null;
+  lockedByStaffId: string | null;
+  submittedAt: IsoUtcString | null;
+  lockedAt: IsoUtcString | null;
+}
+
+export interface AttendanceRecordDto {
+  id: string;
+  schoolId: string;
+  sessionId: string;
+  enrollmentId: string;
+  status: AttendanceStatusKey;
+  remarks: string | null;
+}
+
+/** A roster row for a marking screen: the enrollment, any existing mark, and the
+ *  leave-derived suggested default (ADR-011 §7 — never an eager write). */
+export interface AttendanceRosterRowDto {
+  enrollmentId: string;
+  studentId: string;
+  rollNo: number | null;
+  currentStatus: AttendanceStatusKey | null;
+  suggestedStatus: AttendanceStatusKey;
+}
+
+export interface LeaveRequestDto {
+  id: string;
+  schoolId: string;
+  enrollmentId: string;
+  parentId: string;
+  fromDate: IstDateString;
+  toDate: IstDateString;
+  reason: string;
+  status: LeaveStatusKey;
+  decidedByStaffId: string | null;
+  decidedAt: IsoUtcString | null;
+}
+
+export interface AttendanceCorrectionDto {
+  id: string;
+  schoolId: string;
+  attendanceRecordId: string;
+  requestedByStaffId: string;
+  previousStatus: AttendanceStatusKey;
+  requestedStatus: AttendanceStatusKey;
+  reason: string;
+  status: CorrectionStatusKey;
+  decidedByStaffId: string | null;
+  decidedAt: IsoUtcString | null;
+}
+
+export interface HolidayDto {
+  id: string;
+  schoolId: string;
+  academicYearId: string;
+  name: string;
+  date: IstDateString;
+  type: HolidayTypeKey;
+}
+
+/** Compute-on-read attendance % for an enrollment over a date range (ADR-011 §10).
+ *  Weighting: PRESENT/LATE = 1, HALF_DAY = 0.5, ABSENT = 0; LEAVE excluded from
+ *  the denominator. `percentage` is null when there are no countable days. */
+export interface AttendanceSummaryDto {
+  enrollmentId: string;
+  from: IstDateString;
+  to: IstDateString;
+  present: number;
+  absent: number;
+  late: number;
+  halfDay: number;
+  leave: number;
+  countableDays: number;
+  percentage: number | null;
+}

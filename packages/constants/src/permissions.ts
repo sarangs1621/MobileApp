@@ -60,6 +60,25 @@ export const PERMISSIONS = {
   STUDENT_DOCUMENT_MANAGE: "student_document:manage",
   /** Read student documents. Teacher → PHOTO only; parent → own children (service). */
   STUDENT_DOCUMENT_READ: "student_document:read",
+
+  /* ---- Attendance Management (M4, ADR-011). Reads/marks carry ROW scope
+   * (own-section / own-child), narrowed in the service. */
+  /** Mark attendance (open session, mark records, submit, lock). Teacher → own-section. */
+  ATTENDANCE_MARK: "attendance:mark",
+  /** Read attendance (sessions/records/summary). Teacher → own-section; parent → own child. */
+  ATTENDANCE_READ: "attendance:read",
+  /** Submit an attendance correction request. Teacher → own-section. */
+  ATTENDANCE_CORRECT_SUBMIT: "attendance:correct:submit",
+  /** Approve/reject an attendance correction (updates the record). */
+  ATTENDANCE_CORRECT_DECIDE: "attendance:correct:decide",
+  /** Apply for leave. Parent → own child only (service scope). */
+  LEAVE_APPLY: "leave:apply",
+  /** Approve/reject a leave request. */
+  LEAVE_DECIDE: "leave:decide",
+  /** Read leave requests. Teacher → own-section; parent → own applications. */
+  LEAVE_READ: "leave:read",
+  /** Read the holiday calendar (all in-scope roles). Writes use ACADEMIC_MANAGE. */
+  HOLIDAY_READ: "holiday:read",
 } as const;
 
 export type Permission = (typeof PERMISSIONS)[keyof typeof PERMISSIONS];
@@ -88,6 +107,18 @@ const PEOPLE_READ: readonly Permission[] = [
   PERMISSIONS.STUDENT_DOCUMENT_READ,
 ];
 
+/** Full Attendance management grant (SUPER_ADMIN + OFFICE_ADMIN, M4). Holiday
+ *  writes ride ACADEMIC_MANAGE (both admins already hold it). */
+const ATTENDANCE_MANAGE: readonly Permission[] = [
+  PERMISSIONS.ATTENDANCE_MARK,
+  PERMISSIONS.ATTENDANCE_READ,
+  PERMISSIONS.ATTENDANCE_CORRECT_SUBMIT,
+  PERMISSIONS.ATTENDANCE_CORRECT_DECIDE,
+  PERMISSIONS.LEAVE_DECIDE,
+  PERMISSIONS.LEAVE_READ,
+  PERMISSIONS.HOLIDAY_READ,
+];
+
 /**
  * The fixed Role → Permissions policy (Dev PRD §5). Only SUPER_ADMIN manages
  * users/roles and reads the audit log; all other roles get the self-profile
@@ -108,17 +139,22 @@ export const ROLE_PERMISSIONS: Readonly<Record<RoleKey, readonly Permission[]>> 
     PERMISSIONS.ACADEMIC_READ,
     ...PEOPLE_MANAGE,
     ...PEOPLE_READ,
+    ...ATTENDANCE_MANAGE,
   ],
-  // OFFICE_ADMIN: full academic + People management (M3), school-wide.
+  // OFFICE_ADMIN: full academic + People management (M3) + Attendance (M4), school-wide.
   OFFICE_ADMIN: [
     ...SELF_PROFILE,
     PERMISSIONS.ACADEMIC_MANAGE,
     PERMISSIONS.ACADEMIC_READ,
     ...PEOPLE_MANAGE,
     ...PEOPLE_READ,
+    ...ATTENDANCE_MANAGE,
   ],
   // TEACHER: reads academic structure + reads students/enrollments/documents in
   // their OWN sections and their OWN staff profile (row-scope in the service).
+  // M4: marks attendance + submits corrections for own sections; reads own-section
+  // leave; reads the calendar. Correction/leave DECIDE is admin-only (classTeacher
+  // deferred — no class-teacher flag yet, M3 open item).
   TEACHER: [
     ...SELF_PROFILE,
     PERMISSIONS.ACADEMIC_READ,
@@ -126,15 +162,25 @@ export const ROLE_PERMISSIONS: Readonly<Record<RoleKey, readonly Permission[]>> 
     PERMISSIONS.ENROLLMENT_READ,
     PERMISSIONS.STUDENT_DOCUMENT_READ,
     PERMISSIONS.STAFF_READ,
+    PERMISSIONS.ATTENDANCE_MARK,
+    PERMISSIONS.ATTENDANCE_READ,
+    PERMISSIONS.ATTENDANCE_CORRECT_SUBMIT,
+    PERMISSIONS.LEAVE_READ,
+    PERMISSIONS.HOLIDAY_READ,
   ],
   // PARENT: reads only their OWN children (students/enrollments/documents) and
-  // their OWN parent record (row-scope in the service).
+  // their OWN parent record (row-scope in the service). M4: reads own child's
+  // attendance, applies for + reads own leave, reads the calendar.
   PARENT: [
     ...SELF_PROFILE,
     PERMISSIONS.STUDENT_READ,
     PERMISSIONS.ENROLLMENT_READ,
     PERMISSIONS.STUDENT_DOCUMENT_READ,
     PERMISSIONS.PARENT_READ,
+    PERMISSIONS.ATTENDANCE_READ,
+    PERMISSIONS.LEAVE_APPLY,
+    PERMISSIONS.LEAVE_READ,
+    PERMISSIONS.HOLIDAY_READ,
   ],
   ACCOUNTANT: [...SELF_PROFILE],
 };

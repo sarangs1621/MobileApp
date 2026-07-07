@@ -44,14 +44,18 @@ SA = Super Admin, OA = Office Admin, T = Teacher, P = Parent, AC = Accountant. C
 | `enrollment:enroll` / `enrollment:transfer` / `enrollment:drop` | any | school | – | – | – |
 | `enrollment:promote_bulk` | any | – | – | – | – |
 
-### Attendance (M3)
+### Attendance (M4 — ADR-011)
 
 | Permission | SA | OA | T | P | AC |
 |---|---|---|---|---|---|
 | `attendance:mark` | any | school | ownDivision | – | – |
 | `attendance:read` | any | school | ownDivision | ownChild | – |
+| `attendance:correct:submit` | any | school | ownDivision | – | – |
+| `attendance:correct:decide` | any | school | classTeacher | – | – |
 
-Note B3: marking requires the actor to have a `Staff` row (`markedByStaffId`) — provisioning must guarantee one for every SA/OA/T user.
+- Session ownership is **derived from `TeacherAssignment`**, not stored on the session (ADR-011 §3). DAILY = any assignment to the section; SUBJECT = matching `(subject, section)` assignment.
+- Note B3: marking + correction actors need a `Staff` row (session `createdBy/submittedBy/lockedBy`, correction `requestedBy/decidedBy` — ADR-011 §4) — provisioning must guarantee one for every SA/OA/T user.
+- Holidays are managed under `academic:manage` (working-day calendar, ADR-011 §9).
 
 ### Exams & marks (M4)
 

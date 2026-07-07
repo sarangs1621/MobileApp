@@ -16,9 +16,11 @@ All ADRs live in `docs/architecture/`.
 - ADR-003 — Repositories as the data-access boundary
 - ADR-007 — Audit log (enrollment mutations)
 
-**Attendance**
+**Attendance / leave / corrections / holidays**
+- ADR-011 — Attendance data ownership (Session/Record on Enrollment; leave, corrections, working-day calendar)
+- ADR-010 — Enrollment is the join point (attendance keys to Enrollment, not Student)
 - ADR-003 — Repositories as the data-access boundary
-- ADR-007 — Audit log (attendance mutations)
+- ADR-007 — Audit log (attendance/leave/correction mutations)
 
 **Exams / marks / report cards**
 - ADR-009 — ReportCard.examId optional + partial unique index

@@ -37,6 +37,11 @@ describe("authorization policy", () => {
       PERMISSIONS.ENROLLMENT_READ,
       PERMISSIONS.STUDENT_DOCUMENT_READ,
       PERMISSIONS.PARENT_READ,
+      // M4: read own child's attendance, apply for + read own leave, read the calendar.
+      PERMISSIONS.ATTENDANCE_READ,
+      PERMISSIONS.LEAVE_APPLY,
+      PERMISSIONS.LEAVE_READ,
+      PERMISSIONS.HOLIDAY_READ,
     ]);
     expect(getPermissions("SUPER_ADMIN")).toContain(PERMISSIONS.USER_SET_ROLE);
   });

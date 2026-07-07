@@ -29,7 +29,7 @@ export async function teacherSectionIds(ctx: ServiceContext): Promise<string[]> 
 }
 
 /** The active academic year id for the school, or null if none is active. */
-async function activeYearId(ctx: ServiceContext): Promise<string | null> {
+export async function activeYearId(ctx: ServiceContext): Promise<string | null> {
   const year = await ctx.repositories.academicYears.findActive(ctx.user.schoolId);
   return year?.id ?? null;
 }
