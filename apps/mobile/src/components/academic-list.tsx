@@ -1,5 +1,5 @@
 import { useRouter } from "expo-router";
-import type { ReactElement } from "react";
+import type { ReactElement, ReactNode } from "react";
 import { ActivityIndicator, FlatList, Pressable, Text, View } from "react-native";
 
 /**
@@ -70,6 +70,6 @@ export function AcademicListScreen<T>({
 }
 
 /** A bordered, card-style row (UI_DESIGN_SYSTEM.md §10). */
-export function ListRow({ children }: { children: ReactElement | ReactElement[] }) {
+export function ListRow({ children }: { children: ReactNode }) {
   return <View className="gap-1 rounded-md border border-border bg-card p-4">{children}</View>;
 }

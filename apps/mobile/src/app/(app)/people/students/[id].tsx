@@ -1,7 +1,7 @@
 import { PERMISSIONS } from "@repo/constants";
 import { can } from "@repo/core";
 import type { EnrollmentStatusKey, StudentRelationshipKey } from "@repo/types";
-import { useLocalSearchParams, useRouter } from "expo-router";
+import { Link, useLocalSearchParams, useRouter } from "expo-router";
 import { ActivityIndicator, Pressable, ScrollView, Text, View } from "react-native";
 
 import { ListRow } from "../../../../components/academic-list";
@@ -37,6 +37,7 @@ export default function StudentProfileScreen() {
   const role = me.data?.role;
   const canReadAcademic = role !== undefined && can(role, PERMISSIONS.ACADEMIC_READ);
   const canReadParents = role !== undefined && can(role, PERMISSIONS.PARENT_READ);
+  const canReadAttendance = role !== undefined && can(role, PERMISSIONS.ATTENDANCE_READ);
 
   const enabled = id !== undefined;
   const student = trpc.student.get.useQuery({ id: id ?? "" }, { enabled });
@@ -122,6 +123,22 @@ export default function StudentProfileScreen() {
                 >
                   {enrollment.status}
                 </Text>
+                {canReadAttendance ? (
+                  <Link
+                    href={{
+                      pathname: "/attendance/enrollment/[enrollmentId]",
+                      params: {
+                        enrollmentId: enrollment.id,
+                        academicYearId: enrollment.academicYearId,
+                      },
+                    }}
+                    asChild
+                  >
+                    <Pressable accessibilityRole="button">
+                      <Text className="text-sm text-primary">View attendance</Text>
+                    </Pressable>
+                  </Link>
+                ) : null}
               </ListRow>
             ))
           )}

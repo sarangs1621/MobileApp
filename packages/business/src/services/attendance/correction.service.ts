@@ -1,13 +1,20 @@
 import { PERMISSIONS } from "@repo/constants";
 import { ConflictError, NotFoundError, ValidationError } from "@repo/core";
-import type { AttendanceCorrection, AttendanceRecord } from "@repo/db";
-import type { AttendanceCorrectionDto, AttendanceStatusKey } from "@repo/types";
+import type { AttendanceCorrection, AttendanceRecordWithDate } from "@repo/db";
+import type { AttendanceCorrectionDto, AttendanceStatusKey, PendingCorrectionDto } from "@repo/types";
 
 import { assertCan } from "../../authorization";
 import type { ServiceContext } from "../../context";
 
 import { mapAttendanceCorrection } from "./mappers";
-import { assertTeachesSection, loadSessionInSchool, recordAudit, resolveActingStaffId } from "./scope";
+import {
+  assertTeachesSection,
+  loadSessionInSchool,
+  recordAudit,
+  resolveActingStaffId,
+  studentNameForEnrollment,
+  toIstDateString,
+} from "./scope";
 
 export interface SubmitCorrectionInput {
   attendanceRecordId: string;
@@ -117,18 +124,38 @@ export async function decideCorrection(
   });
 }
 
-/** Pending correction queue for approvers (admin). */
+/** Pending correction queue for approvers, enriched with student name + the
+ *  record's date so the admin can decide without extra lookups. */
 export async function listPendingCorrections(
   ctx: ServiceContext,
-): Promise<AttendanceCorrectionDto[]> {
+): Promise<PendingCorrectionDto[]> {
   assertCan(ctx.user, PERMISSIONS.ATTENDANCE_CORRECT_DECIDE);
   const rows = await ctx.repositories.attendanceCorrections.listPending(ctx.user.schoolId);
+  return Promise.all(
+    rows.map(async (row) => {
+      const record = await ctx.repositories.attendanceRecords.findById(row.attendanceRecordId);
+      return {
+        ...mapAttendanceCorrection(row),
+        studentName: record
+          ? await studentNameForEnrollment(ctx, record.enrollmentId)
+          : row.attendanceRecordId,
+        date: record ? toIstDateString(record.session.date) : ("" as PendingCorrectionDto["date"]),
+      };
+    }),
+  );
+}
+
+/** The acting staff member's own submitted corrections + their status (mobile). */
+export async function listMyCorrections(ctx: ServiceContext): Promise<AttendanceCorrectionDto[]> {
+  assertCan(ctx.user, PERMISSIONS.ATTENDANCE_CORRECT_SUBMIT);
+  const staffId = await resolveActingStaffId(ctx);
+  const rows = await ctx.repositories.attendanceCorrections.listByRequester(staffId);
   return rows.map(mapAttendanceCorrection);
 }
 
 /* ---- internal ---- */
 
-async function loadRecordInSchool(ctx: ServiceContext, id: string): Promise<AttendanceRecord> {
+async function loadRecordInSchool(ctx: ServiceContext, id: string): Promise<AttendanceRecordWithDate> {
   const row = await ctx.repositories.attendanceRecords.findById(id);
   if (!row || row.schoolId !== ctx.user.schoolId) {
     throw new NotFoundError("Attendance record not found");

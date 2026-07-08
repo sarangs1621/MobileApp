@@ -1,6 +1,6 @@
 import type {
   AttendanceCorrection,
-  AttendanceRecord,
+  AttendanceRecordWithDate,
   AttendanceSession,
   Holiday,
   LeaveRequest,
@@ -43,12 +43,13 @@ export function mapAttendanceSession(r: AttendanceSession): AttendanceSessionDto
   };
 }
 
-export function mapAttendanceRecord(r: AttendanceRecord): AttendanceRecordDto {
+export function mapAttendanceRecord(r: AttendanceRecordWithDate): AttendanceRecordDto {
   return {
     id: r.id,
     schoolId: r.schoolId,
     sessionId: r.sessionId,
     enrollmentId: r.enrollmentId,
+    date: toIstDate(r.session.date),
     status: r.status,
     remarks: r.remarks,
   };

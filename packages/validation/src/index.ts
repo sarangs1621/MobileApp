@@ -282,3 +282,79 @@ export const mintDocumentUploadUrlInput = z.object({
   studentId: idSchema,
   fileName: shortText(255),
 });
+
+/* ---- Attendance Management inputs (M4, ADR-011). Business rules (holiday block,
+ * duplicate register, teacher/parent scope, state-machine transitions, immutable
+ * corrections) live in the services — not duplicated here. Dates transform to Date
+ * at this boundary via istDateSchema, the codebase convention. */
+
+const attendanceSessionTypeSchema = z.enum(["DAILY", "SUBJECT"]);
+const attendanceStatusSchema = z.enum(["PRESENT", "ABSENT", "LATE", "HALF_DAY", "LEAVE"]);
+const holidayTypeSchema = z.enum(["NATIONAL", "SCHOOL", "FESTIVAL", "EMERGENCY_CLOSURE"]);
+const decisionSchema = z.enum(["APPROVED", "REJECTED"]);
+const reasonSchema = z.string().trim().min(1).max(500);
+const remarksSchema = z.string().trim().max(500);
+
+/** A single session / leave / correction id. */
+export const sessionIdInput = z.object({ sessionId: idSchema });
+export const enrollmentIdInput = z.object({ enrollmentId: idSchema });
+export const leaveIdInput = z.object({ leaveId: idSchema });
+
+/* Attendance */
+export const openSessionInput = z.object({
+  academicYearId: idSchema,
+  sectionId: idSchema,
+  sessionType: attendanceSessionTypeSchema,
+  subjectId: idSchema.optional(),
+  date: istDateSchema,
+});
+export const markAttendanceInput = z.object({
+  sessionId: idSchema,
+  marks: z
+    .array(
+      z.object({
+        enrollmentId: idSchema,
+        status: attendanceStatusSchema,
+        remarks: remarksSchema.optional(),
+      }),
+    )
+    .min(1),
+});
+/** Look up the existing register for a section/date/type (returns it or null). */
+export const findSessionInput = z.object({
+  sectionId: idSchema,
+  sessionType: attendanceSessionTypeSchema,
+  subjectId: idSchema.optional(),
+  date: istDateSchema,
+});
+/** Enrollment attendance history / summary over a date range. */
+export const attendanceRangeInput = z.object({
+  enrollmentId: idSchema,
+  from: istDateSchema,
+  to: istDateSchema,
+});
+
+/* Leave */
+export const applyLeaveInput = z.object({
+  enrollmentId: idSchema,
+  fromDate: istDateSchema,
+  toDate: istDateSchema,
+  reason: reasonSchema,
+});
+export const decideLeaveInput = z.object({ leaveId: idSchema, decision: decisionSchema });
+
+/* Attendance correction */
+export const submitCorrectionInput = z.object({
+  attendanceRecordId: idSchema,
+  requestedStatus: attendanceStatusSchema,
+  reason: reasonSchema,
+});
+export const decideCorrectionInput = z.object({ correctionId: idSchema, decision: decisionSchema });
+
+/* Holiday (writes ride academic:manage; calendar reads by all roles) */
+export const createHolidayInput = z.object({
+  academicYearId: idSchema,
+  name: nameSchema,
+  date: istDateSchema,
+  type: holidayTypeSchema,
+});

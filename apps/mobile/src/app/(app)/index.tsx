@@ -20,6 +20,11 @@ export default function AppHome() {
   const canReadStudents = role !== undefined && can(role, PERMISSIONS.STUDENT_READ);
   const canReadParents = role !== undefined && can(role, PERMISSIONS.PARENT_READ);
   const canReadStaff = role !== undefined && can(role, PERMISSIONS.STAFF_READ);
+  const canMarkAttendance = role !== undefined && can(role, PERMISSIONS.ATTENDANCE_MARK);
+  const canSubmitCorrection =
+    role !== undefined && can(role, PERMISSIONS.ATTENDANCE_CORRECT_SUBMIT);
+  const canApplyLeave = role !== undefined && can(role, PERMISSIONS.LEAVE_APPLY);
+  const canReadAttendance = role !== undefined && can(role, PERMISSIONS.ATTENDANCE_READ);
 
   return (
     <View className="flex-1 items-center justify-center gap-4 bg-background p-6">
@@ -46,6 +51,22 @@ export default function AppHome() {
           {canReadStaff ? (
             <NavLink href="/people/teacher-profiles" label="Teacher profiles" />
           ) : null}
+        </View>
+      ) : null}
+
+      {canReadAttendance ? (
+        <View className="w-full gap-2">
+          <Text className="text-sm font-medium text-muted-foreground">Attendance</Text>
+          {canMarkAttendance ? (
+            <NavLink href="/attendance/sections" label="Mark attendance" />
+          ) : null}
+          {canSubmitCorrection ? (
+            <NavLink href="/attendance/my-corrections" label="My corrections" />
+          ) : null}
+          {canApplyLeave ? <NavLink href="/attendance/leave" label="Leave requests" /> : null}
+          <Text className="px-1 text-xs text-muted-foreground">
+            Open a student to view their attendance & calendar.
+          </Text>
         </View>
       ) : null}
 

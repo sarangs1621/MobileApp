@@ -23,6 +23,8 @@ export interface UpdateLeaveRequestInput {
 export interface LeaveRequestRepository {
   findById(id: string): Promise<LeaveRequest | null>;
   listByEnrollment(enrollmentId: string): Promise<LeaveRequest[]>;
+  /** School-wide PENDING leave requests (admin approval queue). */
+  listPending(schoolId: string): Promise<LeaveRequest[]>;
   /** Enrollment ids (from the given set) with an APPROVED leave covering `date` —
    *  the marking-time default lookup (ADR-011 §7). */
   approvedEnrollmentIdsOnDate(enrollmentIds: readonly string[], date: Date): Promise<string[]>;
@@ -35,6 +37,11 @@ export function createLeaveRequestRepository(client: DbClient): LeaveRequestRepo
     findById: (id) => client.leaveRequest.findUnique({ where: { id } }),
     listByEnrollment: (enrollmentId) =>
       client.leaveRequest.findMany({ where: { enrollmentId }, orderBy: { fromDate: "desc" } }),
+    listPending: (schoolId) =>
+      client.leaveRequest.findMany({
+        where: { schoolId, status: "PENDING" },
+        orderBy: { createdAt: "asc" },
+      }),
     approvedEnrollmentIdsOnDate: async (enrollmentIds, date) => {
       if (enrollmentIds.length === 0) {
         return [];

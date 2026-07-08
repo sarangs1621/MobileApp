@@ -8,6 +8,12 @@ import {
   subjectRouter,
   teacherAssignmentRouter,
 } from "./routers/academic";
+import {
+  attendanceCorrectionRouter,
+  attendanceRouter,
+  holidayRouter,
+  leaveRouter,
+} from "./routers/attendance";
 import { authRouter } from "./routers/auth";
 import {
   enrollmentRouter,
@@ -44,6 +50,10 @@ export const appRouter = router({
   teacherProfile: teacherProfileRouter,
   enrollment: enrollmentRouter,
   studentDocument: studentDocumentRouter,
+  attendance: attendanceRouter,
+  leave: leaveRouter,
+  attendanceCorrection: attendanceCorrectionRouter,
+  holiday: holidayRouter,
 });
 
 export type AppRouter = typeof appRouter;

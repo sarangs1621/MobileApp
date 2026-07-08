@@ -25,6 +25,8 @@ export interface AttendanceCorrectionRepository {
   findById(id: string): Promise<AttendanceCorrection | null>;
   listByRecord(attendanceRecordId: string): Promise<AttendanceCorrection[]>;
   listPending(schoolId: string): Promise<AttendanceCorrection[]>;
+  /** Corrections raised by a given staff member (their own submissions). */
+  listByRequester(requestedByStaffId: string): Promise<AttendanceCorrection[]>;
   create(input: CreateAttendanceCorrectionInput): Promise<AttendanceCorrection>;
   decide(id: string, data: DecideAttendanceCorrectionInput): Promise<AttendanceCorrection>;
 }
@@ -43,6 +45,11 @@ export function createAttendanceCorrectionRepository(
       client.attendanceCorrection.findMany({
         where: { schoolId, status: "PENDING" },
         orderBy: { createdAt: "asc" },
+      }),
+    listByRequester: (requestedByStaffId) =>
+      client.attendanceCorrection.findMany({
+        where: { requestedByStaffId },
+        orderBy: { createdAt: "desc" },
       }),
     create: (input) => client.attendanceCorrection.create({ data: input }),
     decide: (id, data) =>

@@ -8,6 +8,7 @@
  */
 export {
   openSession,
+  findSession,
   sessionRoster,
   markAttendance,
   submitSession,
@@ -24,12 +25,14 @@ export {
   decideLeave,
   cancelLeave,
   listLeaveByEnrollment,
+  listPendingLeaves,
   type ApplyLeaveInput,
 } from "./leave.service";
 export {
   submitCorrection,
   decideCorrection,
   listPendingCorrections,
+  listMyCorrections,
   type SubmitCorrectionInput,
 } from "./correction.service";
 export {

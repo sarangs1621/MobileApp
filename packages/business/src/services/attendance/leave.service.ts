@@ -1,7 +1,7 @@
 import { PERMISSIONS } from "@repo/constants";
 import { ConflictError, ForbiddenError, NotFoundError, ValidationError } from "@repo/core";
 import type { LeaveRequest } from "@repo/db";
-import type { IstDateString, LeaveRequestDto } from "@repo/types";
+import type { LeaveRequestDto, PendingLeaveDto } from "@repo/types";
 
 import { assertCan } from "../../authorization";
 import type { ServiceContext } from "../../context";
@@ -9,16 +9,17 @@ import type { ServiceContext } from "../../context";
 import { mapLeaveRequest } from "./mappers";
 import {
   assertEnrollmentInScope,
-  istToDate,
   loadEnrollmentInSchool,
   recordAudit,
   resolveActingStaffId,
+  studentNameForEnrollment,
+  toIstDateString,
 } from "./scope";
 
 export interface ApplyLeaveInput {
   enrollmentId: string;
-  fromDate: IstDateString;
-  toDate: IstDateString;
+  fromDate: Date;
+  toDate: Date;
   reason: string;
 }
 
@@ -39,7 +40,7 @@ export async function applyLeave(
   if (enrollment.status !== "ACTIVE") {
     throw new ValidationError("Leave can only be applied for an active enrollment");
   }
-  if (input.fromDate > input.toDate) {
+  if (input.fromDate.getTime() > input.toDate.getTime()) {
     throw new ValidationError("Leave start date must not be after the end date");
   }
 
@@ -48,15 +49,19 @@ export async function applyLeave(
       schoolId: ctx.user.schoolId,
       enrollmentId: input.enrollmentId,
       parentId: parent.id,
-      fromDate: istToDate(input.fromDate),
-      toDate: istToDate(input.toDate),
+      fromDate: input.fromDate,
+      toDate: input.toDate,
       reason: input.reason,
     });
     await recordAudit(ctx, repos, {
       action: "LEAVE_APPLY",
       entityType: "LeaveRequest",
       entityId: created.id,
-      after: { enrollmentId: created.enrollmentId, fromDate: input.fromDate, toDate: input.toDate },
+      after: {
+        enrollmentId: created.enrollmentId,
+        fromDate: toIstDateString(input.fromDate),
+        toDate: toIstDateString(input.toDate),
+      },
     });
     return mapLeaveRequest(created);
   });
@@ -118,6 +123,18 @@ export async function cancelLeave(ctx: ServiceContext, leaveId: string): Promise
     });
     return mapLeaveRequest(after);
   });
+}
+
+/** School-wide pending leave queue for approvers, enriched with the child's name. */
+export async function listPendingLeaves(ctx: ServiceContext): Promise<PendingLeaveDto[]> {
+  assertCan(ctx.user, PERMISSIONS.LEAVE_DECIDE);
+  const rows = await ctx.repositories.leaveRequests.listPending(ctx.user.schoolId);
+  return Promise.all(
+    rows.map(async (row) => ({
+      ...mapLeaveRequest(row),
+      studentName: await studentNameForEnrollment(ctx, row.enrollmentId),
+    })),
+  );
 }
 
 /** Leave history for one enrollment (parent → own child; teacher → own section). */

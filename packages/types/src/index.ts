@@ -219,6 +219,7 @@ export interface AttendanceRecordDto {
   schoolId: string;
   sessionId: string;
   enrollmentId: string;
+  date: IstDateString; // the session's date, denormalized for history/calendar reads
   status: AttendanceStatusKey;
   remarks: string | null;
 }
@@ -257,6 +258,17 @@ export interface AttendanceCorrectionDto {
   status: CorrectionStatusKey;
   decidedByStaffId: string | null;
   decidedAt: IsoUtcString | null;
+}
+
+/** A pending leave, enriched with the child's name for the admin approval queue. */
+export interface PendingLeaveDto extends LeaveRequestDto {
+  studentName: string;
+}
+
+/** A pending correction, enriched with student name + the record's date, for the queue. */
+export interface PendingCorrectionDto extends AttendanceCorrectionDto {
+  studentName: string;
+  date: IstDateString;
 }
 
 export interface HolidayDto {

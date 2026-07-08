@@ -1,18 +1,18 @@
 import { PERMISSIONS } from "@repo/constants";
 import { ConflictError, NotFoundError } from "@repo/core";
 import type { Holiday } from "@repo/db";
-import type { HolidayDto, HolidayTypeKey, IstDateString } from "@repo/types";
+import type { HolidayDto, HolidayTypeKey } from "@repo/types";
 
 import { assertCan } from "../../authorization";
 import type { ServiceContext } from "../../context";
 
 import { mapHoliday } from "./mappers";
-import { istToDate, recordAudit } from "./scope";
+import { recordAudit, toIstDateString } from "./scope";
 
 export interface CreateHolidayInput {
   academicYearId: string;
   name: string;
-  date: IstDateString;
+  date: Date;
   type: HolidayTypeKey;
 }
 
@@ -24,8 +24,7 @@ export async function createHoliday(
 ): Promise<HolidayDto> {
   assertCan(ctx.user, PERMISSIONS.ACADEMIC_MANAGE);
   await assertYearInSchool(ctx, input.academicYearId);
-  const date = istToDate(input.date);
-  if (await ctx.repositories.holidays.findByYearDate(input.academicYearId, date)) {
+  if (await ctx.repositories.holidays.findByYearDate(input.academicYearId, input.date)) {
     throw new ConflictError("A holiday already exists on that date");
   }
 
@@ -34,14 +33,14 @@ export async function createHoliday(
       schoolId: ctx.user.schoolId,
       academicYearId: input.academicYearId,
       name: input.name,
-      date,
+      date: input.date,
       type: input.type,
     });
     await recordAudit(ctx, repos, {
       action: "HOLIDAY_CREATE",
       entityType: "Holiday",
       entityId: created.id,
-      after: { name: created.name, date: input.date, type: created.type },
+      after: { name: created.name, date: toIstDateString(input.date), type: created.type },
     });
     return mapHoliday(created);
   });

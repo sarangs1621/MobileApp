@@ -7,9 +7,24 @@ import { isFullAccess, parentChildIds, teacherSectionIds } from "../people/scope
 
 export { isFullAccess, recordAudit, teacherSectionIds } from "../people/scope";
 
-/** IST calendar date (YYYY-MM-DD) → a UTC-midnight Date for a `@db.Date` column. */
-export function istToDate(date: IstDateString): Date {
-  return new Date(`${date}T00:00:00.000Z`);
+/** @db.Date → YYYY-MM-DD IST string (dates arrive as Date from the Zod boundary
+ *  via `istDateSchema`; this is only for audit/summary echoes). */
+export function toIstDateString(date: Date): IstDateString {
+  return date.toISOString().slice(0, 10) as IstDateString;
+}
+
+/** Resolve a child's display name from an enrollment (for admin approval queues);
+ *  falls back to the enrollment id if the graph is incomplete. */
+export async function studentNameForEnrollment(
+  ctx: ServiceContext,
+  enrollmentId: string,
+): Promise<string> {
+  const enrollment = await ctx.repositories.enrollments.findById(enrollmentId);
+  if (!enrollment) {
+    return enrollmentId;
+  }
+  const student = await ctx.repositories.students.findById(enrollment.studentId);
+  return student ? `${student.firstName} ${student.lastName}` : enrollment.studentId;
 }
 
 /**

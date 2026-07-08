@@ -68,6 +68,23 @@ enum AttendanceSessionStatus { DRAFT  SUBMITTED  LOCKED }
 
 Transitions are forward-only and audited. (No `OPEN` state — DRAFT is the working state.)
 
+**Canonical state machine + allowed operations:**
+
+```
+DRAFT ──submitSession──▶ SUBMITTED ──lockSession──▶ LOCKED
+  ▲                                                    │
+  └── markAttendance (edits)          AttendanceCorrection (approved)
+```
+
+| Operation | Allowed only when session is | Effect |
+|---|---|---|
+| `markAttendance` | **DRAFT** | idempotent upsert of records |
+| `submitSession` | **DRAFT** → SUBMITTED | stamps `submittedBy/At` |
+| `lockSession` | **SUBMITTED** → LOCKED | stamps `lockedBy/At` |
+| (record change) | **after LOCKED** | only via `AttendanceCorrection`, approved (§8) |
+
+`markAttendance` is **DRAFT-only**: once a register is SUBMITTED it is the official record and is not edited in place — reopening is not a modelled transition (forward-only), so any post-SUBMITTED change is a correction. This keeps a single, auditable path for altering a submitted/locked register.
+
 ### 6. Roster = **ACTIVE** enrollments of the ACTIVE year
 
 The register's rows are the section's `ACTIVE` enrollments for the ACTIVE `AcademicYear` (ADR-010 resolves "current" through the single ACTIVE year, not a per-row flag). `ADMITTED`-but-unplaced, `PROMOTED`, `TRANSFERRED`, `DROPPED`, `ALUMNI` enrollments are **excluded** — so **attendance after withdrawal is refused** (no ACTIVE enrollment to mark) and **attendance after promotion** lands only on the new-year ACTIVE row.
@@ -136,7 +153,19 @@ Creating a session on a `NON_WORKING` day is rejected. **M4 implements the basel
 
 ### 10. Analytics foundation (feeds report cards, no new joins)
 
-`AttendanceSummary` is the rollup surface keyed by `enrollmentId` + date range (daily → monthly → term). Weighting: `HALF_DAY` = 0.5 present / 0.5 absent; `LATE` = present (attended) but surfaced as a distinct punctuality count; `LEAVE` typically excluded from the denominator per school policy. Because every record joins `enrollmentId` and terms are `AcademicTerm` ranges on the ACTIVE year, term/annual % for a report card (ADR-009) is a pure aggregation — no per-report placement logic. **M4 builds the records + aggregation rules only**; scheduled % rollups and the absence-push job are out of scope (notification/analytics milestones).
+`AttendanceSummary` is a **compute-on-read business service** (`AttendanceService.attendanceSummary`) keyed by `enrollmentId` + date range (daily → monthly → term). **There is no summary table and no cron job** — the percentage is computed on demand from the underlying `AttendanceRecord` rows. Only if measured read cost ever demands it would a materialized rollup be added; M4 does not need one.
+
+**Canonical attendance weighting** (single source of truth for every % in the product):
+
+| Status | Weight in % | In denominator? |
+|---|---|---|
+| `PRESENT` | **1.0** | yes |
+| `LATE` | **1.0** (attended; surfaced separately as a punctuality count) | yes |
+| `HALF_DAY` | **0.5** | yes |
+| `ABSENT` | **0** | yes |
+| `LEAVE` | — | **excluded** (not counted for or against) unless a future policy changes it |
+
+`percentage = (Σ weights of countable records) / (count of countable records)`, where *countable* = every record except `LEAVE`; `null` when there are no countable days. Because every record joins `enrollmentId` and terms are `AcademicTerm` ranges on the ACTIVE year, term/annual % for a report card (ADR-009) is a pure aggregation — no per-report placement logic. **M4 builds the records + this aggregation only**; scheduled % rollups and the absence-push job are out of scope (notification/analytics milestones).
 
 ## Alternatives Considered
 

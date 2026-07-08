@@ -6,7 +6,6 @@ import type {
   AttendanceSessionDto,
   AttendanceStatusKey,
   AttendanceSummaryDto,
-  IstDateString,
 } from "@repo/types";
 
 import { assertCan } from "../../authorization";
@@ -17,11 +16,11 @@ import {
   assertEnrollmentInScope,
   assertTeachesSection,
   assertWorkingDay,
-  istToDate,
   loadEnrollmentInSchool,
   loadSessionInSchool,
   recordAudit,
   resolveActingStaffId,
+  toIstDateString,
 } from "./scope";
 
 export interface OpenSessionInput {
@@ -29,7 +28,7 @@ export interface OpenSessionInput {
   sectionId: string;
   sessionType: "DAILY" | "SUBJECT";
   subjectId?: string | undefined;
-  date: IstDateString;
+  date: Date;
 }
 
 export interface MarkInput {
@@ -70,14 +69,13 @@ export async function openSession(
     throw new ValidationError("A daily session must not carry a subject");
   }
 
-  const date = istToDate(input.date);
-  await assertWorkingDay(ctx, input.academicYearId, date);
+  await assertWorkingDay(ctx, input.academicYearId, input.date);
 
   const subjectId = input.subjectId ?? null;
   if (
     await ctx.repositories.attendanceSessions.findExisting(
       input.sectionId,
-      date,
+      input.date,
       input.sessionType,
       subjectId,
     )
@@ -92,17 +90,46 @@ export async function openSession(
       sectionId: input.sectionId,
       subjectId,
       sessionType: input.sessionType,
-      date,
+      date: input.date,
       createdByStaffId: staffId,
     });
     await recordAudit(ctx, repos, {
       action: "ATTENDANCE_SESSION_OPEN",
       entityType: "AttendanceSession",
       entityId: created.id,
-      after: { sectionId: created.sectionId, date: input.date, sessionType: created.sessionType },
+      after: {
+        sectionId: created.sectionId,
+        date: toIstDateString(input.date),
+        sessionType: created.sessionType,
+      },
     });
     return mapAttendanceSession(created);
   });
+}
+
+/**
+ * Find the existing register for a section/date/type (or null) — the marking
+ * screen calls this on load to decide between "open register" and showing the
+ * roster, without the side effect of creating one. Teacher → own-section only.
+ */
+export async function findSession(
+  ctx: ServiceContext,
+  input: {
+    sectionId: string;
+    sessionType: "DAILY" | "SUBJECT";
+    subjectId?: string | undefined;
+    date: Date;
+  },
+): Promise<AttendanceSessionDto | null> {
+  assertCan(ctx.user, PERMISSIONS.ATTENDANCE_READ);
+  await assertTeachesSection(ctx, input.sectionId);
+  const row = await ctx.repositories.attendanceSessions.findExisting(
+    input.sectionId,
+    input.date,
+    input.sessionType,
+    input.subjectId ?? null,
+  );
+  return row ? mapAttendanceSession(row) : null;
 }
 
 /**
@@ -152,8 +179,8 @@ export async function sessionRoster(
  * Bulk-mark a register: one idempotent upsert per (session, enrollment). Every
  * enrollment must be ACTIVE and belong to the session's section (blocks marking
  * another section or a withdrawn student). All marks + one audit row commit in a
- * single transaction, so a bad row rolls the whole batch back. LOCKED sessions
- * reject — post-lock changes go through the correction workflow.
+ * single transaction, so a bad row rolls the whole batch back. DRAFT-only
+ * (ADR-011 §5) — a SUBMITTED/LOCKED register changes only via a correction.
  */
 export async function markAttendance(
   ctx: ServiceContext,
@@ -164,8 +191,14 @@ export async function markAttendance(
   const session = await loadSessionInSchool(ctx, input.sessionId);
   await assertTeachesSection(ctx, session.sectionId);
 
-  if (session.status === "LOCKED") {
-    throw new ValidationError("This register is locked; submit a correction instead");
+  // DRAFT-only (ADR-011 §5 state machine): a SUBMITTED/LOCKED register is the
+  // official record; any later change goes through the correction workflow.
+  if (session.status !== "DRAFT") {
+    throw new ValidationError(
+      session.status === "LOCKED"
+        ? "This register is locked; submit a correction instead"
+        : "This register is submitted; submit a correction to change it",
+    );
   }
   if (input.marks.length === 0) {
     throw new ValidationError("No marks provided");
@@ -243,15 +276,15 @@ export async function listSessionRecords(
 /** One enrollment's attendance records over a date range (in scope). */
 export async function studentAttendanceHistory(
   ctx: ServiceContext,
-  input: { enrollmentId: string; from: IstDateString; to: IstDateString },
+  input: { enrollmentId: string; from: Date; to: Date },
 ): Promise<AttendanceRecordDto[]> {
   assertCan(ctx.user, PERMISSIONS.ATTENDANCE_READ);
   const enrollment = await loadEnrollmentInSchool(ctx, input.enrollmentId);
   await assertEnrollmentInScope(ctx, enrollment);
   const rows = await ctx.repositories.attendanceRecords.listByEnrollmentInRange(
     input.enrollmentId,
-    istToDate(input.from),
-    istToDate(input.to),
+    input.from,
+    input.to,
   );
   return rows.map(mapAttendanceRecord);
 }
@@ -263,15 +296,15 @@ export async function studentAttendanceHistory(
  */
 export async function attendanceSummary(
   ctx: ServiceContext,
-  input: { enrollmentId: string; from: IstDateString; to: IstDateString },
+  input: { enrollmentId: string; from: Date; to: Date },
 ): Promise<AttendanceSummaryDto> {
   assertCan(ctx.user, PERMISSIONS.ATTENDANCE_READ);
   const enrollment = await loadEnrollmentInSchool(ctx, input.enrollmentId);
   await assertEnrollmentInScope(ctx, enrollment);
   const rows = await ctx.repositories.attendanceRecords.listByEnrollmentInRange(
     input.enrollmentId,
-    istToDate(input.from),
-    istToDate(input.to),
+    input.from,
+    input.to,
   );
 
   const count = (s: AttendanceStatusKey) => rows.filter((r) => r.status === s).length;
@@ -285,8 +318,8 @@ export async function attendanceSummary(
 
   return {
     enrollmentId: input.enrollmentId,
-    from: input.from,
-    to: input.to,
+    from: toIstDateString(input.from),
+    to: toIstDateString(input.to),
     present,
     absent,
     late,

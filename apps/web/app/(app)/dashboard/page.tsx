@@ -78,6 +78,14 @@ export default function DashboardPage() {
           People
         </Link>
       ) : null}
+      {can(me.data.role, PERMISSIONS.ATTENDANCE_READ) ? (
+        <Link
+          href="/attendance/mark"
+          className="min-h-11 self-start rounded-md border border-border px-4 py-2 font-medium text-foreground"
+        >
+          Attendance
+        </Link>
+      ) : null}
       <button
         type="button"
         onClick={() => void handleLogout()}
