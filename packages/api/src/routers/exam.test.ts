@@ -53,8 +53,8 @@ describe("exam routers — Zod input validation (BAD_REQUEST, before the resolve
     ).rejects.toMatchObject({ code: "BAD_REQUEST" });
   });
   it("rejects an unknown exam type", async () => {
-    // @ts-expect-error — invalid enum value is the point of the test
     await expect(
+      // @ts-expect-error — invalid enum value is the point of the test
       c.exam.create({ academicYearId: "y-1", name: "T", type: "NOPE" }),
     ).rejects.toMatchObject({ code: "BAD_REQUEST" });
   });
