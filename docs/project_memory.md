@@ -15,13 +15,15 @@ here = PRD-planned homework milestone, shifted by the M5 renumbering.
 
 ## Current Step
 
-**M6 Step 3 (Relationships) COMPLETE — STOPPED awaiting approval before Step 4
-(RLS).** Step 2 shipped migration `20260710000000_homework_management` (5 models,
-2 enums, 8 CHECKs, unique (homework, enrollment); no drift; 22/22 constraint
-proofs). Step 3 live-verified the graph via rollback-safe probes (11/11 PASS,
-zero rows persisted): 17/17 FK delete rules exact (no SetNull by design),
-promotion + in-place transfer preserve submission history, cascade precisely
-scoped, actors durable, guarded-transition primitives work; diagram updated.
+**M6 Step 4 (RLS) COMPLETE — STOPPED awaiting approval before Step 5 (Business
+layer).** Steps 2–3 shipped migration `20260710000000_homework_management`
+(5 models, 2 enums, 8 CHECKs; 22/22 constraint proofs; 11/11 relationship
+probes, 17/17 FK rules exact). Step 4 shipped `20260710010000_homework_rls`
+(5 SECURITY-DEFINER helpers + admin/teacher/parent/anon policies; teacher
+DELETE DRAFT-only R5-analog; parent visibility = published/closed + section-
+match-or-has-submission; actor-spoof blocked in WITH CHECK; attachments/
+feedback append-only). **28/28 read+write isolation proofs PASS** on the
+scratch cluster (stubbed uuid auth.uid()); drift check clean after RLS.
 M6 kickoff was read as implicit approval of M5 → M3/M4/M5 frozen.
 
 ## Completed

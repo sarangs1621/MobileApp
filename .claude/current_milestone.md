@@ -4,7 +4,26 @@
 
 ## Current Step
 
-**Step 3 (Relationships) ✅ DONE — awaiting approval before Step 4 (RLS).**
+**Step 4 (RLS) ✅ DONE — awaiting approval before Step 5 (Business layer).**
+Dedicated migration `20260710010000_homework_rls` (defense-in-depth; app path =
+service_role BYPASSRLS): 5 new SECURITY-DEFINER helpers
+(`teaches_subject_in_section`, `teaches_homework`, `teaches_submission_homework`,
+`is_homework_parent_visible` — the §10 or-clause, `is_my_child_submission`) +
+reused `is_academic_admin`/`is_my_child_enrollment`/`is_my_parent_record`.
+Policies: admin ALL ×5 tables · teacher own subject×section READ/INSERT/UPDATE,
+DELETE **DRAFT-only** (R5-analog) · teacher review-UPDATE own submissions +
+INSERT feedback · parent READ published/closed own-child (section-match OR
+has-submission), INSERT/resubmit-UPDATE own child **as own Parent record**
+(actor-spoof fails WITH CHECK), INSERT own sub-attachments · append-only/
+immutable = no UPDATE/DELETE policies on attachments/feedback · anon none.
+**Proven on the scratch cluster with stubbed uuid `auth.uid()`: 28/28 isolation
+proofs PASS (10 read scenarios incl. or-clause post-transfer + sibling-parent
+isolation; 18 write scenarios incl. cross-section insert denial, actor spoof,
+published-delete block, admin ALL).** Drift re-check after RLS: no difference.
+Storage-bucket policies for `homework-files` ride the runbook (ops-managed,
+like student-documents §3b) — not this migration.
+
+**Step 3 (Relationships) ✅ DONE.**
 Every M6 edge live-verified on the scratch cluster via **rollback-safe probes
 (R1–R10 + sanity, 11/11 PASS, zero probe rows persisted)**: R1 delete-rule matrix
 exact (17/17 FKs — 4 Cascade content edges, 13 Restrict; **no SetNull by design**);
