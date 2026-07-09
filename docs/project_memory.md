@@ -15,9 +15,12 @@ here = PRD-planned homework milestone, shifted by the M5 renumbering.
 
 ## Current Step
 
-**M6 Step 1 (Requirements Analysis) COMPLETE — ADR-013 written; STOPPED awaiting
-approval before Step 2 (DB design).** M6 kickoff was read as implicit approval of
-M5 → M3/M4/M5 now frozen.
+**M6 Step 2 (DB design) COMPLETE — STOPPED awaiting approval before Step 3
+(Relationships).** Migration `20260710000000_homework_management` (5 models,
+2 enums, 8 CHECKs, unique (homework, enrollment), no partial uniques needed);
+proven on a scratch Postgres 17 cluster (all 11 migrations replayed, no drift,
+22/22 constraint proofs). M6 kickoff was read as implicit approval of M5 →
+M3/M4/M5 frozen.
 
 ## Completed
 

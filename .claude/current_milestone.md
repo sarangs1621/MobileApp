@@ -4,17 +4,24 @@
 
 ## Current Step
 
-**Step 1 (Requirements Analysis) ✅ DONE — awaiting approval before Step 2.**
-Produced **ADR-013** (docs/architecture/ADR-013-homework-assignment-management.md):
-entities Homework / HomeworkAttachment / HomeworkSubmission / SubmissionAttachment /
-HomeworkFeedback; lifecycles `DRAFT→PUBLISHED→CLOSED` (audited reopen) and
-`SUBMITTED→RETURNED→REVIEWED` (in-place resubmission, attempt counter); derived
-teacher ownership; parent-actor submissions on **Enrollment, never Student**;
-lateness snapshot (no cron); one new private bucket `homework-files`; permission set
-+ RLS plan; edge cases + risk register R1–R6. **Surfaced:** the brief overrides the
-PRD's distribution-only homework decision (#13) — submissions are core, no
-`homework-uploads` flag; OA gets `homework:manage` (brief "Admin ALL" vs planned
-matrix row).
+**Step 2 (Database Design) ✅ DONE — awaiting approval before Step 3.**
+Migration `20260710000000_homework_management`: 5 models (Homework,
+HomeworkAttachment, HomeworkSubmission, SubmissionAttachment, HomeworkFeedback) +
+2 enums (HomeworkStatus, SubmissionStatus). DB invariants: unique
+`(homeworkId, enrollmentId)`; CHECKs — DRAFT⟺no publish stamp, CLOSED⟺close stamp
+(reopen clears it), attempt≥1 ×3, firstSubmittedAt≤submittedAt, decision-state
+stamps, feedback decision≠SUBMITTED. **No partial uniques needed** (no nullable key
+columns — documented in the migration). Delete rules: Cascade content chain
+(guarded to DRAFT at business layer), Restrict on Enrollment/Parent/Staff/
+Section/Subject/Year. **Empirically proven on a scratch Postgres 17 cluster**
+(initdb trust, port 5433): all 11 migrations applied in order (Supabase
+`auth.uid()` stubbed), `migrate diff` DB-vs-datamodel = **no drift**, **22/22
+constraint proofs PASS** (P1–P20 incl. cascade-chain, Restrict edges, resubmit
+round-trip, duplicate-title acceptance). Prisma validate ✓ generate ✓ db
+typecheck+lint ✓.
+
+Step 1 produced **ADR-013**. Surfaced then: brief overrides PRD distribution-only
+(#13); OA gets `homework:manage`.
 
 **Note:** starting M6 was taken as implicit approval of M5 → M3/M4/M5 treated as
 frozen (critical bug/security fixes only). Flag if that reading is wrong.
