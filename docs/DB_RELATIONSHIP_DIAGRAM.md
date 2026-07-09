@@ -125,7 +125,64 @@ erDiagram
     }
 ```
 
-## Communication & notifications (M5)
+## Homework & submissions (M6 — IMPLEMENTED per ADR-013)
+
+> This section reflects the **implemented** schema (`20260710000000_homework_management`),
+> which supersedes the Dev PRD §8.6 distribution-only sketch below (the `HOMEWORK`
+> entity under "Communication & notifications" — `DIVISION`-era vocabulary, no
+> submissions). The M6 brief made parent submissions **core**; ADR-013 is the source
+> of truth. Delete rules **live-verified** M6 Step 3 (rollback-safe probes R1–R10:
+> 17/17 FK rules exact, promotion/transfer history preservation, cascade precision,
+> durable actors, guarded-transition primitives, zero probe rows persisted).
+
+```mermaid
+erDiagram
+    ACADEMIC_YEAR ||--o{ HOMEWORK : "restrict — year stamped at creation (cross-year boundary)"
+    SUBJECT ||--o{ HOMEWORK : "restrict — always subject-bound"
+    SECTION ||--o{ HOMEWORK : "restrict"
+    STAFF ||--o{ HOMEWORK : "createdBy / publishedBy? / closedBy? / reopenedBy? — all restrict (audit actors, not owners)"
+    HOMEWORK ||--o{ HOMEWORK_ATTACHMENT : "CASCADE (teacher files = content)"
+    STAFF ||--o{ HOMEWORK_ATTACHMENT : "uploadedBy restrict"
+    HOMEWORK ||--o{ HOMEWORK_SUBMISSION : "CASCADE (delete business-guarded to DRAFT — structurally submission-free)"
+    ENROLLMENT ||--o{ HOMEWORK_SUBMISSION : "restrict — NEVER Student (ADR-010 §8)"
+    PARENT ||--o{ HOMEWORK_SUBMISSION : "submittedBy restrict — parents submit, no student login"
+    STAFF ||--o{ HOMEWORK_SUBMISSION : "reviewedBy? restrict"
+    HOMEWORK_SUBMISSION ||--o{ SUBMISSION_ATTACHMENT : "CASCADE (append-only, attempt-tagged)"
+    PARENT ||--o{ SUBMISSION_ATTACHMENT : "uploadedBy restrict"
+    HOMEWORK_SUBMISSION ||--o{ HOMEWORK_FEEDBACK : "CASCADE (immutable review rounds)"
+    STAFF ||--o{ HOMEWORK_FEEDBACK : "author restrict"
+
+    HOMEWORK {
+        date dueDate "IST @db.Date; extend-only once PUBLISHED (service)"
+        enum status "DRAFT|PUBLISHED|CLOSED — CHECK: DRAFT iff no publish stamp, CLOSED iff close stamp (reopen clears it)"
+        string reopenReason "audited reopen = the one backward transition (M5 unlock analog)"
+        string id "no natural key — duplicate titles legal (deliberate)"
+    }
+    HOMEWORK_ATTACHMENT { string storagePath "PRIVATE homework-files path, signed on read (ADR-004)" }
+    HOMEWORK_SUBMISSION {
+        enum status "SUBMITTED|RETURNED|REVIEWED — CHECK: decision states carry reviewedBy/At"
+        int attempt "CHECK >= 1; resubmit = in-place attempt++ on the SAME row"
+        bool isLate "snapshot at latest (re)submit vs dueDate — no cron"
+        string id "UK(homeworkId, enrollmentId) — duplicate race is a DB error; holds across transfer (R3)"
+    }
+    SUBMISSION_ATTACHMENT { int attempt "CHECK >= 1 — history never deleted on resubmit" }
+    HOMEWORK_FEEDBACK {
+        enum decision "RETURNED|REVIEWED only — CHECK <> SUBMITTED"
+        int attempt "which attempt this round judged (snapshot)"
+        string body "text only — NO score/grade (grading out of scope)"
+    }
+```
+
+Cross-table invariants **not** in the DB (service layer, ADR-013 §7): section match,
+year match, ACTIVE enrollment, StudentParent link, PUBLISHED-only submission.
+Ownership derives from `TeacherAssignment(teacher, subject, section)` at authz time —
+no owner column to rot.
+
+## Communication & notifications (M5-planned — NOT built)
+
+> The `HOMEWORK` entity in this sketch is **superseded by the implemented M6 model
+> above** (distribution-only → full submissions; brief overrides Dev PRD decision #13).
+> Messages/announcements remain future work.
 
 ```mermaid
 erDiagram
@@ -145,7 +202,7 @@ erDiagram
         enum scope "SCHOOL|CLASS|DIVISION"
         string targetId "LOOSE polymorphic: ClassLevel or Division id"
     }
-    HOMEWORK { string attachmentUrls "storage paths (B7)" }
+    HOMEWORK { string attachmentUrls "storage paths (B7) — SUPERSEDED by M6 section above" }
 ```
 
 ## Ops, flags, add-ons (M1 audit/flags; add-ons behind flags)
@@ -181,4 +238,7 @@ Standalone (loose refs only): `SCHOOL` (tenant root), `AUDIT_LOG(actorUserId, en
 
 | Cascade (composition) | Restrict (history/money) |
 |---|---|
-| Staff/Guardian→User, GuardianStudent, DeviceToken, Notification, GradeBand→Scale, ExamSubject→Exam, Message→Thread, FeeItem→Structure, InvoiceLine→Invoice | Mark, Attendance, Enrollment, Invoice, Payment, ReportCard, LeaveApplication, all academic structure |
+| Staff/Guardian→User, GuardianStudent, DeviceToken, Notification, GradeBand→Scale, ExamSubject→Exam, Message→Thread, FeeItem→Structure, InvoiceLine→Invoice, **M6:** HomeworkAttachment→Homework, HomeworkSubmission→Homework (delete business-guarded to DRAFT), SubmissionAttachment→Submission, HomeworkFeedback→Submission | Mark, Attendance, Enrollment, Invoice, Payment, ReportCard, LeaveApplication, all academic structure, **M6:** Submission→Enrollment/Parent, every homework Staff/Parent actor, Homework→Year/Subject/Section |
+
+**M6 note:** the homework tables use **no SetNull** — verified live (R1: 17/17 FK
+delete rules exact; only Cascade content edges + Restrict data/actor edges).

@@ -117,6 +117,7 @@ model AcademicYear {
   holidays           Holiday[] // M4: virtual back-relation only (no change to frozen M2 model)
   attendanceSessions AttendanceSession[] // M4: virtual back-relation only
   exams              Exam[] // M5: virtual back-relation only
+  homework           Homework[] // M6: virtual back-relation only
   // + raw SQL: UNIQUE (schoolId) WHERE status = 'ACTIVE'  — one ACTIVE year
   // + raw SQL: CHECK (startDate < endDate)
   // + raw SQL: RLS ON — admin-only ALL (academic_rls migration; defense-in-depth)
@@ -176,6 +177,7 @@ model Section {
   enrollments        Enrollment[] // M3: virtual back-relation only (no change to frozen M2 model)
   attendanceSessions AttendanceSession[] // M4: virtual back-relation only
   examSections       ExamSection[] // M5: virtual back-relation only
+  homework           Homework[] // M6: virtual back-relation only
   // + raw SQL: RLS ON — admin-only ALL (academic_rls migration)
 
   @@unique([classId, name])
@@ -192,6 +194,7 @@ model Subject {
   teacherAssignments TeacherAssignment[]
   attendanceSessions AttendanceSession[] // M4: virtual back-relation only
   assessments        Assessment[] // M5: virtual back-relation only
+  homework           Homework[] // M6: virtual back-relation only
   // + raw SQL: RLS ON — admin-only ALL (academic_rls migration)
 
   @@unique([schoolId, name])
@@ -384,6 +387,9 @@ model Parent {
   user             User?            @relation(fields: [userId], references: [id], onDelete: SetNull)
   students         StudentParent[]
   leaveRequests    LeaveRequest[] // M4: virtual back-relation only
+  // M6: virtual back-relations only — submission + upload actors (parents submit for children)
+  homeworkSubmissions   HomeworkSubmission[]
+  submissionAttachments SubmissionAttachment[]
   // + raw SQL: RLS ON — admin ALL; parent SELECT self (userId = auth.uid()) (people_rls, Step 4)
 
   @@index([schoolId])
@@ -439,6 +445,14 @@ model Staff {
   examSectionsLocked    ExamSection[]          @relation("ExamSectionLockedBy")
   examSectionsUnlocked  ExamSection[]          @relation("ExamSectionUnlockedBy")
   marksEntered          Mark[]                 @relation("MarkEnteredBy")
+  // M6: virtual back-relations only — homework lifecycle + review audit actors
+  homeworkCreated             Homework[]             @relation("HomeworkCreatedBy")
+  homeworkPublished           Homework[]             @relation("HomeworkPublishedBy")
+  homeworkClosed              Homework[]             @relation("HomeworkClosedBy")
+  homeworkReopened            Homework[]             @relation("HomeworkReopenedBy")
+  homeworkAttachmentsUploaded HomeworkAttachment[]   @relation("HomeworkAttachmentUploadedBy")
+  submissionsReviewed         HomeworkSubmission[]   @relation("SubmissionReviewedBy")
+  homeworkFeedbackAuthored    HomeworkFeedback[]     @relation("HomeworkFeedbackAuthor")
   // + raw SQL: RLS ON — admin ALL; staff SELECT self (userId = auth.uid()) (people_rls, Step 4)
 
   @@unique([schoolId, employeeId])
@@ -472,6 +486,7 @@ model Enrollment {
   attendanceRecords AttendanceRecord[] // M4: virtual back-relation only
   leaveRequests     LeaveRequest[] // M4: virtual back-relation only
   marks             Mark[] // M5: virtual back-relation only
+  homeworkSubmissions HomeworkSubmission[] // M6: virtual back-relation only
   // + raw SQL: partial unique — roll number unique per section per year:
   //   WHERE "sectionId" IS NOT NULL AND "rollNo" IS NOT NULL
   // + raw SQL: CHECK ("rollNo" IS NULL OR "sectionId" IS NOT NULL) — rollNo only after allocation
@@ -913,4 +928,214 @@ model GradeBand {
 
   @@unique([gradeScaleId, grade]) // a grade letter appears once per scale
   @@index([gradeScaleId])
+}
+
+// ========================= Homework & Assignment Management (M6) =========================
+// ADR-013 is the source of truth (extends ADR-010/011/012 + ADR-004). Submissions key
+// to Enrollment, NEVER Student — and the submitting actor is a PARENT (no student
+// login exists). Grain: Homework (Subject × Section — the assignment IS the register;
+// owns the DRAFT→PUBLISHED→CLOSED lifecycle, and PUBLISHED is the parent-visibility
+// gate) → HomeworkSubmission (per Enrollment; unique (homework, enrollment); in-place
+// resubmission via an attempt counter) with append-only SubmissionAttachment
+// (attempt-tagged) and HomeworkFeedback (immutable review rounds). Ownership is
+// DERIVED from TeacherAssignment(teacher, subject, section) at authz time — never
+// stored; rows persist WHO ACTED (Staff/Parent actors, B3 invariant). Files live in
+// the private `homework-files` bucket (ADR-004): *Path columns, signed per read
+// after a business authz check — never URLs. dueDate is @db.Date (IST convention).
+
+// ---------- enums ----------
+// Homework lifecycle. Forward-only DRAFT→PUBLISHED→CLOSED with ONE audited backward
+// transition: reopen (CLOSED→PUBLISHED, requires a reason — the M5 unlock analog).
+// Submissions are accepted ONLY in PUBLISHED; review/feedback stay allowed in CLOSED.
+enum HomeworkStatus {
+  DRAFT
+  PUBLISHED
+  CLOSED
+}
+
+// Submission lifecycle. SUBMITTED (awaiting review; parent may still resubmit) →
+// RETURNED (changes requested; resubmit → back to SUBMITTED, attempt++) → REVIEWED
+// (terminal accept — no resubmission after). Doubles as the feedback `decision`
+// domain (RETURNED/REVIEWED only — CHECK below).
+enum SubmissionStatus {
+  SUBMITTED
+  RETURNED
+  REVIEWED
+}
+
+// ---------- homework (the assignment — Subject × Section; owns lifecycle + publication) ----------
+// Always subject-bound: a (subject × section) pair is valid iff a TeacherAssignment
+// exists for it (service check, M5 register idiom). academicYearId is stamped from
+// the ACTIVE year at creation — the enforcement boundary for the cross-year
+// invariant (submission.enrollment.academicYearId must match — ADR-013 §7; Subject/
+// Section are year-agnostic, ADR-012 §10 precedent). Content (title/description/
+// attachments) FREEZES at publish; dueDate is extend-only while PUBLISHED (service
+// rules, ADR-013 §3). No ownerTeacherId — ownership derives at authz time; the four
+// *ByStaffId columns are audit actors (B3), all Restrict. Lateness is snapshotted on
+// the submission at (re)submit — there is NO auto-close cron; close is an explicit,
+// audited action. Delete is business-guarded to DRAFT only (R5-analog; submissions
+// require PUBLISHED, so a DRAFT structurally has none).
+model Homework {
+  id                 String               @id @default(cuid())
+  schoolId           String // loose tenant ref (ADR-008)
+  academicYearId     String
+  subjectId          String
+  sectionId          String
+  title              String
+  description        String? // optional body — attachments-only homework is legitimate
+  dueDate            DateTime             @db.Date
+  status             HomeworkStatus       @default(DRAFT)
+  createdByStaffId   String
+  publishedByStaffId String? // stamped on DRAFT→PUBLISHED
+  publishedAt        DateTime?
+  closedByStaffId    String? // stamped on PUBLISHED→CLOSED; CLEARED on reopen (reopen* + AuditLog keep history)
+  closedAt           DateTime?
+  reopenedByStaffId  String? // stamped on the audited reopen (CLOSED→PUBLISHED)
+  reopenedAt         DateTime?
+  reopenReason       String? // required by the service on reopen (ADR-013 §2)
+  createdAt          DateTime             @default(now())
+  updatedAt          DateTime             @updatedAt
+  academicYear       AcademicYear         @relation(fields: [academicYearId], references: [id], onDelete: Restrict)
+  subject            Subject              @relation(fields: [subjectId], references: [id], onDelete: Restrict)
+  section            Section              @relation(fields: [sectionId], references: [id], onDelete: Restrict)
+  createdBy          Staff                @relation("HomeworkCreatedBy", fields: [createdByStaffId], references: [id], onDelete: Restrict)
+  publishedBy        Staff?               @relation("HomeworkPublishedBy", fields: [publishedByStaffId], references: [id], onDelete: Restrict)
+  closedBy           Staff?               @relation("HomeworkClosedBy", fields: [closedByStaffId], references: [id], onDelete: Restrict)
+  reopenedBy         Staff?               @relation("HomeworkReopenedBy", fields: [reopenedByStaffId], references: [id], onDelete: Restrict)
+  attachments        HomeworkAttachment[]
+  submissions        HomeworkSubmission[]
+  // No natural unique: two same-titled homeworks for one section/day are legal (deliberate).
+  // + raw SQL: CHECK — (status = DRAFT) ⟺ (publishedAt IS NULL): the visibility gate can't drift from its stamp
+  // + raw SQL: CHECK — (status = CLOSED) ⟺ (closedAt IS NOT NULL): reopen clears the close stamp
+  // + raw SQL: RLS ON — admin ALL; teacher own subject×section; parent published own-child (homework_rls, Step 4)
+
+  @@index([sectionId, status, dueDate]) // hot path: a section's open homework by due date (parent/teacher feed)
+  @@index([academicYearId, sectionId]) // year-scoped section listing
+  @@index([subjectId])
+  @@index([schoolId])
+}
+
+// ---------- homework attachment (teacher files; metadata — bytes in Storage) ----------
+// Add/remove ONLY while DRAFT (content freezes at publish — service rule). Rows are
+// immutable once written (no updatedAt — the StudentDocument idiom). storagePath is
+// a PRIVATE homework-files bucket path, server-chosen
+// (`{schoolId}/homework/{homeworkId}/{uuid}-{name}` — ADR-004), signed per read.
+// Cascade from Homework: attachments are its content; deletion is business-guarded
+// to DRAFT-only, so the chain can only ever wipe teacher-side draft content.
+model HomeworkAttachment {
+  id                String   @id @default(cuid())
+  schoolId          String // loose tenant ref (ADR-008)
+  homeworkId        String
+  storagePath       String // PRIVATE bucket path (ADR-004), signed on read
+  fileName          String
+  mimeType          String?
+  sizeBytes         Int?
+  checksum          String? // optional SHA-256 hex — integrity check on download
+  uploadedByStaffId String
+  createdAt         DateTime @default(now()) // == uploadedAt (row written at upload; immutable)
+  homework          Homework @relation(fields: [homeworkId], references: [id], onDelete: Cascade)
+  uploadedBy        Staff    @relation("HomeworkAttachmentUploadedBy", fields: [uploadedByStaffId], references: [id], onDelete: Restrict)
+  // + raw SQL: RLS ON — mirrors Homework visibility (homework_rls, Step 4)
+
+  @@index([homeworkId])
+  @@index([schoolId])
+}
+
+// ---------- homework submission (per ENROLLMENT — one row per child per assignment) ----------
+// enrollmentId is the ONLY link to a student (ADR-010 §8) — no studentId column;
+// history survives promotion by construction. The submitting actor is a PARENT; the
+// service enforces the cross-table invariants the DB cannot (ADR-013 §7): section
+// match, year match, ACTIVE enrollment, StudentParent link, homework PUBLISHED.
+// Resubmission mutates THIS row in place (attempt++, status→SUBMITTED, note/
+// submittedAt/isLate refreshed) — never a second row (the unique forbids it);
+// attachments + feedback are append-only children, so history needs no version
+// table. isLate is a SNAPSHOT of the LATEST attempt vs dueDate (IST) — no cron.
+// Review-vs-resubmit races settle via guarded (status, attempt) conditional
+// updates (M4 idiom) — a lost race is a Conflict, never a silent overwrite.
+model HomeworkSubmission {
+  id                  String                 @id @default(cuid())
+  schoolId            String // loose tenant ref (ADR-008)
+  homeworkId          String
+  enrollmentId        String
+  submittedByParentId String // WHO submitted the latest attempt (either linked parent may act)
+  note                String? // optional parent message; empty submission (no note, no files) is service-rejected
+  status              SubmissionStatus       @default(SUBMITTED)
+  attempt             Int                    @default(1)
+  isLate              Boolean                @default(false)
+  firstSubmittedAt    DateTime // stamped once at attempt 1, never touched again
+  submittedAt         DateTime // latest (re)submission
+  reviewedByStaffId   String? // stamped on each RETURNED/REVIEWED decision (kept through a resubmit)
+  reviewedAt          DateTime?
+  createdAt           DateTime               @default(now())
+  updatedAt           DateTime               @updatedAt
+  homework            Homework               @relation(fields: [homeworkId], references: [id], onDelete: Cascade)
+  enrollment          Enrollment             @relation(fields: [enrollmentId], references: [id], onDelete: Restrict)
+  submittedBy         Parent                 @relation(fields: [submittedByParentId], references: [id], onDelete: Restrict)
+  reviewedBy          Staff?                 @relation("SubmissionReviewedBy", fields: [reviewedByStaffId], references: [id], onDelete: Restrict)
+  attachments         SubmissionAttachment[]
+  feedback            HomeworkFeedback[]
+  // + raw SQL: CHECK ("attempt" >= 1)
+  // + raw SQL: CHECK ("firstSubmittedAt" <= "submittedAt")
+  // + raw SQL: CHECK — a decision state (RETURNED/REVIEWED) always carries reviewedBy/reviewedAt
+  // + raw SQL: RLS ON — admin ALL; teacher own subject×section; parent own-child (homework_rls, Step 4)
+
+  @@unique([homeworkId, enrollmentId]) // ONE submission per child per assignment — the duplicate race is a DB error (ADR-013 §5)
+  @@index([enrollmentId]) // child's homework trail (per-year slices under each enrollment)
+  @@index([homeworkId, status]) // teacher review queue (one homework's submissions by state)
+  @@index([schoolId])
+}
+
+// ---------- submission attachment (parent files; APPEND-ONLY, attempt-tagged) ----------
+// Resubmission never deletes prior files' metadata — "the parent did submit X on
+// attempt 1" must stay answerable (disputes; ADR-013 §6). Reads default to the
+// latest attempt. Rows are immutable once written (no updatedAt). storagePath is
+// server-chosen (`{schoolId}/submission/{submissionId}/{attempt}/{uuid}-{name}`).
+// Cascade from submission (its content); the submission itself is delete-guarded
+// via Homework (DRAFT-only), so no published child data can cascade away.
+model SubmissionAttachment {
+  id                 String             @id @default(cuid())
+  schoolId           String // loose tenant ref (ADR-008)
+  submissionId       String
+  attempt            Int // which attempt this file belongs to (append-only history)
+  storagePath        String // PRIVATE bucket path (ADR-004), signed on read
+  fileName           String
+  mimeType           String?
+  sizeBytes          Int?
+  checksum           String? // optional SHA-256 hex — integrity check on download
+  uploadedByParentId String
+  createdAt          DateTime           @default(now()) // == uploadedAt (immutable row)
+  submission         HomeworkSubmission @relation(fields: [submissionId], references: [id], onDelete: Cascade)
+  uploadedBy         Parent             @relation(fields: [uploadedByParentId], references: [id], onDelete: Restrict)
+  // + raw SQL: CHECK ("attempt" >= 1)
+  // + raw SQL: RLS ON — admin ALL; teacher own subject×section; parent own-child (homework_rls, Step 4)
+
+  @@index([submissionId, attempt]) // latest-attempt reads + per-round history
+  @@index([schoolId])
+}
+
+// ---------- homework feedback (immutable review rounds) ----------
+// The M4-correction discipline: an append-only historical assertion, never edited
+// or deleted (no updatedAt). Writing a row + transitioning the submission
+// (RETURNED/REVIEWED + reviewedBy/At stamps) + the AuditLog row happen in ONE
+// transaction (ADR-007). `decision` snapshots the round's outcome (RETURNED or
+// REVIEWED — never SUBMITTED, CHECK below); `attempt` pins which attempt was
+// judged. Text only — NO score/grade fields (grading is out of scope, ADR-013 §8).
+// Parent-visible immediately: the review decision IS the publication act.
+model HomeworkFeedback {
+  id            String             @id @default(cuid())
+  schoolId      String // loose tenant ref (ADR-008)
+  submissionId  String
+  authorStaffId String
+  attempt       Int // which attempt this round reviewed (snapshot)
+  decision      SubmissionStatus // RETURNED or REVIEWED (snapshot of the round's outcome)
+  body          String
+  createdAt     DateTime           @default(now())
+  submission    HomeworkSubmission @relation(fields: [submissionId], references: [id], onDelete: Cascade)
+  author        Staff              @relation("HomeworkFeedbackAuthor", fields: [authorStaffId], references: [id], onDelete: Restrict)
+  // + raw SQL: CHECK ("attempt" >= 1)
+  // + raw SQL: CHECK ("decision" <> 'SUBMITTED') — a feedback round records an outcome
+  // + raw SQL: RLS ON — admin ALL; teacher own subject×section; parent own-child (homework_rls, Step 4)
+
+  @@index([submissionId])
+  @@index([schoolId])
 }
