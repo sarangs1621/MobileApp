@@ -4,7 +4,22 @@
 
 ## Current Step
 
-**Step 2 (Database Design) ✅ DONE — awaiting approval before Step 3.**
+**Step 3 (Relationships) ✅ DONE — awaiting approval before Step 4 (RLS).**
+Every M6 edge live-verified on the scratch cluster via **rollback-safe probes
+(R1–R10 + sanity, 11/11 PASS, zero probe rows persisted)**: R1 delete-rule matrix
+exact (17/17 FKs — 4 Cascade content edges, 13 Restrict; **no SetNull by design**);
+R2 promotion — submission stays on the old enrollment, new-year row starts empty;
+R3 mid-year transfer — submission intact after in-place sectionId move AND the
+(homework, enrollment) unique still blocks a duplicate (ADR-012 §12 analog); R4
+cascade precision — draft delete touches only its own content tree; R5/R6 durable
+actors (Staff feedback-author, Parent uploader undeletable); R7 guarded transition
+primitive (winner 1 row / loser 0); R8 stale review keyed to (SUBMITTED, attempt)
+strikes 0 rows after a resubmit; R9 storage ownership (2 storagePath cols, zero
+*url* cols); R10 DROPPED enrollment keeps its submission history.
+`DB_RELATIONSHIP_DIAGRAM.md`: implemented-M6 section added, PRD homework sketch
+flagged superseded, onDelete summary updated.
+
+**Step 2 (Database Design) ✅ DONE.**
 Migration `20260710000000_homework_management`: 5 models (Homework,
 HomeworkAttachment, HomeworkSubmission, SubmissionAttachment, HomeworkFeedback) +
 2 enums (HomeworkStatus, SubmissionStatus). DB invariants: unique
