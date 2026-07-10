@@ -44,9 +44,14 @@ describe("authorization policy", () => {
       PERMISSIONS.HOLIDAY_READ,
       // M5: read own child's PUBLISHED marks/grades only (row-scoped in service).
       PERMISSIONS.MARK_READ,
+      // M6: read own child's published homework, submit/resubmit, read own submissions/feedback.
+      PERMISSIONS.HOMEWORK_READ,
+      PERMISSIONS.SUBMISSION_SUBMIT,
+      PERMISSIONS.SUBMISSION_READ,
     ]);
     expect(getPermissions("SUPER_ADMIN")).toContain(PERMISSIONS.USER_SET_ROLE);
     expect(getPermissions("SUPER_ADMIN")).toContain(PERMISSIONS.EXAM_MANAGE);
+    expect(getPermissions("SUPER_ADMIN")).toContain(PERMISSIONS.HOMEWORK_MANAGE);
   });
 
   it("canAny / canAll combine permission checks", () => {

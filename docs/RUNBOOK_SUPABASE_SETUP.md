@@ -94,6 +94,33 @@ bucket with single-use signed upload URLs / expiring signed read URLs, both
 minted by the server (`studentDocument.uploadUrl` / `.downloadUrl`). Keep the
 bucket private; never enable public access.
 
+## 3c. Storage buckets (M6 — homework files)
+
+Create the second **private** bucket homework attachments use (ADR-013 §9; same
+ADR-004 posture — server-minted signed URLs only, authz in the business layer):
+
+- Dashboard → Storage → New bucket → name **`homework-files`** → Public **OFF**.
+- Or via API: `POST /storage/v1/bucket` with `{"name":"homework-files","public":false}`
+  (service-role key).
+
+Server-minted only (`homework.attachmentUploadUrl`/`.attachmentDownloadUrl`,
+`submission.attachmentUploadUrl`/`.attachmentDownloadUrl`). Paths are server-chosen
+and namespaced by `schoolId`. Keep private; never enable public access.
+
+**Verification (do this once after provisioning — it is the only file-path check the
+automated test suite cannot run, since no bucket exists in CI):**
+
+1. As a **teacher**, open a DRAFT homework on the web → **Add file** → confirm the
+   upload succeeds and **Open** returns the file (signed URL).
+2. As a **parent**, open that homework (once PUBLISHED) → **Attach file** + note →
+   **Submit** → confirm the file uploads and **Open** returns it.
+3. As the **teacher**, open the submission in the review table → confirm the parent's
+   file opens.
+4. **Negative check:** a *different* parent (not linked to the child) must NOT be able
+   to open the submission file (the service returns Forbidden before any URL is minted).
+
+If all four hold, the M6 storage round-trip is proven end-to-end against live infra.
+
 ## 4. Ongoing user provisioning
 
 Single-user Admin-API provisioning (M1 decision D3) until the admin UI lands (M2+):

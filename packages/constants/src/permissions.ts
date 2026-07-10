@@ -89,6 +89,20 @@ export const PERMISSIONS = {
   MARK_ENTER: "marks:enter",
   /** Read marks/grades/GPA. Teacher → own section; parent → own child PUBLISHED only (service scope). */
   MARK_READ: "marks:read",
+
+  /* ---- Homework & Assignment Management (M6, ADR-013). Ownership DERIVED from
+   * TeacherAssignment (own subject×section); parent reads carry own-child scope,
+   * all narrowed in the service. §11 of the ADR. */
+  /** Create/edit/publish/close/reopen/delete homework + teacher attachments. Teacher → own subject×section. */
+  HOMEWORK_MANAGE: "homework:manage",
+  /** Read homework. Teacher → own subject×section; parent → own child (PUBLISHED/CLOSED, §10). */
+  HOMEWORK_READ: "homework:read",
+  /** Create/resubmit a submission + parent attachments. Parent-only, own child (service scope). */
+  SUBMISSION_SUBMIT: "submission:submit",
+  /** Return/accept a submission + write feedback. Teacher → own subject×section. */
+  SUBMISSION_REVIEW: "submission:review",
+  /** Read submissions/feedback. Teacher → own subject×section; parent → own child's own (service scope). */
+  SUBMISSION_READ: "submission:read",
 } as const;
 
 export type Permission = (typeof PERMISSIONS)[keyof typeof PERMISSIONS];
@@ -153,6 +167,11 @@ export const ROLE_PERMISSIONS: Readonly<Record<RoleKey, readonly Permission[]>> 
     PERMISSIONS.EXAM_MANAGE,
     PERMISSIONS.MARK_ENTER,
     PERMISSIONS.MARK_READ,
+    // M6: full homework management + review, school-wide (no submission:submit — admins don't submit for a child).
+    PERMISSIONS.HOMEWORK_MANAGE,
+    PERMISSIONS.HOMEWORK_READ,
+    PERMISSIONS.SUBMISSION_REVIEW,
+    PERMISSIONS.SUBMISSION_READ,
   ],
   // OFFICE_ADMIN: full academic + People management (M3) + Attendance (M4), school-wide.
   OFFICE_ADMIN: [
@@ -165,12 +184,19 @@ export const ROLE_PERMISSIONS: Readonly<Record<RoleKey, readonly Permission[]>> 
     PERMISSIONS.EXAM_MANAGE,
     PERMISSIONS.MARK_ENTER,
     PERMISSIONS.MARK_READ,
+    // M6: full homework management + review, school-wide (ADR-013 §11 — "Admin ALL").
+    PERMISSIONS.HOMEWORK_MANAGE,
+    PERMISSIONS.HOMEWORK_READ,
+    PERMISSIONS.SUBMISSION_REVIEW,
+    PERMISSIONS.SUBMISSION_READ,
   ],
   // TEACHER: reads academic structure + reads students/enrollments/documents in
   // their OWN sections and their OWN staff profile (row-scope in the service).
   // M4: marks attendance + submits corrections for own sections; reads own-section
-  // leave; reads the calendar. Correction/leave DECIDE is admin-only (classTeacher
-  // deferred — no class-teacher flag yet, M3 open item).
+  // leave; reads the calendar. Correction/leave DECIDE stays admin-only (M4, frozen).
+  // A class-teacher concept now exists as ClassTeacherAssignment (M7 foundation) —
+  // used only for report-card remark authorship; wiring it into attendance/leave
+  // DECIDE is out of scope and unchanged here.
   TEACHER: [
     ...SELF_PROFILE,
     PERMISSIONS.ACADEMIC_READ,
@@ -186,6 +212,11 @@ export const ROLE_PERMISSIONS: Readonly<Record<RoleKey, readonly Permission[]>> 
     // M5: enters + submits marks for own assigned subject×section (register lock is admin-only).
     PERMISSIONS.MARK_ENTER,
     PERMISSIONS.MARK_READ,
+    // M6: manages/reads/reviews homework for own assigned subject×section (derived ownership).
+    PERMISSIONS.HOMEWORK_MANAGE,
+    PERMISSIONS.HOMEWORK_READ,
+    PERMISSIONS.SUBMISSION_REVIEW,
+    PERMISSIONS.SUBMISSION_READ,
   ],
   // PARENT: reads only their OWN children (students/enrollments/documents) and
   // their OWN parent record (row-scope in the service). M4: reads own child's
@@ -202,6 +233,10 @@ export const ROLE_PERMISSIONS: Readonly<Record<RoleKey, readonly Permission[]>> 
     PERMISSIONS.HOLIDAY_READ,
     // M5: reads own child's PUBLISHED marks/grades only (service scope), never edits.
     PERMISSIONS.MARK_READ,
+    // M6: reads own child's published homework, submits/resubmits for own child, reads own submissions/feedback.
+    PERMISSIONS.HOMEWORK_READ,
+    PERMISSIONS.SUBMISSION_SUBMIT,
+    PERMISSIONS.SUBMISSION_READ,
   ],
   ACCOUNTANT: [...SELF_PROFILE],
 };

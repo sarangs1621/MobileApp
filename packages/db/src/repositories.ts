@@ -25,6 +25,10 @@ import {
   type AttendanceSessionRepository,
 } from "./repositories/attendance-session.repository";
 import { createAuditLogRepository, type AuditLogRepository } from "./repositories/audit.repository";
+import {
+  createClassTeacherAssignmentRepository,
+  type ClassTeacherAssignmentRepository,
+} from "./repositories/class-teacher-assignment.repository";
 import { createClassRepository, type ClassRepository } from "./repositories/class.repository";
 import {
   createEnrollmentRepository,
@@ -40,6 +44,22 @@ import {
   type GradeScaleRepository,
 } from "./repositories/grade-scale.repository";
 import { createHolidayRepository, type HolidayRepository } from "./repositories/holiday.repository";
+import {
+  createHomeworkAttachmentRepository,
+  type HomeworkAttachmentRepository,
+} from "./repositories/homework-attachment.repository";
+import {
+  createHomeworkFeedbackRepository,
+  type HomeworkFeedbackRepository,
+} from "./repositories/homework-feedback.repository";
+import {
+  createHomeworkSubmissionRepository,
+  type HomeworkSubmissionRepository,
+} from "./repositories/homework-submission.repository";
+import {
+  createHomeworkRepository,
+  type HomeworkRepository,
+} from "./repositories/homework.repository";
 import {
   createLeaveRequestRepository,
   type LeaveRequestRepository,
@@ -58,6 +78,10 @@ import {
 } from "./repositories/student-parent.repository";
 import { createStudentRepository, type StudentRepository } from "./repositories/student.repository";
 import { createSubjectRepository, type SubjectRepository } from "./repositories/subject.repository";
+import {
+  createSubmissionAttachmentRepository,
+  type SubmissionAttachmentRepository,
+} from "./repositories/submission-attachment.repository";
 import {
   createTeacherAssignmentRepository,
   type TeacherAssignmentRepository,
@@ -79,6 +103,7 @@ export * from "./repositories/class.repository";
 export * from "./repositories/section.repository";
 export * from "./repositories/subject.repository";
 export * from "./repositories/teacher-assignment.repository";
+export * from "./repositories/class-teacher-assignment.repository";
 export * from "./repositories/student.repository";
 export * from "./repositories/enrollment.repository";
 export * from "./repositories/parent.repository";
@@ -95,6 +120,11 @@ export * from "./repositories/assessment.repository";
 export * from "./repositories/exam-section.repository";
 export * from "./repositories/mark.repository";
 export * from "./repositories/grade-scale.repository";
+export * from "./repositories/homework.repository";
+export * from "./repositories/homework-attachment.repository";
+export * from "./repositories/homework-submission.repository";
+export * from "./repositories/submission-attachment.repository";
+export * from "./repositories/homework-feedback.repository";
 export type { DbClient } from "./db-client";
 
 /** Aggregate of repositories injected into services via `ServiceContext`. */
@@ -107,6 +137,7 @@ export interface Repositories {
   sections: SectionRepository;
   subjects: SubjectRepository;
   teacherAssignments: TeacherAssignmentRepository;
+  classTeacherAssignments: ClassTeacherAssignmentRepository;
   students: StudentRepository;
   enrollments: EnrollmentRepository;
   parents: ParentRepository;
@@ -123,6 +154,11 @@ export interface Repositories {
   examSections: ExamSectionRepository;
   marks: MarkRepository;
   gradeScales: GradeScaleRepository;
+  homework: HomeworkRepository;
+  homeworkAttachments: HomeworkAttachmentRepository;
+  homeworkSubmissions: HomeworkSubmissionRepository;
+  submissionAttachments: SubmissionAttachmentRepository;
+  homeworkFeedback: HomeworkFeedbackRepository;
 }
 
 export function createRepositories(client: DbClient): Repositories {
@@ -135,6 +171,7 @@ export function createRepositories(client: DbClient): Repositories {
     sections: createSectionRepository(client),
     subjects: createSubjectRepository(client),
     teacherAssignments: createTeacherAssignmentRepository(client),
+    classTeacherAssignments: createClassTeacherAssignmentRepository(client),
     students: createStudentRepository(client),
     enrollments: createEnrollmentRepository(client),
     parents: createParentRepository(client),
@@ -151,6 +188,11 @@ export function createRepositories(client: DbClient): Repositories {
     examSections: createExamSectionRepository(client),
     marks: createMarkRepository(client),
     gradeScales: createGradeScaleRepository(client),
+    homework: createHomeworkRepository(client),
+    homeworkAttachments: createHomeworkAttachmentRepository(client),
+    homeworkSubmissions: createHomeworkSubmissionRepository(client),
+    submissionAttachments: createSubmissionAttachmentRepository(client),
+    homeworkFeedback: createHomeworkFeedbackRepository(client),
   };
 }
 

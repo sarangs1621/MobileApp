@@ -6,7 +6,7 @@ Standards for PostgreSQL (via Supabase) modelled with Prisma in `packages/db`. B
 
 ## 1. Naming conventions
 - **Models:** `PascalCase`, **singular** — `Student`, `Enrollment`, `LeaveApplication` (one row = one entity; reads naturally with Prisma relations). We do **not** pluralize table names.
-- **Fields:** `camelCase` — `admissionNo`, `isClassTeacher`, `publishedAt`.
+- **Fields:** `camelCase` — `admissionNo`, `assignedAt`, `publishedAt`.
 - **Enums:** `PascalCase` type, `UPPER_SNAKE_CASE` values — `EnrollmentStatus.PROMOTED`.
 - **Booleans** read as predicates — `isCurrent`, `hasPractical`, `isPrimary`, `isAbsent`.
 - **Money** columns are `Int` minor units (paise); never `Float` for currency.

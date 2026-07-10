@@ -11,7 +11,7 @@ The full authorization catalog: every **permission** (`resource:action[:scope]`)
 | `self` | resource is the principal's own account/profile | — |
 | `ownDivision` | teacher has a `TeacherAssignment` for the division | assignments |
 | `ownSubject` | teacher's assignment covers the `classSubjectId` | assignments |
-| `classTeacher` | assignment for the division has `isClassTeacher` | assignments |
+| `classTeacher` | principal is the section's `ClassTeacherAssignment` teacher for the year (M6.5, ADR-015 — **not** a `TeacherAssignment.isClassTeacher` flag, which was never built) | class-teacher assignment |
 | `ownChild` | `GuardianStudent` links guardian → student | guardian links |
 | `school` | resource's `schoolId` == principal's (always also enforced by repositories) | — |
 | `any` | no narrowing (super admin) | — |
@@ -44,6 +44,17 @@ SA = Super Admin, OA = Office Admin, T = Teacher, P = Parent, AC = Accountant. C
 | `enrollment:enroll` / `enrollment:transfer` / `enrollment:drop` | any | school | – | – | – |
 | `enrollment:promote_bulk` | any | – | – | – | – |
 
+### Class teacher management (M6.5, ADR-015 · implemented)
+
+| Permission | SA | OA | T | P | AC |
+|---|---|---|---|---|---|
+| `classTeacher.assign` / `.replace` / `.remove` → `academic:manage` | any | school | – | – | – |
+| `classTeacher.get` → `academic:read` | any | school | school | – | – |
+
+- The class teacher of a `(academicYear × section)` is the dedicated `ClassTeacherAssignment` (ADR-015) — **one row per slot**; a replacement is an **in-place update** (never a 2nd row), audited `CLASS_TEACHER_REPLACE`. `teacherId → User`; `createdByStaffId → Staff` (B3 actor — the assigning admin needs a `Staff` row).
+- No new permission: management reuses `academic:manage` (its remit already covers "assignments"), reads reuse `academic:read`. RLS: admin ALL, teacher SELECT own (`teacherId = auth.uid()`), parent/anon none.
+- Consumed by report cards (M7/ADR-014) via the `assertClassTeacherOfEnrollment` scope predicate — only the assigned class teacher may author teacher remarks.
+
 ### Attendance (M4 — ADR-011)
 
 | Permission | SA | OA | T | P | AC |
@@ -70,17 +81,38 @@ SA = Super Admin, OA = Office Admin, T = Teacher, P = Parent, AC = Accountant. C
 - OA/SA hold `marks:enter`/`marks:read` school-wide but have no `TeacherAssignment`, so day-to-day entry is teacher-driven (mobile); admins enter/oversee via the web console (find-or-create register).
 - **Not built in M5** (later milestones): `reportcard:generate`/`reportcard:read` (report-card PDFs, ADR-009), publish-notify (no notifications in M5), CGPA-across-years.
 
-### Homework, leave, communication (PRD-planned M5 — NOT built)
+### Homework & Assignment Management (M6, ADR-013 — implemented)
 
-> Numbering note: this project built **M5 = Examination & Assessment** (above); the
-> PRD's homework/communication plan shifts out by one. Tags left as-is pending an
-> explicit renumbering decision (see `docs/milestones/M5.md`).
-
+Built as **M6** (see `docs/milestones/M6.md`). The M6 brief **overrode the PRD's
+distribution-only plan** (decision-#13): parent submissions, uploads, teacher review,
+and feedback are **core** (no `homework-uploads` flag). Homework is **always
+subject-bound**, so teacher scope is uniformly `ownSubject×Section` (derived from
+`TeacherAssignment`) — there is no division-only variant. Deviations from the
+PRD-planned rows are decided in ADR-013 §11 (OA gets `homework:manage`; `submission:
+submit` is parent-only). Row/ownership scope is enforced in the service; RLS is
+defense-in-depth (28/28 isolation proven).
 
 | Permission | SA | OA | T | P | AC |
 |---|---|---|---|---|---|
-| `homework:create` | any | – | ownDivision (+ownSubject when subject-bound) | – | – |
-| `homework:read` | any | school | ownDivision | ownChild | – |
+| `homework:manage` (create/edit/publish/close/reopen/delete + teacher attachments) | any | school | ownSubject×Section | – | – |
+| `homework:read` | any | school | ownSubject×Section | ownChild (PUBLISHED/CLOSED, §10 or-clause) | – |
+| `submission:submit` (create/resubmit + parent attachments) | – | – | – | ownChild | – |
+| `submission:review` (return/accept + feedback) | any | school | ownSubject×Section | – | – |
+| `submission:read` | any | school | ownSubject×Section | ownChild (own submissions/feedback) | – |
+
+Notes:
+- **`submission:submit` is parent-only** — admins do not fabricate a child's submission (no Student login; the Parent is the actor).
+- **Download scope** (signed URLs): submission files reach admins, the owning teacher, and the linked parents — **never another parent** (R4).
+- **Not built in M6** (later milestones): homework notifications (publish/feedback send none), un-review correction, standalone "notes".
+
+### Leave, communication (PRD-planned — NOT built)
+
+> Numbering note: this project built **M5 = Examination**, **M6 = Homework** (above);
+> the PRD's leave/communication plan shifts out. Tags left as-is pending an explicit
+> renumbering decision.
+
+| Permission | SA | OA | T | P | AC |
+|---|---|---|---|---|---|
 | `leave:apply` | – | – | – | ownChild | – |
 | `leave:decide` | any | – | classTeacher | – | – |
 | `leave:read` | any | school | classTeacher | ownChild (own applications) | – |

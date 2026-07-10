@@ -94,6 +94,14 @@ export default function DashboardPage() {
           Examinations
         </Link>
       ) : null}
+      {can(me.data.role, PERMISSIONS.HOMEWORK_READ) ? (
+        <Link
+          href="/homework"
+          className="min-h-11 self-start rounded-md border border-border px-4 py-2 font-medium text-foreground"
+        >
+          Homework
+        </Link>
+      ) : null}
       <button
         type="button"
         onClick={() => void handleLogout()}

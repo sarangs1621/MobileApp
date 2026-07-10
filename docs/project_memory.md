@@ -15,15 +15,24 @@ here = PRD-planned homework milestone, shifted by the M5 renumbering.
 
 ## Current Step
 
-**M6 Step 4 (RLS) COMPLETE — STOPPED awaiting approval before Step 5 (Business
-layer).** Steps 2–3 shipped migration `20260710000000_homework_management`
-(5 models, 2 enums, 8 CHECKs; 22/22 constraint proofs; 11/11 relationship
-probes, 17/17 FK rules exact). Step 4 shipped `20260710010000_homework_rls`
-(5 SECURITY-DEFINER helpers + admin/teacher/parent/anon policies; teacher
-DELETE DRAFT-only R5-analog; parent visibility = published/closed + section-
-match-or-has-submission; actor-spoof blocked in WITH CHECK; attachments/
-feedback append-only). **28/28 read+write isolation proofs PASS** on the
-scratch cluster (stubbed uuid auth.uid()); drift check clean after RLS.
+**M6 Steps 1–10 COMPLETE — full milestone shipped, STOPPED awaiting approval.**
+DB (Steps 2–3): migration `20260710000000_homework_management` (5 models, 2 enums,
+8 CHECKs; 22/22 constraint proofs; 11/11 relationship probes, 17/17 FK rules exact).
+RLS (Step 4): `20260710010000_homework_rls` (**28/28** read+write isolation proofs).
+Business (Step 5): `packages/business/services/homework` — lifecycle, derived
+ownership, §7 invariants, §10 parent or-clause, storage mints; 5 repositories;
+5 permissions. API (Step 6): `homework`/`submission` routers (25 procedures) +
+validation. Mobile (Step 7): `apps/mobile/.../homework` (text loop + download).
+Web (Step 8): `apps/web/app/(app)/homework` console with **full teacher+parent file
+upload/download**. Testing (Step 9): **85 tests** (incl. R2 race, R4 download-authz,
+R6 clean-error); storage to the M3 mock-`StoragePort` bar. Docs (Step 10): feature/
+status/PERMISSIONS_MATRIX/API_INVENTORY/architecture_index/RUNBOOK §3c/ADR-013 status
+synced; PRD distribution-only scope corrected.
+**Deviations shipped:** parent upload path keyed by homeworkId/enrollmentId/attempt
+(not submissionId, §9) for atomic submit; mobile upload web-only; OFFICE_ADMIN
+web-create-from-scratch picker unbuilt (service supports it). **Runbook-gated:** the
+real byte upload→download round-trip against a provisioned `homework-files` bucket is
+a one-time manual check (`RUNBOOK_SUPABASE_SETUP.md §3c`) — not runnable in CI.
 M6 kickoff was read as implicit approval of M5 → M3/M4/M5 frozen.
 
 ## Completed
@@ -151,9 +160,26 @@ M6 kickoff was read as implicit approval of M5 → M3/M4/M5 frozen.
 
 ## Current Status
 
-M0/M1/M1.5/M2 **approved & frozen**; M3 People + M4 Attendance complete (awaiting
-approval). **M5 Examination & Assessment complete (Steps 1–10), awaiting
-approval:** `Exam → Assessment → ExamSection (register) → Mark` on Enrollment
+M0/M1/M1.5/M2 **approved & frozen**; M3 People + M4 Attendance + M5 Examination
+complete (awaiting approval). **M6 Homework & Assignment Management complete (Steps
+1–10), awaiting approval:** `Homework (Subject×Section, year-stamped) →
+HomeworkAttachment / HomeworkSubmission (per Enrollment, unique) → SubmissionAttachment
+(append-only) / HomeworkFeedback (immutable, text-only)` (ADR-013). Guarded
+`DRAFT→PUBLISHED→CLOSED` + audited reopen; publish requires dueDate≥today (IST);
+content frozen at publish (dueDate extend-only); isLate snapshot; §7 cross-table
+submit invariants; §10 parent or-clause (section-match OR has-submission — survives
+mid-year transfer); DRAFT-only delete (R5 analog). Derived ownership
+(TeacherAssignment); parent-only submit; guarded review/resubmit races (R2); B3
+actors extended to parents (R6). Private `homework-files` bucket (ADR-004) — teacher
++ parent upload/download, signed URLs, downloads never leak to another parent (R4).
+2 routers / 25 procedures; RLS 28/28. Web `/homework` console (both roles, full file
+upload+download, review + CSV); mobile (teacher create/review + parent submit — text
+loop + download). **85 tests**; typecheck ✓ lint ✓ **35/35 turbo tasks**. Byte
+upload→download round-trip is a runbook-gated manual check (no bucket in CI).
+Brief **overrode the PRD** — homework is no longer distribution-only.
+
+**M5 Examination & Assessment (Steps 1–10), awaiting approval:**
+`Exam → Assessment → ExamSection (register) → Mark` on Enrollment
 (ADR-012 — results survive promotion), forward-only `DRAFT→SUBMITTED→LOCKED` lock
 per register + publish per exam (parents never see a partial), central grade
 compute **snapshotted at lock** (GradeScale edits never mutate history),
@@ -174,10 +200,12 @@ tasks** (business 207, api 266, validation 50); mobile ios export ✓ (Step 7).
 
 ## Next Task
 
-**STOPPED — M6 Step 1 (Requirements Analysis / ADR-013) reported; waiting for user
-approval before Step 2 (DB design).** Surfaced for sign-off: brief overrides PRD
-distribution-only homework (#13); OA gets `homework:manage`; content frozen at
-publish (dueDate extend-only); no resubmit after REVIEWED; new private
-`homework-files` bucket (user provisions before live uploads). Prior open
-sign-offs still stand: **holiday = hard block in M4** (ADR-011 §9); before live
+**STOPPED — M6 (Homework & Assignment Management, ADR-013) COMPLETE, all 10 steps
+shipped; awaiting milestone approval to freeze.** Before live homework uploads the
+user must **provision the private `homework-files` bucket** and run the one-time
+upload→download round-trip check (`RUNBOOK_SUPABASE_SETUP.md §3c`) — the only file
+path CI can't exercise. Known limitations recorded in `docs/features/homework.md`
+(OFFICE_ADMIN web-create picker; no un-review correction; mobile upload web-only;
+no homework notifications). Prior open sign-offs still stand: **holiday = hard block
+in M4** (ADR-011 §9); before live
 document uploads create the private `student-documents` bucket (runbook §3b).

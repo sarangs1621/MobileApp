@@ -13,6 +13,7 @@ const TABS = [
   { href: "/academic/classes", label: "Classes" },
   { href: "/academic/subjects", label: "Subjects" },
   { href: "/academic/assignments", label: "Teacher assignments" },
+  { href: "/academic/class-teachers", label: "Class teachers" },
 ] as const;
 
 /**

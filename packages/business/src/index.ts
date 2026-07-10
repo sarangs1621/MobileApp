@@ -15,6 +15,7 @@ export * from "./services/academic";
 export * from "./services/people";
 export * from "./services/attendance";
 export * from "./services/exam";
+export * from "./services/homework";
 export {
   assertCan,
   assertScope,

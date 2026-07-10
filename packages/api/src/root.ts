@@ -15,7 +15,9 @@ import {
   leaveRouter,
 } from "./routers/attendance";
 import { authRouter } from "./routers/auth";
+import { classTeacherRouter } from "./routers/class-teacher";
 import { assessmentRouter, examRouter, gradeScaleRouter, markRouter } from "./routers/exam";
+import { homeworkRouter, submissionRouter } from "./routers/homework";
 import {
   enrollmentRouter,
   parentRouter,
@@ -46,6 +48,7 @@ export const appRouter = router({
   section: sectionRouter,
   subject: subjectRouter,
   teacherAssignment: teacherAssignmentRouter,
+  classTeacher: classTeacherRouter,
   student: studentRouter,
   parent: parentRouter,
   teacherProfile: teacherProfileRouter,
@@ -59,6 +62,8 @@ export const appRouter = router({
   assessment: assessmentRouter,
   mark: markRouter,
   gradeScale: gradeScaleRouter,
+  homework: homeworkRouter,
+  submission: submissionRouter,
 });
 
 export type AppRouter = typeof appRouter;

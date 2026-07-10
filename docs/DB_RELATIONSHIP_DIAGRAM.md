@@ -63,7 +63,7 @@ erDiagram
     }
     DIVISION { string name "UK(classLevelId, name)" }
     CLASS_SUBJECT { string id "UK(classLevelId, subjectId, academicYearId)" }
-    TEACHER_ASSIGNMENT { bool isClassTeacher "grants division rights" }
+    TEACHER_ASSIGNMENT { string note "NO isClassTeacher flag — class teacher is the dedicated ClassTeacherAssignment (M6.5, ADR-015)" }
     ENROLLMENT {
         enum status "ADMITTED..ALUMNI lifecycle"
         string id "UK(studentId, academicYearId)"

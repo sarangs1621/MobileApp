@@ -58,6 +58,20 @@ arrays (single-tenant admin data) — cursor pagination arrives with unbounded d
 | `teacherAssignment.create` | M | `academic:manage` | ✓ | assignee must be ACTIVE TEACHER in school; no duplicate (teacher, subject, section) |
 | `teacherAssignment.delete` | M | `academic:manage` | ✓ | assignments are immutable — no update |
 
+## class teacher management (M6.5 — implemented, ADR-015)
+
+The `classTeacher` router — the current class teacher of a `(academicYear × section)`
+slot (one row; a replacement is an **in-place update**, never a 2nd row). Thin
+transport → business (assertCan + audit-in-tx); no Prisma in the router. Reads
+reuse `academic:read`, mutations `academic:manage` (no new permission).
+
+| Procedure | Type | Permission | Audit | Notes |
+|---|---|---|---|---|
+| `classTeacher.get` | Q | `academic:read` | – | current class teacher of `(academicYearId, sectionId)` or null |
+| `classTeacher.assign` | M | `academic:manage` | ✓ | empty slot only; assignee ACTIVE TEACHER in school; `assignedAt=now`, `createdByStaffId`=acting staff; unique `(year, section)` → `CONFLICT` if taken |
+| `classTeacher.replace` | M | `academic:manage` | ✓ | occupied slot → in-place update (`teacherId`, `assignedAt=now`); ONE `CLASS_TEACHER_REPLACE` audit (before/after); `NOT_FOUND` if empty |
+| `classTeacher.remove` | M | `academic:manage` | ✓ | frees the slot (by id); history stays in `AuditLog` |
+
 ## people management (M3 — implemented)
 
 Five flat routers on the **protected** gate. The service enforces the permission
@@ -202,12 +216,52 @@ excludes notifications — brief overrides Dev PRD §7).
 notifications in M5), CGPA-across-years (foundation only — GPA is active-year;
 snapshots enable the aggregate), exam attempts/re-exams.
 
-## homework / leave / announcements / messages (M5)
+## homework / submission — Homework & Assignment Management (M6, ADR-013 · implemented)
+
+Two flat routers on the **protected** gate; signed-URL mints add the
+`storageProcedure` (host-injected `StoragePort`, ADR-004). `Homework (Subject×Section,
+year-stamped) → HomeworkAttachment / HomeworkSubmission (per Enrollment, unique) →
+SubmissionAttachment (append-only) / HomeworkFeedback (immutable)`. Guarded
+`DRAFT→PUBLISHED→CLOSED` + audited `reopen`; §7 submit invariants + §10 parent
+or-clause enforced in the service; audit in-tx. Publish/feedback send **no
+notification** (brief overrides PRD). Ownership derives from `TeacherAssignment` (no
+`ownerTeacherId`). 25 procedures (14 `homework.*` + 11 `submission.*`).
+
+| Procedure | T | Permission | Audit | Notes |
+|---|---|---|---|---|
+| `homework.create` | M | `homework:manage` | ✓ | teacher own subject×section (or admin); validates the pair is staffed; stamps the ACTIVE year |
+| `homework.update` | M | `homework:manage` | ✓ | DRAFT: title/desc/dueDate; PUBLISHED: `dueDate` **extend-only**; CLOSED: blocked (§3) |
+| `homework.publish` | M | `homework:manage` | ✓ | DRAFT → PUBLISHED (guarded); **requires `dueDate ≥ today` IST** |
+| `homework.close` | M | `homework:manage` | ✓ | PUBLISHED → CLOSED (guarded); review/feedback still allowed |
+| `homework.reopen` | M | `homework:manage` | ✓ | CLOSED → PUBLISHED; **requires a reason**; clears the close stamp (M5 unlock analog) |
+| `homework.delete` | M | `homework:manage` | ✓ | **DRAFT only** (R5 analog); Cascade wipes teacher draft content |
+| `homework.get` | Q | `homework:read` | – | read-scoped (teacher own / parent §10 or-clause) |
+| `homework.list` | Q | `homework:read` | – | role-aware: admin (year/section) · teacher (own) · parent (PUBLISHED/CLOSED §10) |
+| `homework.targets` | Q | `homework:manage` | – | teacher assignable subject×section, name-enriched (create picker + labels; empty for admins) |
+| `homework.attachmentUploadUrl` | M (storage) | `homework:manage` | – | mint signed upload; DRAFT-only + MIME/size/count checked before the URL; server-chosen path |
+| `homework.attachmentAdd` | M | `homework:manage` | ✓ | persist teacher-file metadata (DRAFT-only) |
+| `homework.attachments` | Q | `homework:read` | – | a homework's teacher files (read-scoped) |
+| `homework.attachmentDownloadUrl` | M (storage) | `homework:read` | – | mint 300 s signed read after read-authz (§10) |
+| `homework.attachmentRemove` | M | `homework:manage` | ✓ | DRAFT-only; metadata only (bytes remain) |
+| `submission.submit` | M | `submission:submit` | ✓ | parent own-child; §7 invariants + empty-guard; `isLate` snapshot; unique→`Conflict`; atomic row+attachments |
+| `submission.resubmit` | M | `submission:submit` | ✓ | in-place attempt++ (guarded `status,attempt`); PUBLISHED only; **not after REVIEWED** |
+| `submission.listByHomework` | Q | `submission:read` | – | teacher review queue (owner-gated); optional status filter |
+| `submission.get` | Q | `submission:read` | – | admin / owning teacher / own-child parent |
+| `submission.listByEnrollment` | Q | `submission:read` | – | a child's trail — **admin or linked parent only** (teachers use the per-homework queue) |
+| `submission.childContext` | Q | `submission:read` | – | parent per-child enrollment + existing submission for a homework (mobile/web submit) |
+| `submission.attachmentUploadUrl` | M (storage) | `submission:submit` | – | mint per (homework, enrollment, attempt); §7 authz before the URL |
+| `submission.attachments` | Q | `submission:read` | – | a submission's parent files (read-scoped) |
+| `submission.attachmentDownloadUrl` | M (storage) | `submission:read` | – | mint 300 s signed read; **never another parent** (R4) |
+| `submission.review` | M | `submission:review` | ✓ | RETURNED/REVIEWED + immutable feedback + guarded transition, one tx; allowed after CLOSE |
+| `submission.feedback` | Q | `submission:read` | – | a submission's feedback rounds (read-scoped) |
+
+**Not built in M6** (later milestones): homework notifications, un-review correction,
+standalone "notes".
+
+## leave / announcements / messages (PRD-planned — NOT built)
 
 | Procedure | T | Permission | Audit | Notif |
 |---|---|---|---|---|
-| `homework.create` | M | `homework:create` | – | ✓ push to division's guardians |
-| `homework.listForDivision` | Q | `homework:read` | – | – | cursor |
 | `leave.apply` | M | `leave:apply` | ✓ | ✓ to class teacher |
 | `leave.decide` | M | `leave:decide` | ✓ | ✓ to applicant; on APPROVE upserts Attendance LEAVE (§8.7; calendar B1) |
 | `leave.cancel` | M | `leave:apply` (own, PENDING) or `leave:decide` (APPROVED revert) | ✓ | ✓ — **adopted v1.3** (Dev PRD §7); cancelling APPROVED reverts LEAVE rows |

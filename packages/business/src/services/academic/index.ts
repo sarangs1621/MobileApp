@@ -56,3 +56,13 @@ export {
   type CreateTeacherAssignmentInput,
   type ListTeacherAssignmentsFilter,
 } from "./teacher-assignment.service";
+export {
+  assignClassTeacher,
+  replaceClassTeacher,
+  removeClassTeacher,
+  getClassTeacherForSection,
+  isClassTeacherOfEnrollment,
+  assertClassTeacherOfEnrollment,
+  type AssignClassTeacherInput,
+  type ClassTeacherLookup,
+} from "./class-teacher.service";

@@ -73,11 +73,18 @@ End-to-end flows for every core journey. Format per flow: **Actor · Trigger · 
 
 **Alternates:** overlapping existing leave → validation error. Range spans holiday → holidays skipped.
 
-## F8 — Homework distribution
-1. Teacher `MOB-TEA-04`: division (+subject) → title/body/attachments (MIME+size validated; stored as private paths) → `homework.create`.
-2. Division guardians get push → parent `MOB-PAR-04` reads; attachments open via signed URLs.
-
-No submission flow (distribution-only, §8.6).
+## F8 — Homework (bidirectional — M6, ADR-013)
+> **Superseded §8.6 "distribution-only":** the M6 brief made submissions/uploads/
+> review/feedback **core**. No push notifications in M6 (later).
+1. Teacher: pick a subject×section target → title/body/dueDate (+ optional files,
+   MIME/size validated, server-chosen private paths) → `homework.create` (DRAFT) →
+   `homework.publish` (requires `dueDate ≥ today` IST).
+2. Parent (own child, §10 visibility): reads the published homework + teacher files
+   (signed URLs) → `submission.submit` (note + optional files; §7 invariants; `isLate`
+   snapshot) → on `RETURNED` may `submission.resubmit` (attempt++, in place).
+3. Teacher: `submission.listByHomework` review queue → `submission.review`
+   (RETURNED = changes requested / REVIEWED = terminal accept) + immutable feedback →
+   parent reads feedback. **No resubmit after REVIEWED.**
 
 ## F9 — Announcements
 1. Office/Super `WEB-ANN-01`: compose (en and/or ml) → scope SCHOOL/CLASS/DIVISION (+target) → publish.

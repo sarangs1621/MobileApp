@@ -1,10 +1,11 @@
 # Status — Homework, Notes, Leave & Communication
 
-- **Status:** Not started
-- **Current milestone:** later — homework/notes + leave + announcements + messaging
-- **Completion:** 0%
-- **Dependencies:** Authentication (frozen), People, Notifications
-- **Frozen?** No
-- **Known issues:** homework is **distribution-only** (no uploads); leave→attendance enrollment resolution (§8.7); `attachmentPaths` not URLs.
-- **Next work:** its milestone — post homework, leave apply/decide, announcements, teacher↔guardian messaging.
-- **Spec:** Dev PRD v1.3 §8.6–§8.8.
+- **Status:** **Homework = M6 shipped** (Homework & Assignment Management) — awaiting approval. Notes/leave/announcements/messaging = later.
+- **Current milestone:** M6 (ADR-013, extends ADR-010/011/012 + ADR-004) — see `docs/milestones/M6.md`
+- **Completion:** homework create/publish/close/reopen/delete · teacher attachments · parent submit/resubmit + attachments · teacher review + feedback · storage upload/download = **done**. Announcements + teacher↔guardian messaging + standalone "notes" = later milestones.
+- **Dependencies:** Authentication (frozen), People (Enrollment is the submission key; Parent is the actor), academic structure (Subject/Section/TeacherAssignment), Storage (ADR-004 private bucket)
+- **Frozen?** No (freezes on approval)
+- **Delivered:** `Homework (Subject×Section, year-stamped) → HomeworkAttachment / HomeworkSubmission (per Enrollment, unique) → SubmissionAttachment (append-only, attempt-tagged) / HomeworkFeedback (immutable, text-only)`. Guarded `DRAFT→PUBLISHED→CLOSED` + audited `reopen`; publish requires `dueDate≥today` (IST); content frozen at publish, `dueDate` extend-only; `isLate` snapshot; §7 cross-table submit invariants; §10 parent or-clause (section-match OR has-submission — survives transfer). 2 routers / 25 procedures; private `homework-files` bucket (mint→PUT→persist, downloads scoped — never to another parent); RLS 28/28. Web console (both roles, **full file upload+download**, review + CSV); mobile (teacher create/review + parent submit — text loop + download). 85 tests.
+- **Scope correction (M6 brief overrode the PRD):** homework is **no longer distribution-only** — parent submissions, uploads, teacher review, and feedback are **core** (no `homework-uploads` flag). PRD §8.6 / decision-#13 superseded; corrected in feature/permission docs.
+- **Known issues / deferred:** OFFICE_ADMIN can't create homework from scratch on web (teacher-scoped picker; service supports it); no un-review correction path; publish/feedback send **no notification**; mobile file **upload** deferred to web; storage byte-cleanup deferred; the real upload→download round-trip is a provisioning-runbook check (`RUNBOOK_SUPABASE_SETUP.md §3c`). Leave→attendance (§8.7) + messaging (§8.8) remain later milestones. `storagePath` never a URL.
+- **Spec:** Dev PRD v1.3 §8.6 (superseded in part) + **ADR-013** (source of truth). §8.7–§8.8 (leave/communication) unchanged, later.

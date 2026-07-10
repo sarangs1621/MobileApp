@@ -2,6 +2,7 @@ import type {
   AcademicTerm,
   AcademicYear,
   Class,
+  ClassTeacherAssignment,
   Section,
   Subject,
   TeacherAssignment,
@@ -10,6 +11,7 @@ import type {
   AcademicTermDto,
   AcademicYearDto,
   ClassDto,
+  ClassTeacherAssignmentDto,
   IstDateString,
   SectionDto,
   SubjectDto,
@@ -61,5 +63,17 @@ export function mapTeacherAssignment(row: TeacherAssignment): TeacherAssignmentD
     teacherId: row.teacherId,
     subjectId: row.subjectId,
     sectionId: row.sectionId,
+  };
+}
+
+export function mapClassTeacherAssignment(row: ClassTeacherAssignment): ClassTeacherAssignmentDto {
+  return {
+    id: row.id,
+    schoolId: row.schoolId,
+    academicYearId: row.academicYearId,
+    sectionId: row.sectionId,
+    teacherId: row.teacherId,
+    assignedAt: row.assignedAt.toISOString(),
+    createdByStaffId: row.createdByStaffId,
   };
 }

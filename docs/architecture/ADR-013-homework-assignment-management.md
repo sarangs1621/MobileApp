@@ -1,6 +1,17 @@
 # ADR-013 — Homework & Assignment Management (M6)
 
-**Status:** Proposed (Step 1 — awaiting approval) · **Date:** 2026-07-10 · **Deciders:** Architecture, Product
+**Status:** Accepted — **M6 implemented** (Steps 1–10 shipped 2026-07-10; awaiting milestone approval) · **Date:** 2026-07-10 · **Deciders:** Architecture, Product
+
+> **Implementation note (Step 10).** Shipped as specified with one deliberate
+> deviation from §9: the **parent submission upload path is keyed by
+> `{schoolId}/submission/{homeworkId}/{enrollmentId}/{attempt}/…`** (not
+> `{submissionId}` as sketched) so a submit is a single atomic transaction — the
+> submission row and its attachment metadata persist together, and the mint needs no
+> pre-existing submission row. Same private / server-chosen / attempt-tagged
+> properties; no behavioural change. Also: mobile ships the text loop + attachment
+> **download**, with file **upload web-only** (no native picker dependency); the
+> OFFICE_ADMIN create-from-scratch web picker is unbuilt (service supports it) — both
+> recorded in `docs/features/homework.md` §Known limitations.
 **Related:** Dev PRD v1.3 §8.6 (homework — superseded in part by the M6 brief, see below) ·
 ADR-002 (business layer is the authorization gate) · ADR-003 (repositories) ·
 ADR-004 (private Storage + signed URLs — homework attachments are its founding use case) ·

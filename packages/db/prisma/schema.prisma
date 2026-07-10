@@ -54,21 +54,22 @@ model School {
 // `id` == Supabase `auth.users.id` — no separate PK, no default (the UID is
 // supplied at provisioning). Credentials/OTP live in Supabase; we store none.
 model User {
-  id                 String              @id
-  schoolId           String // loose tenant ref (ADR-008)
-  role               Role
-  status             UserStatus          @default(INVITED)
-  phone              String?             @unique
-  email              String?             @unique
-  locale             Locale              @default(EN)
-  lastLoginAt        DateTime?
-  createdAt          DateTime            @default(now())
-  updatedAt          DateTime            @updatedAt
-  deviceTokens       DeviceToken[]
+  id                      String                   @id
+  schoolId                String // loose tenant ref (ADR-008)
+  role                    Role
+  status                  UserStatus               @default(INVITED)
+  phone                   String?                  @unique
+  email                   String?                  @unique
+  locale                  Locale                   @default(EN)
+  lastLoginAt             DateTime?
+  createdAt               DateTime                 @default(now())
+  updatedAt               DateTime                 @updatedAt
+  deviceTokens            DeviceToken[]
   // Virtual back-relations only (no column/behavior change to the frozen M1 model).
-  teacherAssignments TeacherAssignment[]
-  staff              Staff? // M3: employment profile, 1:1 (userId unique on Staff)
-  parent             Parent? // M3: parent portal login, 1:1 (userId unique on Parent)
+  teacherAssignments      TeacherAssignment[]
+  classTeacherAssignments ClassTeacherAssignment[] // M7 foundation: sections where this user is the class teacher (virtual back-relation only)
+  staff                   Staff? // M3: employment profile, 1:1 (userId unique on Staff)
+  parent                  Parent? // M3: parent portal login, 1:1 (userId unique on Parent)
   // + raw SQL: RLS ON — read-self + admin-read-all (m1_rls_hardening)
 
   @@index([schoolId, role])
@@ -104,20 +105,21 @@ enum AcademicYearStatus {
 // TIME axis root, e.g. "2026–27". Calendar dates are @db.Date (IST convention,
 // Dev PRD decision #22) so range logic can't drift by a UTC off-by-one.
 model AcademicYear {
-  id                 String              @id @default(cuid())
-  schoolId           String // loose tenant ref (ADR-008)
-  name               String
-  startDate          DateTime            @db.Date
-  endDate            DateTime            @db.Date
-  status             AcademicYearStatus  @default(PLANNED)
-  createdAt          DateTime            @default(now())
-  updatedAt          DateTime            @updatedAt
-  terms              AcademicTerm[]
-  enrollments        Enrollment[] // M3: virtual back-relation only (no change to frozen M2 model)
-  holidays           Holiday[] // M4: virtual back-relation only (no change to frozen M2 model)
-  attendanceSessions AttendanceSession[] // M4: virtual back-relation only
-  exams              Exam[] // M5: virtual back-relation only
-  homework           Homework[] // M6: virtual back-relation only
+  id                      String                   @id @default(cuid())
+  schoolId                String // loose tenant ref (ADR-008)
+  name                    String
+  startDate               DateTime                 @db.Date
+  endDate                 DateTime                 @db.Date
+  status                  AcademicYearStatus       @default(PLANNED)
+  createdAt               DateTime                 @default(now())
+  updatedAt               DateTime                 @updatedAt
+  terms                   AcademicTerm[]
+  enrollments             Enrollment[] // M3: virtual back-relation only (no change to frozen M2 model)
+  holidays                Holiday[] // M4: virtual back-relation only (no change to frozen M2 model)
+  attendanceSessions      AttendanceSession[] // M4: virtual back-relation only
+  exams                   Exam[] // M5: virtual back-relation only
+  homework                Homework[] // M6: virtual back-relation only
+  classTeacherAssignments ClassTeacherAssignment[] // M7 foundation: virtual back-relation only
   // + raw SQL: UNIQUE (schoolId) WHERE status = 'ACTIVE'  — one ACTIVE year
   // + raw SQL: CHECK (startDate < endDate)
   // + raw SQL: RLS ON — admin-only ALL (academic_rls migration; defense-in-depth)
@@ -167,17 +169,18 @@ model Class {
 // Parallel group within a class ("A", "B"). Restrict delete from Class: a class
 // with sections must be emptied deliberately (no cascade data loss).
 model Section {
-  id                 String              @id @default(cuid())
-  classId            String
-  name               String
-  createdAt          DateTime            @default(now())
-  updatedAt          DateTime            @updatedAt
-  class              Class               @relation(fields: [classId], references: [id], onDelete: Restrict)
-  teacherAssignments TeacherAssignment[]
-  enrollments        Enrollment[] // M3: virtual back-relation only (no change to frozen M2 model)
-  attendanceSessions AttendanceSession[] // M4: virtual back-relation only
-  examSections       ExamSection[] // M5: virtual back-relation only
-  homework           Homework[] // M6: virtual back-relation only
+  id                      String                   @id @default(cuid())
+  classId                 String
+  name                    String
+  createdAt               DateTime                 @default(now())
+  updatedAt               DateTime                 @updatedAt
+  class                   Class                    @relation(fields: [classId], references: [id], onDelete: Restrict)
+  teacherAssignments      TeacherAssignment[]
+  enrollments             Enrollment[] // M3: virtual back-relation only (no change to frozen M2 model)
+  attendanceSessions      AttendanceSession[] // M4: virtual back-relation only
+  examSections            ExamSection[] // M5: virtual back-relation only
+  homework                Homework[] // M6: virtual back-relation only
+  classTeacherAssignments ClassTeacherAssignment[] // M7 foundation: virtual back-relation only
   // + raw SQL: RLS ON — admin-only ALL (academic_rls migration)
 
   @@unique([classId, name])
@@ -205,7 +208,10 @@ model Subject {
 // Immutable — no update; staffing changes are audited delete + create. NOT
 // year-scoped per the M2 brief (unique triple below); year scoping is an
 // additive migration if a later milestone needs assignment history.
-// No isClassTeacher flag yet (later milestone).
+// A class-teacher is NOT a flag on this table (a teacher teaching 3 subjects in a
+// section would need 3 flagged rows, and a class teacher may teach NO subject in
+// their section) — it is the dedicated year-scoped `ClassTeacherAssignment` below
+// (M7 foundation). This model stays exactly as frozen in M2.
 model TeacherAssignment {
   id        String   @id @default(cuid())
   schoolId  String // denormalized loose tenant ref — scope queries + audit (ADR-008)
@@ -373,20 +379,20 @@ model StudentDocument {
 // RLS parent-scope; an emergency-only contact has null uid and no portal access.
 // SetNull (not Cascade): removing the login keeps the contact record.
 model Parent {
-  id               String           @id @default(cuid())
-  schoolId         String // loose tenant ref (ADR-008)
-  userId           String?          @unique
-  name             String
-  phone            String
-  email            String?
-  occupation       String?
-  address          String?
-  preferredContact PreferredContact @default(PHONE)
-  createdAt        DateTime         @default(now())
-  updatedAt        DateTime         @updatedAt
-  user             User?            @relation(fields: [userId], references: [id], onDelete: SetNull)
-  students         StudentParent[]
-  leaveRequests    LeaveRequest[] // M4: virtual back-relation only
+  id                    String                 @id @default(cuid())
+  schoolId              String // loose tenant ref (ADR-008)
+  userId                String?                @unique
+  name                  String
+  phone                 String
+  email                 String?
+  occupation            String?
+  address               String?
+  preferredContact      PreferredContact       @default(PHONE)
+  createdAt             DateTime               @default(now())
+  updatedAt             DateTime               @updatedAt
+  user                  User?                  @relation(fields: [userId], references: [id], onDelete: SetNull)
+  students              StudentParent[]
+  leaveRequests         LeaveRequest[] // M4: virtual back-relation only
   // M6: virtual back-relations only — submission + upload actors (parents submit for children)
   homeworkSubmissions   HomeworkSubmission[]
   submissionAttachments SubmissionAttachment[]
@@ -418,41 +424,43 @@ model StudentParent {
 // DESCRIPTIVE only: a teacher's read-scope derives from TeacherAssignment→Section,
 // never from Staff. Named Staff (not TeacherProfile) for forward-consistency.
 model Staff {
-  id                    String                 @id @default(cuid())
-  schoolId              String // loose tenant ref (ADR-008)
-  userId                String                 @unique
-  employeeId            String
-  department            String?
-  qualification         String?
-  experienceYears       Int?
-  joiningDate           DateTime?              @db.Date
-  bio                   String?
-  photoPath             String? // PRIVATE storage path, signed on read (ADR-004)
-  createdAt             DateTime               @default(now())
-  updatedAt             DateTime               @updatedAt
-  user                  User                   @relation(fields: [userId], references: [id], onDelete: Cascade)
+  id                          String                   @id @default(cuid())
+  schoolId                    String // loose tenant ref (ADR-008)
+  userId                      String                   @unique
+  employeeId                  String
+  department                  String?
+  qualification               String?
+  experienceYears             Int?
+  joiningDate                 DateTime?                @db.Date
+  bio                         String?
+  photoPath                   String? // PRIVATE storage path, signed on read (ADR-004)
+  createdAt                   DateTime                 @default(now())
+  updatedAt                   DateTime                 @updatedAt
+  user                        User                     @relation(fields: [userId], references: [id], onDelete: Cascade)
   // M4: virtual back-relations only — attendance audit actors + correction actors (no DB change to this frozen M3 model)
-  sessionsCreated       AttendanceSession[]    @relation("SessionCreatedBy")
-  sessionsSubmitted     AttendanceSession[]    @relation("SessionSubmittedBy")
-  sessionsLocked        AttendanceSession[]    @relation("SessionLockedBy")
-  correctionsRequested  AttendanceCorrection[] @relation("CorrectionRequestedBy")
-  correctionsDecided    AttendanceCorrection[] @relation("CorrectionDecidedBy")
-  leavesDecided         LeaveRequest[]
+  sessionsCreated             AttendanceSession[]      @relation("SessionCreatedBy")
+  sessionsSubmitted           AttendanceSession[]      @relation("SessionSubmittedBy")
+  sessionsLocked              AttendanceSession[]      @relation("SessionLockedBy")
+  correctionsRequested        AttendanceCorrection[]   @relation("CorrectionRequestedBy")
+  correctionsDecided          AttendanceCorrection[]   @relation("CorrectionDecidedBy")
+  leavesDecided               LeaveRequest[]
   // M5: virtual back-relations only — exam publish + exam-section audit actors + mark entry
-  examsPublished        Exam[]                 @relation("ExamPublishedBy")
-  examSectionsCreated   ExamSection[]          @relation("ExamSectionCreatedBy")
-  examSectionsSubmitted ExamSection[]          @relation("ExamSectionSubmittedBy")
-  examSectionsLocked    ExamSection[]          @relation("ExamSectionLockedBy")
-  examSectionsUnlocked  ExamSection[]          @relation("ExamSectionUnlockedBy")
-  marksEntered          Mark[]                 @relation("MarkEnteredBy")
+  examsPublished              Exam[]                   @relation("ExamPublishedBy")
+  examSectionsCreated         ExamSection[]            @relation("ExamSectionCreatedBy")
+  examSectionsSubmitted       ExamSection[]            @relation("ExamSectionSubmittedBy")
+  examSectionsLocked          ExamSection[]            @relation("ExamSectionLockedBy")
+  examSectionsUnlocked        ExamSection[]            @relation("ExamSectionUnlockedBy")
+  marksEntered                Mark[]                   @relation("MarkEnteredBy")
   // M6: virtual back-relations only — homework lifecycle + review audit actors
-  homeworkCreated             Homework[]             @relation("HomeworkCreatedBy")
-  homeworkPublished           Homework[]             @relation("HomeworkPublishedBy")
-  homeworkClosed              Homework[]             @relation("HomeworkClosedBy")
-  homeworkReopened            Homework[]             @relation("HomeworkReopenedBy")
-  homeworkAttachmentsUploaded HomeworkAttachment[]   @relation("HomeworkAttachmentUploadedBy")
-  submissionsReviewed         HomeworkSubmission[]   @relation("SubmissionReviewedBy")
-  homeworkFeedbackAuthored    HomeworkFeedback[]     @relation("HomeworkFeedbackAuthor")
+  homeworkCreated             Homework[]               @relation("HomeworkCreatedBy")
+  homeworkPublished           Homework[]               @relation("HomeworkPublishedBy")
+  homeworkClosed              Homework[]               @relation("HomeworkClosedBy")
+  homeworkReopened            Homework[]               @relation("HomeworkReopenedBy")
+  homeworkAttachmentsUploaded HomeworkAttachment[]     @relation("HomeworkAttachmentUploadedBy")
+  submissionsReviewed         HomeworkSubmission[]     @relation("SubmissionReviewedBy")
+  homeworkFeedbackAuthored    HomeworkFeedback[]       @relation("HomeworkFeedbackAuthor")
+  // M6.5: virtual back-relation only — class-teacher assignments this staff performed (audit actor)
+  classTeacherAssignmentsMade ClassTeacherAssignment[] @relation("ClassTeacherAssignedBy")
   // + raw SQL: RLS ON — admin ALL; staff SELECT self (userId = auth.uid()) (people_rls, Step 4)
 
   @@unique([schoolId, employeeId])
@@ -469,23 +477,23 @@ model Staff {
 // section — a rollNo without a sectionId is invalid. Enforced by a CHECK below
 // (rollNo NULL OR sectionId NOT NULL) and by EnrollmentService on allocation.
 model Enrollment {
-  id                String             @id @default(cuid())
-  schoolId          String // loose tenant ref (ADR-008)
-  studentId         String
-  academicYearId    String
-  classId           String
-  sectionId         String?
-  rollNo            Int? // set only once sectionId is assigned (see CHECK below)
-  status            EnrollmentStatus   @default(ADMITTED)
-  createdAt         DateTime           @default(now())
-  updatedAt         DateTime           @updatedAt
-  student           Student            @relation(fields: [studentId], references: [id], onDelete: Restrict)
-  academicYear      AcademicYear       @relation(fields: [academicYearId], references: [id], onDelete: Restrict)
-  class             Class              @relation(fields: [classId], references: [id], onDelete: Restrict)
-  section           Section?           @relation(fields: [sectionId], references: [id], onDelete: Restrict)
-  attendanceRecords AttendanceRecord[] // M4: virtual back-relation only
-  leaveRequests     LeaveRequest[] // M4: virtual back-relation only
-  marks             Mark[] // M5: virtual back-relation only
+  id                  String               @id @default(cuid())
+  schoolId            String // loose tenant ref (ADR-008)
+  studentId           String
+  academicYearId      String
+  classId             String
+  sectionId           String?
+  rollNo              Int? // set only once sectionId is assigned (see CHECK below)
+  status              EnrollmentStatus     @default(ADMITTED)
+  createdAt           DateTime             @default(now())
+  updatedAt           DateTime             @updatedAt
+  student             Student              @relation(fields: [studentId], references: [id], onDelete: Restrict)
+  academicYear        AcademicYear         @relation(fields: [academicYearId], references: [id], onDelete: Restrict)
+  class               Class                @relation(fields: [classId], references: [id], onDelete: Restrict)
+  section             Section?             @relation(fields: [sectionId], references: [id], onDelete: Restrict)
+  attendanceRecords   AttendanceRecord[] // M4: virtual back-relation only
+  leaveRequests       LeaveRequest[] // M4: virtual back-relation only
+  marks               Mark[] // M5: virtual back-relation only
   homeworkSubmissions HomeworkSubmission[] // M6: virtual back-relation only
   // + raw SQL: partial unique — roll number unique per section per year:
   //   WHERE "sectionId" IS NOT NULL AND "rollNo" IS NOT NULL
@@ -1137,5 +1145,45 @@ model HomeworkFeedback {
   // + raw SQL: RLS ON — admin ALL; teacher own subject×section; parent own-child (homework_rls, Step 4)
 
   @@index([submissionId])
+  @@index([schoolId])
+}
+
+// ========================= Class Teacher Management (M6.5) =========================
+// ClassTeacherAssignment (ADR-015) — the CURRENT holder of the class-teacher slot
+// for a (academicYear × section). DELIBERATELY a dedicated model, NOT a flag on
+// TeacherAssignment: a teacher may teach several subjects in a section (which of
+// those rows would carry the flag?) and a class teacher may teach NO subject in
+// their section at all. So class-teacher-ship is its own fact: (year × section) →
+// ONE teacher.
+//
+// YEAR-SCOPED (diverges from the non-year-scoped TeacherAssignment): each year gets
+// its own row, so CROSS-YEAR history is preserved by construction (ADR-010 per-year
+// rows). WITHIN a year the row is UPDATED IN PLACE when the class teacher changes
+// (ADR-010 §5 mid-year-transfer philosophy); AuditLog carries the change history —
+// NO endedAt, NO isActive, NO second row (there is always exactly one row per
+// (year, section), enforced by @@unique below). `teacherId → User` mirrors
+// TeacherAssignment's RLS idiom (teacherId = auth.uid()). `assignedAt` = when the
+// CURRENT teacher took the slot (re-stamped to now() on assign AND replace; prior
+// values live in the AuditLog before-image). `createdByStaffId → Staff` = the acting
+// staff who assigned (B3 audit actor). Managed by admins under `academic:manage`;
+// the remark-authoring gate is the business-layer predicate isClassTeacherOfEnrollment.
+model ClassTeacherAssignment {
+  id               String       @id @default(cuid())
+  schoolId         String // loose tenant ref (ADR-008)
+  academicYearId   String
+  sectionId        String
+  teacherId        String // → User (like TeacherAssignment.teacherId; RLS checks teacherId = auth.uid())
+  assignedAt       DateTime     @default(now()) // when the CURRENT teacher took the slot (re-stamped on replace)
+  createdByStaffId String // → Staff — acting staff who assigned/replaced (B3 audit actor)
+  createdAt        DateTime     @default(now())
+  updatedAt        DateTime     @updatedAt
+  academicYear     AcademicYear @relation(fields: [academicYearId], references: [id], onDelete: Restrict)
+  section          Section      @relation(fields: [sectionId], references: [id], onDelete: Restrict)
+  teacher          User         @relation(fields: [teacherId], references: [id], onDelete: Restrict)
+  createdBy        Staff        @relation("ClassTeacherAssignedBy", fields: [createdByStaffId], references: [id], onDelete: Restrict)
+  // + raw SQL: RLS ON — admin ALL; teacher SELECT own (teacherId = auth.uid()) (class_teacher_assignment migration)
+
+  @@unique([academicYearId, sectionId]) // exactly ONE class teacher per section per year (UPDATE, never a 2nd row)
+  @@index([teacherId])
   @@index([schoolId])
 }

@@ -27,6 +27,8 @@ export default function AppHome() {
   const canReadAttendance = role !== undefined && can(role, PERMISSIONS.ATTENDANCE_READ);
   const canEnterMarks = role !== undefined && can(role, PERMISSIONS.MARK_ENTER);
   const canReadMarks = role !== undefined && can(role, PERMISSIONS.MARK_READ);
+  const canManageHomework = role !== undefined && can(role, PERMISSIONS.HOMEWORK_MANAGE);
+  const canReadHomework = role !== undefined && can(role, PERMISSIONS.HOMEWORK_READ);
 
   return (
     <View className="flex-1 items-center justify-center gap-4 bg-background p-6">
@@ -42,6 +44,7 @@ export default function AppHome() {
           <NavLink href="/academic/classes" label="Classes" />
           <NavLink href="/academic/subjects" label="Subjects" />
           <NavLink href="/academic/assignments" label="Teacher assignments" />
+          <NavLink href="/academic/class-teachers" label="Class teachers" />
         </View>
       ) : null}
 
@@ -79,6 +82,16 @@ export default function AppHome() {
           {canReadMarks && role === "PARENT" ? (
             <NavLink href="/exam/children" label="Marks & grades" />
           ) : null}
+        </View>
+      ) : null}
+
+      {canManageHomework || (canReadHomework && role === "PARENT") ? (
+        <View className="w-full gap-2">
+          <Text className="text-sm font-medium text-muted-foreground">Homework</Text>
+          <NavLink
+            href="/homework"
+            label={canManageHomework ? "Homework" : "My children’s homework"}
+          />
         </View>
       ) : null}
 

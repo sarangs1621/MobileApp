@@ -89,6 +89,19 @@ export interface TeacherAssignmentDto {
   sectionId: string;
 }
 
+/** M6.5: the current class teacher of a section for a year (ADR-015). */
+export interface ClassTeacherAssignmentDto {
+  id: string;
+  schoolId: string;
+  academicYearId: string;
+  sectionId: string;
+  teacherId: string;
+  /** ISO timestamp — when the CURRENT teacher took the slot (re-stamped on replace). */
+  assignedAt: string;
+  /** Staff id of the acting admin who assigned/replaced (audit actor). */
+  createdByStaffId: string;
+}
+
 /* ---- People Management DTOs (M3). Student is identity-only; Enrollment owns
  * per-year placement (ADR-010). Calendar columns (dob, joiningDate) are IST date
  * strings. */
@@ -411,4 +424,106 @@ export interface GradeScaleDto {
   name: string;
   isDefault: boolean;
   bands: GradeBandDto[];
+}
+
+/* ---------- Homework & Assignment Management (M6, ADR-013) ---------- */
+export type HomeworkStatusKey = "DRAFT" | "PUBLISHED" | "CLOSED";
+export type SubmissionStatusKey = "SUBMITTED" | "RETURNED" | "REVIEWED";
+
+export interface HomeworkDto {
+  id: string;
+  schoolId: string;
+  academicYearId: string;
+  subjectId: string;
+  sectionId: string;
+  title: string;
+  description: string | null;
+  dueDate: IstDateString;
+  status: HomeworkStatusKey;
+  createdByStaffId: string;
+  publishedByStaffId: string | null;
+  publishedAt: IsoUtcString | null;
+  closedByStaffId: string | null;
+  closedAt: IsoUtcString | null;
+  reopenedByStaffId: string | null;
+  reopenedAt: IsoUtcString | null;
+  reopenReason: string | null;
+}
+
+/** A teacher's assignable (subject × section) target — name-enriched, for the create picker + list labels. */
+export interface HomeworkTargetDto {
+  subjectId: string;
+  subjectName: string;
+  sectionId: string;
+  sectionName: string;
+}
+
+/**
+ * A parent's per-child submission context for one homework (mobile submit flow):
+ * the child, the enrollment to submit against (null if they hold no ACTIVE
+ * enrollment in the homework's section — e.g. after a transfer), and their existing
+ * submission if any (readable across enrollments — the §10 or-clause).
+ */
+export interface HomeworkChildContextDto {
+  studentId: string;
+  studentName: string;
+  enrollmentId: string | null;
+  submission: HomeworkSubmissionDto | null;
+}
+
+/** Teacher-side file metadata (bytes in the private bucket, read via a signed URL). */
+export interface HomeworkAttachmentDto {
+  id: string;
+  schoolId: string;
+  homeworkId: string;
+  storagePath: string;
+  fileName: string;
+  mimeType: string | null;
+  sizeBytes: number | null;
+  checksum: string | null;
+  uploadedByStaffId: string;
+  createdAt: IsoUtcString;
+}
+
+export interface HomeworkSubmissionDto {
+  id: string;
+  schoolId: string;
+  homeworkId: string;
+  enrollmentId: string;
+  submittedByParentId: string;
+  note: string | null;
+  status: SubmissionStatusKey;
+  attempt: number;
+  isLate: boolean;
+  firstSubmittedAt: IsoUtcString;
+  submittedAt: IsoUtcString;
+  reviewedByStaffId: string | null;
+  reviewedAt: IsoUtcString | null;
+}
+
+/** Parent-side file metadata, append-only + tagged with the attempt it belongs to. */
+export interface SubmissionAttachmentDto {
+  id: string;
+  schoolId: string;
+  submissionId: string;
+  attempt: number;
+  storagePath: string;
+  fileName: string;
+  mimeType: string | null;
+  sizeBytes: number | null;
+  checksum: string | null;
+  uploadedByParentId: string;
+  createdAt: IsoUtcString;
+}
+
+/** One immutable teacher review round (text only — no grading, ADR-013 §8). */
+export interface HomeworkFeedbackDto {
+  id: string;
+  schoolId: string;
+  submissionId: string;
+  authorStaffId: string;
+  attempt: number;
+  decision: SubmissionStatusKey;
+  body: string;
+  createdAt: IsoUtcString;
 }

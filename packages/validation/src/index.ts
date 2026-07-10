@@ -131,6 +131,23 @@ export const listTeacherAssignmentsInput = z.object({
   sectionId: idSchema.optional(),
 });
 
+/* ---- Class Teacher Management (M6.5, ADR-015). The (year × section) slot →
+ * one teacher. Assign and Replace share a shape; Get is keyed by the slot.
+ * All business rules (active-teacher, in-school, one-per-slot, replace-requires-
+ * existing) live in the service, not duplicated here. */
+export const assignClassTeacherInput = z.object({
+  academicYearId: idSchema,
+  sectionId: idSchema,
+  teacherId: idSchema,
+});
+/** Replace has the same shape as assign (same slot, new teacher). */
+export const replaceClassTeacherInput = assignClassTeacherInput;
+/** Look up / target the class teacher of a section for a year. */
+export const classTeacherSectionInput = z.object({
+  academicYearId: idSchema,
+  sectionId: idSchema,
+});
+
 /* ---- People Management inputs (M3). Cross-entity rules (uniqueness, one-per-year,
  * scope, rollNo-needs-section) live in the business services — not duplicated here. */
 
@@ -444,4 +461,93 @@ export const createGradeScaleInput = z.object({
       }),
     )
     .min(1),
+});
+
+/* ---------- Homework & Assignment Management (M6, ADR-013) ---------- */
+/* Transport validation only — the state machine, derived ownership, §7 cross-table
+ * invariants, empty-submission guard, and mime/size allow-list live in the services
+ * (not duplicated here). dueDate transforms to a Date at this boundary. */
+
+export const homeworkIdInput = z.object({ homeworkId: idSchema });
+export const submissionIdInput = z.object({ submissionId: idSchema });
+export const attachmentIdInput = z.object({ attachmentId: idSchema });
+
+const homeworkTitleSchema = z.string().trim().min(1).max(200);
+const homeworkBodySchema = z.string().trim().max(5000);
+const submissionNoteSchema = z.string().trim().max(2000);
+const feedbackBodySchema = z.string().trim().min(1).max(5000);
+const reviewDecisionSchema = z.enum(["RETURNED", "REVIEWED"]);
+const submissionStatusSchema = z.enum(["SUBMITTED", "RETURNED", "REVIEWED"]);
+
+/* Homework lifecycle */
+export const createHomeworkInput = z.object({
+  subjectId: idSchema,
+  sectionId: idSchema,
+  title: homeworkTitleSchema,
+  description: homeworkBodySchema.nullable().optional(),
+  dueDate: istDateSchema,
+});
+export const updateHomeworkInput = z.object({
+  homeworkId: idSchema,
+  title: homeworkTitleSchema.optional(),
+  description: homeworkBodySchema.nullable().optional(),
+  dueDate: istDateSchema.optional(),
+});
+export const reopenHomeworkInput = z.object({
+  homeworkId: idSchema,
+  reason: reasonSchema,
+});
+export const listHomeworkInput = z.object({
+  academicYearId: idSchema.optional(),
+  sectionId: idSchema.optional(),
+});
+
+/* Teacher attachments (bytes uploaded separately to Storage — ADR-004) */
+export const mintHomeworkUploadUrlInput = z.object({
+  homeworkId: idSchema,
+  fileName: shortText(255),
+  mimeType: shortText(120),
+  sizeBytes: z.number().int().positive(),
+});
+export const addHomeworkAttachmentInput = z.object({
+  homeworkId: idSchema,
+  storagePath: shortText(600),
+  fileName: shortText(255),
+  mimeType: shortText(120),
+  sizeBytes: z.number().int().positive(),
+  checksum: shortText(128).optional(),
+});
+
+/* Parent submissions */
+const submissionAttachmentMetaSchema = z.object({
+  storagePath: shortText(600),
+  fileName: shortText(255),
+  mimeType: shortText(120),
+  sizeBytes: z.number().int().positive(),
+  checksum: shortText(128).optional(),
+});
+export const submitHomeworkInput = z.object({
+  homeworkId: idSchema,
+  enrollmentId: idSchema,
+  note: submissionNoteSchema.nullable().optional(),
+  attachments: z.array(submissionAttachmentMetaSchema).max(10).default([]),
+});
+export const mintSubmissionUploadUrlInput = z.object({
+  homeworkId: idSchema,
+  enrollmentId: idSchema,
+  attempt: z.number().int().positive(),
+  fileName: shortText(255),
+  mimeType: shortText(120),
+  sizeBytes: z.number().int().positive(),
+});
+export const listSubmissionsInput = z.object({
+  homeworkId: idSchema,
+  statuses: z.array(submissionStatusSchema).nonempty().optional(),
+});
+
+/* Teacher review */
+export const reviewSubmissionInput = z.object({
+  submissionId: idSchema,
+  decision: reviewDecisionSchema,
+  body: feedbackBodySchema,
 });

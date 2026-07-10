@@ -19,9 +19,9 @@ Dev PRD §13 says **M0** includes "Supabase Auth + RBAC" and **M1** = people + b
 ADR-002's M1 refinement explicitly **removed** the transport role gate (`roleProcedure`) — authorization is permission (`assertCan`) + scope (`assertScope`) in the business layer, and transport does authentication only. But Dev PRD §4.4 ("tRPC procedures apply the coarse role gate"), §7, and `API_CONVENTIONS.md` §5 ("Coarse role gate in the procedure (middleware)") still describe the old model.
 **Resolution:** update Dev PRD §4.4/§7 and API_CONVENTIONS §5 to match ADR-002's refinement. The ADR is the newer, deliberate decision.
 
-### A3 — Product PRD still says "submissions" for homework · **MEDIUM**
+### A3 — Product PRD still says "submissions" for homework · **RESOLVED (M6)**
 `School_Portal_PRD_v2.md` §6.6 heading is "Homework, notes & **submissions** (core)" and §10 M4 says "homework/**submissions**" — contradicting the distribution-only decision (Dev PRD §8.6, decision log #13).
-**Resolution:** copy fix in the product PRD.
+**Resolution (2026-07-10, M6/ADR-013):** the contradiction is resolved **in favour of submissions** — the M6 kickoff brief made parent submissions/uploads/review/feedback **core scope** (no `homework-uploads` flag), overriding the Dev PRD §8.6 distribution-only decision. The product PRD's "submissions" wording was correct; Dev PRD §8.6 / decision-#13 are the superseded lines. Corrected in `features/homework.md`, `status/Homework.md`, PERMISSIONS_MATRIX, API_INVENTORY. No further copy fix needed.
 
 ---
 

@@ -50,5 +50,30 @@ export const APP_TIMEZONE = "Asia/Kolkata";
  */
 export const STORAGE_BUCKETS = {
   STUDENT_DOCUMENTS: "student-documents",
+  /** Homework teacher/parent attachments (M6, ADR-013 §9). Provisioned via runbook. */
+  HOMEWORK_FILES: "homework-files",
 } as const;
 export type StorageBucketKey = (typeof STORAGE_BUCKETS)[keyof typeof STORAGE_BUCKETS];
+
+/**
+ * Homework attachment upload constraints (M6, ADR-013 §7). Validated at mint time,
+ * before a signed URL exists — the client's claimed mimeType/sizeBytes are checked,
+ * not the real bytes (ADR-004 accepts that ceiling; the bucket is private).
+ */
+export const HOMEWORK_ATTACHMENT = {
+  /** Max bytes per file (25 MB — a scanned worksheet / photo set). */
+  MAX_FILE_BYTES: 25 * 1024 * 1024,
+  /** Max attachments per homework (teacher) or per submission attempt (parent). */
+  MAX_FILES: 10,
+  /** Allowed MIME types — documents + images (no executables/archives). */
+  ALLOWED_MIME_TYPES: [
+    "application/pdf",
+    "image/jpeg",
+    "image/png",
+    "image/webp",
+    "image/heic",
+    "application/msword",
+    "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+    "text/plain",
+  ] as readonly string[],
+} as const;
