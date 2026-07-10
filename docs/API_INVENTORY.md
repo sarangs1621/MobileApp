@@ -211,10 +211,10 @@ excludes notifications — brief overrides Dev PRD §7).
 | `gradeScale.create` | M | `exam:manage` | ✓ | percent bands + nullable `gradePoint`; non-overlap (DB `EXCLUDE` + friendly precheck) |
 | `gradeScale.list` | Q | `exam:manage` | – | the school's grade scales |
 
-**Not built in M5** (design-compatible, later milestones): report cards
-(`generateReportCard`/`getReportCard`, ADR-009), publish-*notify* (no
+**Not built in M5** (design-compatible, later milestones): publish-*notify* (no
 notifications in M5), CGPA-across-years (foundation only — GPA is active-year;
-snapshots enable the aggregate), exam attempts/re-exams.
+snapshots enable the aggregate), exam attempts/re-exams. Report cards shipped in
+**M7** (ADR-014) — see the `reportCard` section below.
 
 ## homework / submission — Homework & Assignment Management (M6, ADR-013 · implemented)
 
@@ -257,6 +257,37 @@ notification** (brief overrides PRD). Ownership derives from `TeacherAssignment`
 
 **Not built in M6** (later milestones): homework notifications, un-review correction,
 standalone "notes".
+
+## reportCard — Report Card & Academic Results (M7, ADR-014 · implemented)
+
+One flat `reportCard` router on the **protected** gate. `ReportCard` is **Enrollment-owned**
+(never Student/Exam/Term — those are scope); `kind` ∈ EXAM/TERM/ANNUAL with nullable
+`examId`/`termId` scope. Lifecycle `DRAFT→SUBMITTED→APPROVED→PUBLISHED` (+ `SUPERSEDED`/
+`REVOKED`), each a **guarded** transition; the snapshot (attendance %, rank, GPA) is **frozen
+at APPROVE** from the canonical M4/M5 services; a correction is a **new version** (option B —
+supersede-then-publish in one tx, so never two live PUBLISHED). Authority is admin
+(`report_card:manage`); the **class teacher** (`assertClassTeacherOfEnrollment`, ADR-015)
+drafts a remark + submits; parents read own-child PUBLISHED. Audit in-tx. No PDF generation /
+notifications (deferred). Year-consistency (scope year = enrollment year) is a service invariant.
+12 procedures.
+
+| Procedure | T | Permission | Audit | Notes |
+|---|---|---|---|---|
+| `reportCard.get` | Q | `report_card:read` | – | read-scoped: admin any / class-teacher own-section / parent own-child PUBLISHED |
+| `reportCard.listForEnrollment` | Q | `report_card:read` | – | a student's card trail for one enrollment; **parent → PUBLISHED only** |
+| `reportCard.listForSection` | Q | `report_card:read` | – | every card in a `(year, section)`; admin any / the assigned class teacher (same gate as `listForEnrollment`, section grain) |
+| `reportCard.generate` | M | `report_card:manage` | ✓ | admin; creates (or returns the existing) DRAFT for `(enrollment, kind, scope)`; year-consistency checked; version continues past terminal rows |
+| `reportCard.draftRemark` | M | `report_card:remark` | ✓ | the class teacher (scope-gated) sets `classTeacherRemark` while **DRAFT** |
+| `reportCard.edit` | M | `report_card:manage` | ✓ | admin; `principalRemark` / `promotionDecision`, **pre-publish only** |
+| `reportCard.submit` | M | `report_card:remark` | ✓ | class teacher; DRAFT → SUBMITTED (guarded) |
+| `reportCard.approve` | M | `report_card:manage` | ✓ | admin; **SUBMITTED → APPROVED** (skip-state rejected); **freezes the snapshot** |
+| `reportCard.reopen` | M | `report_card:manage` | ✓ | admin; SUBMITTED/APPROVED → DRAFT; **requires a reason**; clears stamps + snapshot |
+| `reportCard.publish` | M | `report_card:manage` | ✓ | admin; APPROVED → PUBLISHED; **supersedes any prior published version in one tx** |
+| `reportCard.revoke` | M | `report_card:manage` | ✓ | admin; PUBLISHED → REVOKED; **requires a reason** |
+| `reportCard.correct` | M | `report_card:manage` | ✓ | admin; spawns a new DRAFT `version+1` from a published card (copies authored fields); refuses a second concurrent correction |
+
+**Not built in M7** (later milestones): PDF rendering (the `pdfPath` column + private bucket are
+provisioned for it), report-card notifications, CGPA-across-years snapshot, bilingual PDF.
 
 ## leave / announcements / messages (PRD-planned — NOT built)
 

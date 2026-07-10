@@ -105,6 +105,30 @@ Notes:
 - **Download scope** (signed URLs): submission files reach admins, the owning teacher, and the linked parents — **never another parent** (R4).
 - **Not built in M6** (later milestones): homework notifications (publish/feedback send none), un-review correction, standalone "notes".
 
+### Report Cards & Academic Results (M7, ADR-014 — implemented)
+
+Built as **M7** (see `docs/milestones/M7.md`). Lifecycle authority is **admin**
+(`report_card:manage` — generate/edit/approve/publish/reopen/revoke/correct); the **class
+teacher** authors a remark + submits under `report_card:remark`, narrowed by the `classTeacher`
+scope (`assertClassTeacherOfEnrollment`, ADR-015) — a subject teacher of the same section is
+refused; parents read own-child **PUBLISHED** cards. Row/ownership scope is enforced in the
+service; RLS is defense-in-depth (10/10 read+write isolation proven).
+
+| Permission | SA | OA | T | P | AC |
+|---|---|---|---|---|---|
+| `report_card:manage` (generate/edit/approve/publish/reopen/revoke/correct) | any | school | – | – | – |
+| `report_card:remark` (draft class-teacher remark + submit) | – | – | `classTeacher` (own section) | – | – |
+| `report_card:read` | any | school | `classTeacher` (own section) | ownChild (PUBLISHED only) | – |
+
+Notes:
+- **`report_card:remark` is the class-teacher capability** — every TEACHER holds it, but the
+  `assertClassTeacherOfEnrollment` scope refuses anyone who is not the section's class teacher.
+- **Approve requires SUBMITTED** — approving a DRAFT (skip-state) is rejected, so every card
+  passes the class-teacher review gate before approval.
+- **Snapshot is frozen at APPROVE**; PUBLISHED cards are immutable — a fix is a **new version**
+  (correct → publish, which supersedes the prior published one). Every publish/correction is audited.
+- **Not built in M7** (later milestones): PDF rendering, report-card notifications, CGPA-across-years.
+
 ### Leave, communication (PRD-planned — NOT built)
 
 > Numbering note: this project built **M5 = Examination**, **M6 = Homework** (above);

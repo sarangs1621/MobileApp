@@ -458,6 +458,60 @@ export interface HomeworkTargetDto {
   sectionName: string;
 }
 
+/* ---------- Report Cards & Academic Results (M7, ADR-014) ---------- */
+export type ReportCardKindKey = "EXAM" | "TERM" | "ANNUAL";
+export type ReportCardStatusKey =
+  "DRAFT" | "SUBMITTED" | "APPROVED" | "PUBLISHED" | "SUPERSEDED" | "REVOKED";
+export type RankScopeKey = "SECTION" | "CLASS";
+export type PromotionDecisionKey = "PROMOTED" | "RETAINED";
+
+/**
+ * A report card (M7, ADR-014). Owner = Enrollment; Exam/Term are scope. All snapshot
+ * fields are null in DRAFT/SUBMITTED and frozen at APPROVE. Dates are ISO-UTC (rendered
+ * to IST at the edge). pdfPath is a private-bucket path, signed on read — never a URL.
+ */
+export interface ReportCardDto {
+  id: string;
+  schoolId: string;
+  enrollmentId: string;
+  kind: ReportCardKindKey;
+  examId: string | null;
+  termId: string | null;
+  version: number;
+  status: ReportCardStatusKey;
+  classTeacherRemark: string | null;
+  principalRemark: string | null;
+  promotionDecision: PromotionDecisionKey | null;
+  // snapshot (frozen at approve) — rank is all-or-nothing (null unless GPA computable)
+  rank: number | null;
+  rankScope: RankScopeKey | null;
+  cohortSize: number | null;
+  attendancePercentage: number | null;
+  presentCount: number | null;
+  absentCount: number | null;
+  lateCount: number | null;
+  halfDayCount: number | null;
+  leaveCount: number | null;
+  workingDays: number | null;
+  gpaSnapshot: number | null;
+  cgpaSnapshot: number | null;
+  pdfPath: string | null;
+  // lifecycle actors + stamps
+  createdByStaffId: string;
+  submittedByStaffId: string | null;
+  submittedAt: IsoUtcString | null;
+  approvedByStaffId: string | null;
+  approvedAt: IsoUtcString | null;
+  publishedByStaffId: string | null;
+  publishedAt: IsoUtcString | null;
+  reopenedByStaffId: string | null;
+  reopenedAt: IsoUtcString | null;
+  reopenReason: string | null;
+  revokedByStaffId: string | null;
+  revokedAt: IsoUtcString | null;
+  revokeReason: string | null;
+}
+
 /**
  * A parent's per-child submission context for one homework (mobile submit flow):
  * the child, the enrollment to submit against (null if they hold no ACTIVE

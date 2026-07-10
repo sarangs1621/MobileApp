@@ -140,6 +140,7 @@ model AcademicTerm {
   createdAt      DateTime     @default(now())
   updatedAt      DateTime     @updatedAt
   academicYear   AcademicYear @relation(fields: [academicYearId], references: [id], onDelete: Cascade)
+  reportCards    ReportCard[] // M7: virtual back-relation only (TERM-card scope; ADR-014)
   // + raw SQL: EXCLUDE USING gist (academicYearId =, daterange(start,end,'[]') &&)
   // + raw SQL: CHECK (startDate < endDate)
   // + raw SQL: RLS ON — admin-only ALL (academic_rls migration)
@@ -461,6 +462,13 @@ model Staff {
   homeworkFeedbackAuthored    HomeworkFeedback[]       @relation("HomeworkFeedbackAuthor")
   // M6.5: virtual back-relation only — class-teacher assignments this staff performed (audit actor)
   classTeacherAssignmentsMade ClassTeacherAssignment[] @relation("ClassTeacherAssignedBy")
+  // M7: virtual back-relations only — report-card lifecycle audit actors (B3)
+  reportCardsCreated          ReportCard[]             @relation("ReportCardCreatedBy")
+  reportCardsSubmitted        ReportCard[]             @relation("ReportCardSubmittedBy")
+  reportCardsApproved         ReportCard[]             @relation("ReportCardApprovedBy")
+  reportCardsPublished        ReportCard[]             @relation("ReportCardPublishedBy")
+  reportCardsReopened         ReportCard[]             @relation("ReportCardReopenedBy")
+  reportCardsRevoked          ReportCard[]             @relation("ReportCardRevokedBy")
   // + raw SQL: RLS ON — admin ALL; staff SELECT self (userId = auth.uid()) (people_rls, Step 4)
 
   @@unique([schoolId, employeeId])
@@ -495,6 +503,7 @@ model Enrollment {
   leaveRequests       LeaveRequest[] // M4: virtual back-relation only
   marks               Mark[] // M5: virtual back-relation only
   homeworkSubmissions HomeworkSubmission[] // M6: virtual back-relation only
+  reportCards         ReportCard[] // M7: virtual back-relation only (owner side; ADR-014)
   // + raw SQL: partial unique — roll number unique per section per year:
   //   WHERE "sectionId" IS NOT NULL AND "rollNo" IS NOT NULL
   // + raw SQL: CHECK ("rollNo" IS NULL OR "sectionId" IS NOT NULL) — rollNo only after allocation
@@ -768,6 +777,7 @@ model Exam {
   gradeScale         GradeScale?  @relation(fields: [gradeScaleId], references: [id], onDelete: Restrict)
   publishedBy        Staff?       @relation("ExamPublishedBy", fields: [publishedByStaffId], references: [id], onDelete: Restrict)
   assessments        Assessment[]
+  reportCards        ReportCard[] // M7: virtual back-relation only (EXAM-card scope; ADR-014)
   // + raw SQL: RLS ON — admin ALL; teacher SELECT (own-assigned via assessment→section); parent SELECT published (exam_rls, Step 4)
 
   @@unique([academicYearId, name]) // one exam name per year
@@ -1185,5 +1195,156 @@ model ClassTeacherAssignment {
 
   @@unique([academicYearId, sectionId]) // exactly ONE class teacher per section per year (UPDATE, never a 2nd row)
   @@index([teacherId])
+  @@index([schoolId])
+}
+
+// ========================= Report Cards & Academic Results (M7) =========================
+// ADR-014 is the source of truth (extends ADR-009 examId-nullable + partial-unique).
+// The card OWNER is Enrollment (ADR-010 §8) — never Student, never Exam/Term/Year
+// (those are SCOPE attributes). M7 is a pure REPORTING layer over frozen M3–M6: it
+// SNAPSHOTS the compute-on-read (attendance %) and cohort-relative (rank) values plus
+// its own authored fields (remarks, promotion decision), and COPIES the already-immutable
+// upstream numbers (GPA) for display only — it never re-owns marks/attendance.
+//
+// Locked product decisions (R1/R2/R3):
+//  R1 — the CLASS TEACHER (ADR-015 ClassTeacherAssignment; gate isClassTeacherOfEnrollment)
+//       drafts the classTeacherRemark and SUBMITS for review; OFFICE_ADMIN/SUPER_ADMIN
+//       APPROVE, PUBLISH, REOPEN, REVOKE. A subject teacher never edits a card.
+//  R2 — rank is STORED (frozen value + its rankScope cohort). Own-rank-only visibility
+//       and a future "hide rank" school setting are APP-LAYER concerns — NO schema flag.
+//  R3 — PUBLISHED cards are immutable; a correction creates a NEW version (version++),
+//       the prior PUBLISHED row → SUPERSEDED (retained). Every publish/correction is
+//       written to AuditLog by the SERVICE (ADR-007) — no column here.
+
+// ---------- enums ----------
+// Card scope discriminator (ADR-009's deferred extension point, now required).
+// EXAM → examId set; TERM → termId set; ANNUAL → neither (year comes from enrollment).
+// Each brings its OWN per-kind uniqueness rule (raw SQL below) — the designed seam
+// for future board formats (CBSE/ICSE/semester), ADR-014 §10.
+enum ReportCardKind {
+  EXAM
+  TERM
+  ANNUAL
+}
+
+// Publication lifecycle (ADR-014 §2 + R1's review gap). Forward-only, audited.
+//   DRAFT ──submit──▶ SUBMITTED ──approve──▶ APPROVED ──publish──▶ PUBLISHED
+//     ▲                   │                     │
+//     └──── reopen ◀───────┴─────────────────────┘   (clears submit/approve stamps)
+//   PUBLISHED ──supersede──▶ SUPERSEDED  (a correction's new version; R3)
+//   PUBLISHED ──revoke────▶ REVOKED      (pulled from parents, no replacement; R1)
+// APPROVED == ADR-014 §2's "GENERATED" (snapshot frozen + PDF rendered, not yet
+// parent-visible) — renamed to match R1's "approve" verb; see the Step-10 doc note.
+// Parent-visibility gate is exactly PUBLISHED (ADR-012 idiom).
+enum ReportCardStatus {
+  DRAFT
+  SUBMITTED
+  APPROVED
+  PUBLISHED
+  SUPERSEDED
+  REVOKED
+}
+
+// The cohort a snapshotted rank was computed over — frozen WITH the value (R2/ADR-014
+// §3): a later transfer/scope change is non-retroactive by construction.
+enum RankScope {
+  SECTION
+  CLASS
+}
+
+// The promotion outcome as SHOWN on the card (ANNUAL). The card RECORDS this decision;
+// it does NOT perform promotion — that is a separate Enrollment mutation (ADR-010 §4,
+// promoteBulk). One-directional: enrollment lifecycle → card content, never card →
+// enrollment (ADR-014 §8).
+enum PromotionDecision {
+  PROMOTED
+  RETAINED
+}
+
+// ---------- report card (Enrollment-owned; ADR-014) ----------
+// enrollmentId is the ONLY link to a student (ADR-010 §8) — no studentId/academicYearId
+// column (year is one hop via enrollment). All snapshot fields are NULL in DRAFT/SUBMITTED
+// and FROZEN at APPROVE (== §2 GENERATED). pdfPath is service-set and DELIBERATELY not
+// tied to any lifecycle CHECK — the private report-card bucket is runbook-provisioned
+// (ADR-014 R5), and a storage dependency must never be able to block a status transition.
+// The structured card view reads THESE snapshot fields + the PDF link ONLY — it must
+// NOT re-join live Mark rows: an ADR-012 unlock→edit→lock after publish would drift the
+// re-joined grades from the frozen card (precisely why a correction is a NEW version, R3,
+// not an in-place read). Per-subject grade rows are deliberately NOT snapshotted into a
+// child table (ADR-014 Alternative #3 — marks are already immutable upstream, ADR-012 §3;
+// the PDF holds the rendered table, gpaSnapshot holds the queryable aggregate).
+// All *ByStaffId are audit actors (B3 invariant), all Restrict. RLS is Step 4.
+model ReportCard {
+  id           String           @id @default(cuid())
+  schoolId     String // loose tenant ref (ADR-008)
+  enrollmentId String
+  kind         ReportCardKind
+  examId       String? // EXAM cards (ADR-009 nullable; kind⟺scope CHECK + per-kind unique below)
+  termId       String? // TERM cards
+  version      Int              @default(1) // R3: bumps per correction; (scope, version) is unique per kind
+  status       ReportCardStatus @default(DRAFT)
+
+  // ---- card-owned authored fields (system of record; ADR-014 §3) ----
+  classTeacherRemark String? // R1: authored by the class teacher (ADR-015 gate), editable in DRAFT
+  principalRemark    String? // office/principal comment
+  promotionDecision  PromotionDecision? // stated outcome shown to parent (ANNUAL); ADR-014 §3/§8
+
+  // ---- snapshot: frozen at APPROVE (ADR-014 §3) ----
+  rank                 Int? // cohort rank, frozen (R2)
+  rankScope            RankScope? // the cohort the rank was computed over (frozen WITH the value)
+  cohortSize           Int? // "rank of N"
+  attendancePercentage Float? // weighted %, compute-on-read (ADR-011) → MUST snapshot
+  presentCount         Int?
+  absentCount          Int?
+  lateCount            Int?
+  halfDayCount         Int?
+  leaveCount           Int? // LEAVE is excluded from the % denominator (ADR-011 weighting)
+  workingDays          Int? // sessions counted (denominator)
+  gpaSnapshot          Float? // display copy of gpaForEnrollment — already immutable upstream (ADR-012 §3)
+  cgpaSnapshot         Float?
+  pdfPath              String? // PRIVATE bucket, signed-on-read (ADR-004); service-set, NOT lifecycle-gating
+
+  // ---- lifecycle actors + stamps (B3: all → Staff, Restrict) ----
+  createdByStaffId   String
+  submittedByStaffId String? // DRAFT→SUBMITTED (class teacher submits for review); CLEARED on reopen
+  submittedAt        DateTime?
+  approvedByStaffId  String? // SUBMITTED→APPROVED (snapshot frozen + PDF); CLEARED on reopen
+  approvedAt         DateTime?
+  publishedByStaffId String? // APPROVED→PUBLISHED (parent-visible)
+  publishedAt        DateTime?
+  reopenedByStaffId  String? // audited reopen (SUBMITTED/APPROVED→DRAFT); clears submit/approve stamps
+  reopenedAt         DateTime?
+  reopenReason       String? // required by the service on reopen (homework idiom)
+  revokedByStaffId   String? // PUBLISHED→REVOKED (pull a published card)
+  revokedAt          DateTime?
+  revokeReason       String? // required by the service on revoke
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  enrollment  Enrollment    @relation(fields: [enrollmentId], references: [id], onDelete: Restrict)
+  exam        Exam?         @relation(fields: [examId], references: [id], onDelete: Restrict)
+  term        AcademicTerm? @relation(fields: [termId], references: [id], onDelete: Restrict)
+  createdBy   Staff         @relation("ReportCardCreatedBy", fields: [createdByStaffId], references: [id], onDelete: Restrict)
+  submittedBy Staff?        @relation("ReportCardSubmittedBy", fields: [submittedByStaffId], references: [id], onDelete: Restrict)
+  approvedBy  Staff?        @relation("ReportCardApprovedBy", fields: [approvedByStaffId], references: [id], onDelete: Restrict)
+  publishedBy Staff?        @relation("ReportCardPublishedBy", fields: [publishedByStaffId], references: [id], onDelete: Restrict)
+  reopenedBy  Staff?        @relation("ReportCardReopenedBy", fields: [reopenedByStaffId], references: [id], onDelete: Restrict)
+  revokedBy   Staff?        @relation("ReportCardRevokedBy", fields: [revokedByStaffId], references: [id], onDelete: Restrict)
+  // + raw SQL: CHECK — kind⟺scope (EXAM⟹examId set/termId null; TERM⟹termId set/examId null; ANNUAL⟹both null)
+  // + raw SQL: CHECK — snapshot-iff-approved: (approvedAt IS NULL) = (status IN DRAFT,SUBMITTED)  [reopen clears approvedAt]
+  // + raw SQL: CHECK — publishedAt set ⟺ status has-been-published (PUBLISHED,SUPERSEDED,REVOKED)
+  // + raw SQL: CHECK — revokedAt set ⟺ status = REVOKED
+  // + raw SQL: CHECK — version >= 1; rank/cohortSize >= 1 and rank <= cohortSize; percentage 0..100; gpa/cgpa >= 0
+  // + raw SQL: partial unique per kind — ONE PUBLISHED per scope (R3): supersede-then-publish in ONE tx (service).
+  //            "one ACTIVE draft per scope" is deliberately a SERVICE invariant, not structural (M6 cross-row stance).
+  // + raw SQL: partial unique per kind — (scope, version) so two corrections can't collide on a version (R3)
+  // + raw SQL: RLS ON — admin ALL; class-teacher own-section; parent PUBLISHED own-child (report_card_rls, Step 4)
+
+  @@index([enrollmentId]) // student's card trail (parent read + Q6 year-over-year comparison)
+  @@index([enrollmentId, kind])
+  @@index([examId])
+  @@index([termId])
+  @@index([status]) // admin review/publish queues
   @@index([schoolId])
 }

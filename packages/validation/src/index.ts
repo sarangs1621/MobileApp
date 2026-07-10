@@ -551,3 +551,29 @@ export const reviewSubmissionInput = z.object({
   decision: reviewDecisionSchema,
   body: feedbackBodySchema,
 });
+
+/* ---------- Report Cards & Academic Results (M7, ADR-014) ---------- */
+const reportCardKindSchema = z.enum(["EXAM", "TERM", "ANNUAL"]);
+const promotionDecisionSchema = z.enum(["PROMOTED", "RETAINED"]);
+const remarkSchema = z.string().trim().min(1).max(5000);
+
+/** {reportCardId} — submit / approve / publish / correct (bare-id lifecycle actions). */
+export const reportCardIdInput = z.object({ reportCardId: idSchema });
+/** Generate a DRAFT card for a (enrollment, kind, scope). examId/termId narrowed to kind in the service. */
+export const generateReportCardInput = z.object({
+  enrollmentId: idSchema,
+  kind: reportCardKindSchema,
+  examId: idSchema.optional(),
+  termId: idSchema.optional(),
+});
+export const draftClassTeacherRemarkInput = z.object({
+  reportCardId: idSchema,
+  remark: remarkSchema,
+});
+export const editReportCardInput = z.object({
+  reportCardId: idSchema,
+  principalRemark: remarkSchema.nullable().optional(),
+  promotionDecision: promotionDecisionSchema.nullable().optional(),
+});
+export const reopenReportCardInput = z.object({ reportCardId: idSchema, reason: reasonSchema });
+export const revokeReportCardInput = z.object({ reportCardId: idSchema, reason: reasonSchema });

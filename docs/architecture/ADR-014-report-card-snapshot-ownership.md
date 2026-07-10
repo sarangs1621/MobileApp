@@ -1,13 +1,28 @@
 # ADR-014 — Report Card Snapshot Ownership (M7)
 
-**Status:** Proposed — **M7 Step 1 (Requirements Analysis) only; no schema/code written** · **Date:** 2026-07-10 · **Deciders:** Architecture, Product
+**Status:** **Accepted / Implemented (M7 Steps 1–10 shipped)** · **Date:** 2026-07-10 (analysis), 2026-07-11 (implemented) · **Deciders:** Architecture, Product
 **Related:** Dev PRD v1.3 §6 (`ReportCard` model sketch), §8.5 (exams/marks/grades/report cards), §16.3 `[CONFIRM]` (rank visibility) ·
 **ADR-009** (ReportCard.examId optional + partial unique — *the direct predecessor; extended here*) ·
 ADR-010 (Enrollment is the single join point) · ADR-011 (attendance compute-on-read + weighting) ·
 ADR-012 (exam publication + snapshot-at-lock + GPA/CGPA from snapshots) · ADR-013 (register/actor/derived-ownership patterns) ·
 ADR-002 (business layer is the authorization gate) · ADR-003 (repositories) · ADR-004 (private Storage, signed-on-read) ·
 ADR-007 (in-transaction audit) · ADR-008 (loose `schoolId`) · DATABASE_CONVENTIONS (status-enum lifecycle, no soft-delete, `@db.Date`)
-**Precedes:** M7 (Report Card & Academic Results) implementation — this ADR defines the model and answers the Step-1 questions. **No Prisma model, migration, or service is written here.** Schema is Step 2.
+**Precedes:** M7 (Report Card & Academic Results) — this ADR defined the model and answered the Step-1 questions; **M7 has since shipped it** (schema, RLS, business, API, mobile, web, tests). See `docs/milestones/M7.md`, `docs/features/report-cards.md`, `docs/status/ReportCards.md`.
+
+---
+
+## Implementation reconciliation (M7 — shipped)
+
+The analysis below is the original Step-1 record. Where the shipped implementation refined a proposed direction (all with R1/R2/R3 product sign-off), the **final decision is:**
+
+- **Owner = `Enrollment`** (§1) — shipped as proposed. `kind` EXAM/TERM/ANNUAL + nullable `examId`/`termId`; per-kind partial-unique indexes (ADR-009's realized seam).
+- **Lifecycle = `DRAFT → SUBMITTED → APPROVED → PUBLISHED`** (+ `SUPERSEDED`, `REVOKED`). The proposed §2 `GENERATED` state **shipped as `APPROVED`** (renamed to R1's "approve" verb); a **`SUBMITTED`** review state was added (R1: the class teacher submits, the office/principal approves) and a **`REVOKED`** terminal state (R1: pull a published card). Approving a **DRAFT is rejected** (skip-state) — every card passes the review gate.
+- **Snapshot frozen at APPROVE** (§3) — attendance %, rank, GPA; rank is **all-or-nothing** (null value ⇒ null rank/rankScope/cohortSize). **R2 resolved:** rank is **stored** with `rankScope = SECTION` (CLASS reserved); own-rank-only + a future "hide rank" setting are app-layer (no schema flag).
+- **Correction = option B (§4) — supersession/versioning.** **R3 resolved:** published cards are immutable; a correction is a **new `version`**; publishing it **supersedes-then-publishes in one transaction** (prior → `SUPERSEDED`), so never two live PUBLISHED; every publish/correction is audited. (This supersedes the §4 *recommendation* of (A) overwrite-and-audit.)
+- **Class-teacher remark authorship** (§7) — via `assertClassTeacherOfEnrollment` (M6.5/ADR-015). **R1 resolved.**
+- **Stored PDF** (`pdfPath`, §9) — the column + private bucket are provisioned; **rendering is deferred** (not built in M7).
+
+The section-by-section analysis that follows is retained as the decision record; read the bullets above as the shipped truth where they differ.
 
 ---
 
@@ -66,6 +81,10 @@ Student (identity)
 
 ### 2. Publication lifecycle — `DRAFT → GENERATED → PUBLISHED` (+ conditional supersession)
 
+> **SHIPPED as `DRAFT → SUBMITTED → APPROVED → PUBLISHED` (+ `SUPERSEDED`, `REVOKED`).** `GENERATED`
+> below = the shipped **`APPROVED`** state (snapshot frozen, not parent-visible); R1 added the
+> **`SUBMITTED`** review state before it and the **`REVOKED`** terminal state. See the reconciliation block.
+
 Mirrors the M5 exam publication semantics (publish = the parent-visibility gate) but adds one state M5 does not need — an **approval gap** between "numbers assembled" and "released to parents" (the office/principal review step, Q7):
 
 ```
@@ -112,6 +131,7 @@ The stored PDF (§9) already freezes *every rendered value*. So a **structured s
   - **(A) Overwrite-and-audit** (honors ADR-009 literally): re-publish overwrites the same row; the `AuditLog` before/after JSON carries what-was-previously-published. Simplest; one row per `(enrollment, kind, scope)`; the partial-unique index from ADR-009 is untouched.
   - **(B) Supersede/version** (extends ADR-009): publishing a correction inserts a **new** PUBLISHED row and marks the prior `SUPERSEDED`; parents always read the latest PUBLISHED. Gives an immutable published-history but **requires changing the uniqueness rule** (from "one per `(enrollment, examId)`" to "one *live* per `(enrollment, kind, scope)`"), which is an explicit extension of ADR-009 and **must be called out** (it is, here).
   - **Recommendation:** **(A) overwrite-and-audit** for M7 — it honors ADR-009 with zero schema-constraint change, and the AuditLog already gives the "what was published before" trail. Choose (B) only if the school requires a legally-retained immutable copy of every superseded card. *This is the single decision most needing product sign-off.*
+  - **✅ SHIPPED: (B) supersession/versioning** (R3 sign-off — an immutable retained history of every version is required). A correction is a new `version`; publishing it supersedes-then-publishes in one tx (prior → `SUPERSEDED`); never two live PUBLISHED; every publish/correction audited.
 - **History / corrections workflow:** the report card is **never a back-door to edit marks or attendance** (§ Boundary). A wrong grade is fixed via ADR-012 **Unlock → Edit → Lock → Publish** on the exam; a wrong attendance mark via ADR-011 **AttendanceCorrection**. Only *card-owned* fields (remarks, promotion decision, rank scope) are editable on the card itself; fixing an upstream number means re-generating (pre-publish) or correcting-then-republishing (post-publish, per A/B above).
 
 ### 5. Academic dependencies (read-only consumption of frozen modules)
@@ -240,8 +260,8 @@ The one deliberate extension point requiring future work: a **new report `kind`*
 ## Risks
 
 - **R1 — Class-teacher gap. ✅ RESOLVED (2026-07-10).** Product chose class-teacher-authored remarks; the dedicated additive **`ClassTeacherAssignment`** model + `assertClassTeacherOfEnrollment` gate are built and verified (see §7 banner). No longer a blocker for the ReportCard step, which consumes the predicate.
-- **R2 — Rank visibility & scope is an open product decision** (PRD §16.3 `[CONFIRM]`): within section? class? shown to parents at all? Snapshotting rank requires the answer (the frozen value + its scope). **Do not invent it — needs sign-off.**
-- **R3 — Correction model (§4 A vs B)** needs product sign-off: overwrite-and-audit (recommended, honors ADR-009) vs. supersession (immutable published-history, extends ADR-009's uniqueness).
+- **R2 — Rank visibility & scope. ✅ RESOLVED (2026-07-11).** Rank is **stored** with `rankScope = SECTION` (CLASS reserved), frozen at approve, all-or-nothing (null GPA ⇒ null rank). Own-rank-only + a future "hide rank" school setting are app-layer — no schema flag.
+- **R3 — Correction model. ✅ RESOLVED (2026-07-11).** Chose **(B) supersession/versioning** (§4) — published immutable, correction = new version, prior → `SUPERSEDED`, supersede-then-publish in one tx, all audited.
 - **R4 — B3 actor invariant** extends to report cards: whoever generates/publishes needs a `Staff` row (the M4/M5/M6 provisioning invariant).
 - **R5 — Bucket provisioning:** a private report-card bucket (or a namespace in an existing one) must be provisioned before live PDF generation — a runbook step, exactly like `homework-files` (M6).
 - **R6 — Bilingual PDF (en + ml):** PRD §8.5 requires printable **bilingual** cards; template/font work is a real Step-7/8 cost, flagged now.
@@ -264,6 +284,6 @@ The one deliberate extension point requiring future work: a **new report `kind`*
 
 ---
 
-## STOP — Step 1 boundary
+## Status — Implemented (M7 Steps 1–10 shipped)
 
-This ADR is the **M7 Step 1 (Requirements Analysis)** deliverable. It records the model direction and the open decisions. **No Prisma model, migration, RLS policy, service, or UI is written.** Schema design is **Step 2** and must first resolve R1 (teacher/class-teacher scope), R2 (rank), and R3 (correction model) with product. Do not proceed to Step 2 without milestone approval.
+This ADR began as the **M7 Step 1 (Requirements Analysis)** deliverable. R1 (class-teacher scope), R2 (rank), and R3 (correction model) were resolved with product and **M7 shipped all 10 steps** — schema (`20260710030000`), RLS (`20260710040000`), business (`services/report-card`), API (`reportCard`, 12 procedures), mobile (parent viewing), web (`/report-cards` console), and tests (54 automated + DB proofs). The shipped decisions are summarized in the **Implementation reconciliation** block at the top; the section-by-section analysis is retained as the decision record. See `docs/milestones/M7.md`, `docs/features/report-cards.md`, `docs/status/ReportCards.md`.

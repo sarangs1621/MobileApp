@@ -4,6 +4,15 @@ _The single always-load file. Keep under 2 pages. Update when a step completes._
 
 ## Current Milestone
 
+**M7 — Report Cards & Academic Results** (ADR-014; the academic reporting layer over
+M3–M6). `ReportCard` Enrollment-owned, `kind` EXAM/TERM/ANNUAL; lifecycle
+`DRAFT→SUBMITTED→APPROVED→PUBLISHED` (+ SUPERSEDED/REVOKED); snapshot (attendance %,
+rank, GPA) frozen at APPROVE; correction = new version (supersede-then-publish, one tx);
+class-teacher remark via ADR-015. **M7 Steps 1–10 COMPLETE — awaiting approval.** (M6.5
+Class Teacher Management, ADR-015, also complete — the dependency M7 consumes.) History below.
+
+<details><summary>Prior milestone — M6 Homework & Assignment Management</summary>
+
 **M6 — Homework & Assignment Management** (scope = Homework + HomeworkAttachment +
 HomeworkSubmission (per **Enrollment**, never Student) + SubmissionAttachment +
 HomeworkFeedback; ADR-013 extends ADR-010/011/012 + ADR-004 storage. Lifecycles:
@@ -13,9 +22,11 @@ for children — no student login. **Brief overrides PRD decision #13:** submiss
 are core, not distribution-only, no `homework-uploads` flag). **Numbering:** M6
 here = PRD-planned homework milestone, shifted by the M5 renumbering.
 
+</details>
+
 ## Current Step
 
-**M6 Steps 1–10 COMPLETE — full milestone shipped, STOPPED awaiting approval.**
+**M7 Steps 1–10 COMPLETE — full milestone shipped, STOPPED awaiting approval.**
 DB (Steps 2–3): migration `20260710000000_homework_management` (5 models, 2 enums,
 8 CHECKs; 22/22 constraint proofs; 11/11 relationship probes, 17/17 FK rules exact).
 RLS (Step 4): `20260710010000_homework_rls` (**28/28** read+write isolation proofs).
@@ -129,6 +140,10 @@ M6 kickoff was read as implicit approval of M5 → M3/M4/M5 frozen.
   validation 50 (35/35 turbo tasks); authorization matrix + `listExamRegisters`
   mutation-checked; no defects. **10** docs.
 
+- ✓ **M6.5 Steps 1–10 (Class Teacher Management, ADR-015)** — dedicated `ClassTeacherAssignment` (year×section → ONE teacher; in-place replace, never a 2nd row); `class-teacher.service` + `classTeacher` router (get/assign/replace/remove) + web management page + mobile read-only; the `assertClassTeacherOfEnrollment` scope predicate M7 consumes for remark authorship. Purely additive; RLS + DB invariants proven; gate 35/35.
+
+- ✓ **M7 Steps 1–10 (Report Cards & Academic Results, ADR-014)** — **1** ADR-014 (Enrollment-owned; snapshot vs live; lifecycle; correction; R1/R2/R3 locked). **2** `ReportCard` + 4 enums (migration `20260710030000`); CHECKs + per-kind partial-uniques; 13/13 proofs, zero drift, additive. **3** leaf, 9/9 FK matrix RESTRICT + 6/6 rollback probes. **4** RLS (`20260710040000`) admin/class-teacher/parent; 10/10 isolation. **5** `services/report-card` lifecycle + `snapshot.ts` (pure rank + assembly over canonical M4/M5) + year-consistency gate; 3 permissions; persistence-only repo. **6** thin `reportCard` router (12 procedures). **7** mobile parent viewing. **8** web role-aware console `/report-cards` + `/report-cards/[id]` (+ post-review `listForSection` making the class-teacher list ClassTeacherAssignment-driven). **9** 54 tests (business 32 + api 22) + DB SQL proofs re-confirmed. **10** docs. Full gate typecheck/lint/test green; no defects.
+
 - ✓ **M1 RLS hardening** (security-fix exception, 2026-07-05): M1 auth tables shipped with no RLS. Migration `20260705020000_m1_rls_hardening` enables RLS (not FORCE) on School/User/DeviceToken/AuditLog with read-only policies (`user_read_self` + `is_admin()` reads; owner-only device tokens; admin-only School/AuditLog) — stops parent/teacher user enumeration; no write policies (writes stay service_role); anon denied. Defense-in-depth only. **Blocking pre-apply gate:** confirm live Prisma role bypasses RLS before applying or auth locks out (see `docs/RLS_POLICIES.md`). All 80 tests still green.
 
 ## Frozen Modules (read-only — see workflow.md)
@@ -160,9 +175,17 @@ M6 kickoff was read as implicit approval of M5 → M3/M4/M5 frozen.
 
 ## Current Status
 
-M0/M1/M1.5/M2 **approved & frozen**; M3 People + M4 Attendance + M5 Examination
-complete (awaiting approval). **M6 Homework & Assignment Management complete (Steps
-1–10), awaiting approval:** `Homework (Subject×Section, year-stamped) →
+M0/M1/M1.5/M2 **approved & frozen**; M3 People + M4 Attendance + M5 Examination + M6
+Homework + M6.5 Class Teacher Management complete (awaiting approval). **M7 Report Cards
+& Academic Results complete (Steps 1–10), awaiting approval:** `ReportCard` Enrollment-owned,
+`kind` EXAM/TERM/ANNUAL; `DRAFT→SUBMITTED→APPROVED→PUBLISHED` (+SUPERSEDED/REVOKED); snapshot
+frozen at APPROVE; correction = new version (supersede-then-publish, one tx); class-teacher
+remark (ADR-015). 12-procedure `reportCard` router; parent mobile + role-aware web console; 54
+tests + DB proofs. See `docs/milestones/M7.md`, `docs/features/report-cards.md`, `docs/status/ReportCards.md`.
+
+<details><summary>Prior — M6 Homework status</summary>
+
+`Homework (Subject×Section, year-stamped) →
 HomeworkAttachment / HomeworkSubmission (per Enrollment, unique) → SubmissionAttachment
 (append-only) / HomeworkFeedback (immutable, text-only)` (ADR-013). Guarded
 `DRAFT→PUBLISHED→CLOSED` + audited reopen; publish requires dueDate≥today (IST);
@@ -177,6 +200,8 @@ upload+download, review + CSV); mobile (teacher create/review + parent submit �
 loop + download). **85 tests**; typecheck ✓ lint ✓ **35/35 turbo tasks**. Byte
 upload→download round-trip is a runbook-gated manual check (no bucket in CI).
 Brief **overrode the PRD** — homework is no longer distribution-only.
+
+</details>
 
 **M5 Examination & Assessment (Steps 1–10), awaiting approval:**
 `Exam → Assessment → ExamSection (register) → Mark` on Enrollment
@@ -200,7 +225,18 @@ tasks** (business 207, api 266, validation 50); mobile ios export ✓ (Step 7).
 
 ## Next Task
 
-**STOPPED — M6 (Homework & Assignment Management, ADR-013) COMPLETE, all 10 steps
+**STOPPED — M7 (Report Cards & Academic Results, ADR-014) COMPLETE, all 10 steps
+shipped; awaiting milestone approval to freeze.** M7 is purely additive over the frozen
+M1–M6.5 (`+ReportCard` table/enums, 3 permissions, 1 additive `reportCard.listForSection`
+read; no existing schema/service/contract/RLS change). Before live PDF generation, provision
+the private **report-card bucket** and build the renderer (bilingual en+ml) — a runbook step,
+like `homework-files` in M6; `pdfPath` + the column are already provisioned. Deferred: report-card
+notifications, CGPA-across-years, cross-year student trail. Known limitations in
+`docs/features/report-cards.md` / `docs/status/ReportCards.md`.
+
+<details><summary>Prior — M6 next-task note</summary>
+
+**M6 (Homework & Assignment Management, ADR-013) COMPLETE, all 10 steps
 shipped; awaiting milestone approval to freeze.** Before live homework uploads the
 user must **provision the private `homework-files` bucket** and run the one-time
 upload→download round-trip check (`RUNBOOK_SUPABASE_SETUP.md §3c`) — the only file
@@ -209,3 +245,5 @@ path CI can't exercise. Known limitations recorded in `docs/features/homework.md
 no homework notifications). Prior open sign-offs still stand: **holiday = hard block
 in M4** (ADR-011 §9); before live
 document uploads create the private `student-documents` bucket (runbook §3b).
+
+</details>

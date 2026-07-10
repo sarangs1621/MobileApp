@@ -25,6 +25,7 @@ import {
   studentRouter,
   teacherProfileRouter,
 } from "./routers/people";
+import { reportCardRouter } from "./routers/report-card";
 import { publicProcedure, router } from "./trpc";
 
 /**
@@ -64,6 +65,7 @@ export const appRouter = router({
   gradeScale: gradeScaleRouter,
   homework: homeworkRouter,
   submission: submissionRouter,
+  reportCard: reportCardRouter,
 });
 
 export type AppRouter = typeof appRouter;

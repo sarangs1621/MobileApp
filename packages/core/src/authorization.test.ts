@@ -48,10 +48,14 @@ describe("authorization policy", () => {
       PERMISSIONS.HOMEWORK_READ,
       PERMISSIONS.SUBMISSION_SUBMIT,
       PERMISSIONS.SUBMISSION_READ,
+      // M7: read own child's PUBLISHED report cards only (row-scoped in service).
+      PERMISSIONS.REPORT_CARD_READ,
     ]);
     expect(getPermissions("SUPER_ADMIN")).toContain(PERMISSIONS.USER_SET_ROLE);
     expect(getPermissions("SUPER_ADMIN")).toContain(PERMISSIONS.EXAM_MANAGE);
     expect(getPermissions("SUPER_ADMIN")).toContain(PERMISSIONS.HOMEWORK_MANAGE);
+    expect(getPermissions("SUPER_ADMIN")).toContain(PERMISSIONS.REPORT_CARD_MANAGE);
+    expect(getPermissions("TEACHER")).toContain(PERMISSIONS.REPORT_CARD_REMARK);
   });
 
   it("canAny / canAll combine permission checks", () => {

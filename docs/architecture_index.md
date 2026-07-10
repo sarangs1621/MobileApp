@@ -30,10 +30,12 @@ All ADRs live in `docs/architecture/`.
 
 **Exams / marks / report cards**
 - ADR-012 — Examination & Assessment (Exam→Assessment→ExamSection→Mark on Enrollment; lock-per-register / publish-per-exam; grade snapshots; GPA from snapshots; derived ownership) — **M5, implemented**
-- ADR-009 — ReportCard.examId optional + partial unique index (report cards — future)
-- ADR-014 — Report Card Snapshot Ownership (Enrollment-owned; snapshot vs live; stored PDF; consumes ADR-015 for class-teacher remark authorship) — **proposed (M7)**
+- ADR-009 — ReportCard.examId optional + partial unique index (the deferral seam **realized by M7/ADR-014**)
 - ADR-010 — Enrollment is the mark key (results survive promotion; CGPA aggregates a student's enrollments)
 - ADR-007 — Audit log (exam/mark mutations)
+
+**Report card management**
+- ADR-014 — Report Card Snapshot Ownership (`ReportCard` **Enrollment-owned**; `kind` EXAM/TERM/ANNUAL discriminator + nullable `examId`/`termId` scope, per-kind partial-uniques; lifecycle `DRAFT→SUBMITTED→APPROVED→PUBLISHED` + `SUPERSEDED`/`REVOKED`; **snapshot frozen at APPROVE** — attendance %/rank/GPA; correction = **new version** (option B, supersede-then-publish in one tx); class-teacher remark authorship via `assertClassTeacherOfEnrollment` [ADR-015]; stored-PDF path [ADR-004]; audit in-tx [ADR-007]) — **M7, implemented**
 
 **Homework (attachments)**
 - ADR-004 — Private Supabase Storage + signed URLs

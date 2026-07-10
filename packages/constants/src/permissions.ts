@@ -103,6 +103,18 @@ export const PERMISSIONS = {
   SUBMISSION_REVIEW: "submission:review",
   /** Read submissions/feedback. Teacher → own subject×section; parent → own child's own (service scope). */
   SUBMISSION_READ: "submission:read",
+
+  /* ---- Report Cards & Academic Results (M7, ADR-014). Lifecycle authority is
+   * admin (generate/approve/publish/reopen/revoke/correct); the class teacher
+   * authors a remark + submits — narrowed by the assertClassTeacherOfEnrollment
+   * SCOPE (a subject teacher of the same section is refused); reads carry own-
+   * section / own-child(PUBLISHED) row scope. R1/R2/R3. */
+  /** Generate/approve/publish/reopen/revoke/correct a card + edit principal remarks/promotion. Admin-only. */
+  REPORT_CARD_MANAGE: "report_card:manage",
+  /** Draft the class-teacher remark + submit for review. Teacher → own-section (class-teacher scope). */
+  REPORT_CARD_REMARK: "report_card:remark",
+  /** Read report cards. Teacher → own-section; parent → own child PUBLISHED only (service scope). */
+  REPORT_CARD_READ: "report_card:read",
 } as const;
 
 export type Permission = (typeof PERMISSIONS)[keyof typeof PERMISSIONS];
@@ -172,6 +184,9 @@ export const ROLE_PERMISSIONS: Readonly<Record<RoleKey, readonly Permission[]>> 
     PERMISSIONS.HOMEWORK_READ,
     PERMISSIONS.SUBMISSION_REVIEW,
     PERMISSIONS.SUBMISSION_READ,
+    // M7: full report-card lifecycle + read, school-wide (ADR-014 §7 — office/principal authority).
+    PERMISSIONS.REPORT_CARD_MANAGE,
+    PERMISSIONS.REPORT_CARD_READ,
   ],
   // OFFICE_ADMIN: full academic + People management (M3) + Attendance (M4), school-wide.
   OFFICE_ADMIN: [
@@ -189,6 +204,9 @@ export const ROLE_PERMISSIONS: Readonly<Record<RoleKey, readonly Permission[]>> 
     PERMISSIONS.HOMEWORK_READ,
     PERMISSIONS.SUBMISSION_REVIEW,
     PERMISSIONS.SUBMISSION_READ,
+    // M7: full report-card lifecycle + read, school-wide (ADR-014 §7).
+    PERMISSIONS.REPORT_CARD_MANAGE,
+    PERMISSIONS.REPORT_CARD_READ,
   ],
   // TEACHER: reads academic structure + reads students/enrollments/documents in
   // their OWN sections and their OWN staff profile (row-scope in the service).
@@ -217,6 +235,10 @@ export const ROLE_PERMISSIONS: Readonly<Record<RoleKey, readonly Permission[]>> 
     PERMISSIONS.HOMEWORK_READ,
     PERMISSIONS.SUBMISSION_REVIEW,
     PERMISSIONS.SUBMISSION_READ,
+    // M7: the class teacher (assertClassTeacherOfEnrollment scope) authors a remark + submits;
+    // reads own-section cards. A subject teacher holds these too but the scope refuses them.
+    PERMISSIONS.REPORT_CARD_REMARK,
+    PERMISSIONS.REPORT_CARD_READ,
   ],
   // PARENT: reads only their OWN children (students/enrollments/documents) and
   // their OWN parent record (row-scope in the service). M4: reads own child's
@@ -237,6 +259,8 @@ export const ROLE_PERMISSIONS: Readonly<Record<RoleKey, readonly Permission[]>> 
     PERMISSIONS.HOMEWORK_READ,
     PERMISSIONS.SUBMISSION_SUBMIT,
     PERMISSIONS.SUBMISSION_READ,
+    // M7: reads own child's PUBLISHED report cards only (service scope), never edits.
+    PERMISSIONS.REPORT_CARD_READ,
   ],
   ACCOUNTANT: [...SELF_PROFILE],
 };

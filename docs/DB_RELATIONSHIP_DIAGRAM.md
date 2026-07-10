@@ -6,7 +6,7 @@ Visual companion to Dev PRD §6 (the schema there is the source of truth). Merma
 
 - `||--o{` one-to-many · `||--||` one-to-one · `}o--o{` many-to-many (via join model)
 - **Loose refs** (deliberately no FK): `schoolId` everywhere (ADR-008), `AuditLog`/`ImportJob` actor+entity (ADR-007), `Announcement.targetId` (polymorphic). Shown as dashed notes, not edges.
-- Partial unique indexes (raw SQL in migrations): `ReportCard(enrollmentId, examId) WHERE examId IS NOT NULL` (ADR-009), `GuardianStudent(studentId) WHERE isPrimary`, and `AcademicYear(schoolId) WHERE isCurrent` (adopted v1.3 — exactly one current year).
+- Partial unique indexes (raw SQL in migrations): **M7** `ReportCard` per kind — ONE PUBLISHED per `(enrollment, scope)` + `(enrollment, scope, version)` unique (ADR-014, generalizes ADR-009's `examId`-nullable seam); `GuardianStudent(studentId) WHERE isPrimary`; `AcademicYear(schoolId) WHERE isCurrent` (adopted v1.3 — exactly one current year).
 
 ## Identity & people (M1–M2)
 
@@ -97,6 +97,14 @@ Leave→Attendance bridge (no FK): on APPROVED, service resolves `studentId → 
 
 ## Exams, marks, report cards (M4)
 
+> **Report cards IMPLEMENTED in M7** (`20260710030000_report_card_management`, ADR-014) —
+> the `REPORT_CARD` block below reflects the shipped model, superseding the ADR-009
+> `examId`-only sketch. It is a LEAF reporting table (no children): **9 FKs, ALL Restrict,
+> no Cascade/SetNull in or out**. Delete rules + rollback-safety **live-verified** M7 Step 3
+> (matrix 9/9 exact; D1–D5 delete-blocked incl. year-cascade precision; P1–P3 cards survive
+> promotion/transfer/withdrawal by construction — key to the immutable enrollment; 0 rows
+> persisted). Owner = Enrollment (ADR-010 §8); Exam/Term/Year are scope, not owners.
+
 ```mermaid
 erDiagram
     ACADEMIC_YEAR ||--o{ EXAM : ""
@@ -107,8 +115,10 @@ erDiagram
     STAFF ||--o{ MARK : "enteredBy"
     GRADE_SCALE ||--o{ GRADE_BAND : "cascade"
     GRADE_BAND ||--o{ MARK : "optional"
-    ENROLLMENT ||--o{ REPORT_CARD : ""
-    EXAM ||--o{ REPORT_CARD : "OPTIONAL (ADR-009)"
+    ENROLLMENT ||--o{ REPORT_CARD : "restrict — OWNER; never orphaned, survives promotion/withdrawal/transfer"
+    EXAM ||--o{ REPORT_CARD : "restrict — EXAM-card scope (nullable, ADR-009)"
+    ACADEMIC_TERM ||--o{ REPORT_CARD : "restrict — TERM-card scope (nullable)"
+    STAFF ||--o{ REPORT_CARD : "createdBy / submittedBy? / approvedBy? / publishedBy? / reopenedBy? / revokedBy? — all restrict (audit actors, B3)"
 
     EXAM_SUBJECT { string id "UK(examId, classSubjectId)" }
     MARK {
@@ -120,8 +130,16 @@ erDiagram
     }
     GRADE_BAND { string grade "A+..E configurable" }
     REPORT_CARD {
-        string examId "nullable — partial UK WHERE NOT NULL"
-        string pdfPath "private storage PATH, signed on read (v1.3)"
+        enum kind "EXAM|TERM|ANNUAL — discriminator (ADR-009 seam); kind⟺scope CHECK"
+        string examId "nullable — EXAM cards only"
+        string termId "nullable — TERM cards only"
+        int version "R3: bumps per correction; (scope,version) unique per kind"
+        enum status "DRAFT|SUBMITTED|APPROVED|PUBLISHED|SUPERSEDED|REVOKED — approve=snapshot frozen, publish=parent gate"
+        int rank "snapshot @approve + rankScope(SECTION|CLASS) + cohortSize (R2)"
+        float attendancePercentage "snapshot @approve — compute-on-read (ADR-011)"
+        float gpaSnapshot "display copy — marks already immutable upstream (ADR-012)"
+        string pdfPath "private bucket PATH, signed on read; NOT lifecycle-gating (R5)"
+        string id "partial-unique per kind: ONE PUBLISHED per scope + (scope,version) unique"
     }
 ```
 
@@ -238,7 +256,13 @@ Standalone (loose refs only): `SCHOOL` (tenant root), `AUDIT_LOG(actorUserId, en
 
 | Cascade (composition) | Restrict (history/money) |
 |---|---|
-| Staff/Guardian→User, GuardianStudent, DeviceToken, Notification, GradeBand→Scale, ExamSubject→Exam, Message→Thread, FeeItem→Structure, InvoiceLine→Invoice, **M6:** HomeworkAttachment→Homework, HomeworkSubmission→Homework (delete business-guarded to DRAFT), SubmissionAttachment→Submission, HomeworkFeedback→Submission | Mark, Attendance, Enrollment, Invoice, Payment, ReportCard, LeaveApplication, all academic structure, **M6:** Submission→Enrollment/Parent, every homework Staff/Parent actor, Homework→Year/Subject/Section |
+| Staff/Guardian→User, GuardianStudent, DeviceToken, Notification, GradeBand→Scale, ExamSubject→Exam, Message→Thread, FeeItem→Structure, InvoiceLine→Invoice, **M6:** HomeworkAttachment→Homework, HomeworkSubmission→Homework (delete business-guarded to DRAFT), SubmissionAttachment→Submission, HomeworkFeedback→Submission | Mark, Attendance, Enrollment, Invoice, Payment, ReportCard, LeaveApplication, all academic structure, **M6:** Submission→Enrollment/Parent, every homework Staff/Parent actor, Homework→Year/Subject/Section, **M7:** ReportCard→Enrollment/Exam/Term + all 6 Staff actors |
 
 **M6 note:** the homework tables use **no SetNull** — verified live (R1: 17/17 FK
 delete rules exact; only Cascade content edges + Restrict data/actor edges).
+
+**M7 note:** `ReportCard` is a **leaf** — **9 FKs, all Restrict, no Cascade/SetNull** in or
+out. Verified live (Step 3): matrix 9/9 exact; a published card can never be orphaned or
+cascade-deleted, and survives promotion/withdrawal/transfer because it keys to the immutable
+enrollment (ADR-014 §8). Cascade precision: deleting the `AcademicYear` is blocked upstream at
+`Enrollment→AcademicYear` (Restrict), so no cascade can reach a term a card scopes.

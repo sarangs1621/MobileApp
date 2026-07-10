@@ -66,6 +66,10 @@ import {
 } from "./repositories/leave-request.repository";
 import { createMarkRepository, type MarkRepository } from "./repositories/mark.repository";
 import { createParentRepository, type ParentRepository } from "./repositories/parent.repository";
+import {
+  createReportCardRepository,
+  type ReportCardRepository,
+} from "./repositories/report-card.repository";
 import { createSectionRepository, type SectionRepository } from "./repositories/section.repository";
 import { createStaffRepository, type StaffRepository } from "./repositories/staff.repository";
 import {
@@ -125,6 +129,7 @@ export * from "./repositories/homework-attachment.repository";
 export * from "./repositories/homework-submission.repository";
 export * from "./repositories/submission-attachment.repository";
 export * from "./repositories/homework-feedback.repository";
+export * from "./repositories/report-card.repository";
 export type { DbClient } from "./db-client";
 
 /** Aggregate of repositories injected into services via `ServiceContext`. */
@@ -159,6 +164,7 @@ export interface Repositories {
   homeworkSubmissions: HomeworkSubmissionRepository;
   submissionAttachments: SubmissionAttachmentRepository;
   homeworkFeedback: HomeworkFeedbackRepository;
+  reportCards: ReportCardRepository;
 }
 
 export function createRepositories(client: DbClient): Repositories {
@@ -193,6 +199,7 @@ export function createRepositories(client: DbClient): Repositories {
     homeworkSubmissions: createHomeworkSubmissionRepository(client),
     submissionAttachments: createSubmissionAttachmentRepository(client),
     homeworkFeedback: createHomeworkFeedbackRepository(client),
+    reportCards: createReportCardRepository(client),
   };
 }
 
