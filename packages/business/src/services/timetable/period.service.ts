@@ -27,11 +27,11 @@ export interface CreatePeriodInput {
 }
 
 export interface UpdatePeriodInput {
-  name?: string;
-  order?: number;
-  startTime?: string;
-  endTime?: string;
-  isBreak?: boolean;
+  name?: string | undefined;
+  order?: number | undefined;
+  startTime?: string | undefined;
+  endTime?: string | undefined;
+  isBreak?: boolean | undefined;
 }
 
 /** Periods of a bell schedule, in order. Any timetable reader. */

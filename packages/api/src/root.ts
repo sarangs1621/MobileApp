@@ -26,6 +26,7 @@ import {
   teacherProfileRouter,
 } from "./routers/people";
 import { reportCardRouter } from "./routers/report-card";
+import { bellScheduleRouter, periodRouter, timetableRouter } from "./routers/timetable";
 import { publicProcedure, router } from "./trpc";
 
 /**
@@ -66,6 +67,9 @@ export const appRouter = router({
   homework: homeworkRouter,
   submission: submissionRouter,
   reportCard: reportCardRouter,
+  bellSchedule: bellScheduleRouter,
+  period: periodRouter,
+  timetable: timetableRouter,
 });
 
 export type AppRouter = typeof appRouter;

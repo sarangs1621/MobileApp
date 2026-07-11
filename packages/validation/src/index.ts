@@ -579,3 +579,67 @@ export const editReportCardInput = z.object({
 });
 export const reopenReportCardInput = z.object({ reportCardId: idSchema, reason: reasonSchema });
 export const revokeReportCardInput = z.object({ reportCardId: idSchema, reason: reasonSchema });
+
+/* ---- Timetable Management inputs (M9, ADR-017). Cross-field/business rules
+ * (one-schedule-per-year, period overlap, ownership from TeacherAssignment,
+ * double-booking, cross-year, no-class-on-break) live in the services — not here. */
+
+/** Clock time "HH:MM" 24-hour (a `@db.Time` column value). */
+export const clockTimeSchema = z
+  .string()
+  .regex(/^([01]\d|2[0-3]):[0-5]\d$/, "Expected HH:MM (00:00–23:59)");
+/** Weekday enum (Mon–Sun; matches the Prisma `Weekday`). */
+export const weekdaySchema = z.enum(["MON", "TUE", "WED", "THU", "FRI", "SAT", "SUN"]);
+const roomSchema = z.string().trim().max(60);
+
+/** {bellScheduleId} — list a schedule's periods. */
+export const bellScheduleIdInput = z.object({ bellScheduleId: idSchema });
+
+/** Create the year's (single) bell schedule. */
+export const createBellScheduleInput = z.object({ academicYearId: idSchema, name: nameSchema });
+/** Rename the bell schedule. */
+export const updateBellScheduleInput = z.object({ id: idSchema, name: nameSchema });
+
+/** Add a period to a schedule. */
+export const createPeriodInput = z.object({
+  bellScheduleId: idSchema,
+  name: nameSchema,
+  order: z.number().int().positive(),
+  startTime: clockTimeSchema,
+  endTime: clockTimeSchema,
+  isBreak: z.boolean().default(false),
+});
+/** Edit a period (any subset). */
+export const updatePeriodInput = z.object({
+  id: idSchema,
+  name: nameSchema.optional(),
+  order: z.number().int().positive().optional(),
+  startTime: clockTimeSchema.optional(),
+  endTime: clockTimeSchema.optional(),
+  isBreak: z.boolean().optional(),
+});
+
+/** Create a timetable entry (one weekly slot). */
+export const createTimetableEntryInput = z.object({
+  academicYearId: idSchema,
+  sectionId: idSchema,
+  subjectId: idSchema,
+  teacherId: idSchema,
+  periodId: idSchema,
+  weekday: weekdaySchema,
+  room: roomSchema.nullable().optional(),
+});
+/** Edit a timetable entry (any subset; section/year are fixed after create). */
+export const updateTimetableEntryInput = z.object({
+  id: idSchema,
+  subjectId: idSchema.optional(),
+  teacherId: idSchema.optional(),
+  periodId: idSchema.optional(),
+  weekday: weekdaySchema.optional(),
+  room: roomSchema.nullable().optional(),
+});
+
+/** A section's weekly grid (year × section). */
+export const sectionTimetableInput = z.object({ academicYearId: idSchema, sectionId: idSchema });
+/** A teacher's weekly grid (year × teacher). */
+export const teacherTimetableInput = z.object({ academicYearId: idSchema, teacherId: idSchema });

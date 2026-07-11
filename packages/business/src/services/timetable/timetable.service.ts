@@ -36,15 +36,15 @@ export interface CreateTimetableEntryInput {
   teacherId: string;
   periodId: string;
   weekday: string;
-  room?: string | null;
+  room?: string | null | undefined;
 }
 
 export interface UpdateTimetableEntryInput {
-  subjectId?: string;
-  teacherId?: string;
-  periodId?: string;
-  weekday?: string;
-  room?: string | null;
+  subjectId?: string | undefined;
+  teacherId?: string | undefined;
+  periodId?: string | undefined;
+  weekday?: string | undefined;
+  room?: string | null | undefined;
 }
 
 /** Create a timetable entry. Admin-only, audited. */
