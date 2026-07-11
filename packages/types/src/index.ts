@@ -172,6 +172,7 @@ export interface StaffDto {
   id: string;
   schoolId: string;
   userId: string;
+  name: string;
   employeeId: string;
   department: string | null;
   qualification: string | null;

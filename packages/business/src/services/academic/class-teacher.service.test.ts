@@ -91,6 +91,7 @@ const officeStaff: Staff = {
   id: "stf-office",
   schoolId: "s-1",
   userId: "u-office",
+  name: "Olivia Office",
   employeeId: "E-1",
   department: null,
   qualification: null,

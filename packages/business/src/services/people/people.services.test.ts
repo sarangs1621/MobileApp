@@ -124,6 +124,7 @@ const staffRow: Staff = {
   id: "sf-1",
   schoolId: "s-1",
   userId: "u-teacher",
+  name: "Tara Teacher",
   employeeId: "EMP-01",
   department: null,
   qualification: null,
@@ -660,7 +661,7 @@ describe("parent — records and links", () => {
 /* ---- staff — employment profile ---- */
 
 describe("staff — employment profile", () => {
-  const newStaff = { userId: "u-teacher", employeeId: "EMP-02" };
+  const newStaff = { userId: "u-teacher", name: "Nate New", employeeId: "EMP-02" };
 
   it("creates a profile and audits", async () => {
     const { ctx, repos } = makeCtx(officeAdmin);
