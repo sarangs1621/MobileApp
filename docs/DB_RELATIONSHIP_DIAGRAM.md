@@ -251,11 +251,50 @@ no longer has a backing assignment. Keeping timetable ownership valid on assignm
 removal is a **business-layer** responsibility (`TimetableService`) — the same posture
 as attendance/exam/homework, where ownership is resolved at authz time, not stored.
 
-## Communication & notifications (M5-planned — NOT built)
+## Notifications (M10 — IMPLEMENTED per ADR-018)
+
+> The implemented **in-app** notification schema (`20260711030000_notification_management`, ADR-018) —
+> supersedes the `USER ||--o{ NOTIFICATION : "cascade"` sketch in the Identity section (which pre-dated the
+> per-user recipient split and used cascade). Grain: **Notification** (one immutable event) → 1:N
+> **NotificationRecipient** (one per-user copy — read/archive state). Both FKs **Restrict** (not cascade —
+> brief). Recipients are resolved once at emit and stored explicitly. Isolation **live-verified** M10 Step 3
+> (rolled back): a user reads/writes only own recipient rows (Teacher A ≠ Teacher B, parent ≠ other parent);
+> a Notification is readable iff an EXISTS recipient row; admin all; anon none.
+
+```mermaid
+erDiagram
+    USER ||--o{ NOTIFICATION_RECIPIENT : "restrict — one copy per user per event"
+    NOTIFICATION ||--o{ NOTIFICATION_RECIPIENT : "restrict — fan-out"
+
+    NOTIFICATION {
+        enum type "HOMEWORK_PUBLISHED|EXAM_PUBLISHED|REPORT_CARD_PUBLISHED|ANNOUNCEMENT|TIMETABLE_UPDATED?|STUDY_MATERIAL?|SYSTEM"
+        enum priority "LOW|NORMAL|HIGH|URGENT"
+        string actionUrl "deep link (nullable)"
+        datetime createdAt "immutable — NO updatedAt"
+        string schoolId "loose (ADR-008)"
+    }
+    NOTIFICATION_RECIPIENT {
+        bool isRead "readAt when true"
+        bool isArchived "archivedAt — reversible SOFT DELETE"
+        string id "UK(notificationId, userId) — idempotency floor"
+    }
+```
+
+Generated **after commit** by a business `*AndNotify` composition wrapping the frozen publish services
+(Homework/Exam/ReportCard) — services untouched; delete() hard-removes the caller's own recipient row (the
+shared event + other recipients survive). `TIMETABLE_UPDATED`/`STUDY_MATERIAL` types reserved (no M10 source).
+
+**M10 note:** notifications use **no Cascade, no SetNull** — both FKs Restrict (`NotificationRecipient →
+Notification`, `NotificationRecipient → User`). Purely additive (2 tables + 2 enums); the `User.notifications`
+back-relation is virtual. `migrate diff` (M9 head → schema) = only these CREATEs, zero ALTER; zero drift.
+
+## Communication & notifications (messages — NOT built; announcements now via M10)
 
 > The `HOMEWORK` entity in this sketch is **superseded by the implemented M6 model
 > above** (distribution-only → full submissions; brief overrides Dev PRD decision #13).
-> Messages/announcements remain future work.
+> The `ANNOUNCEMENT` entity is **superseded by M10** — an announcement is a
+> `Notification(type=ANNOUNCEMENT)` (see the Notifications section above), no separate
+> table. **Messages/threads** remain future work.
 
 ```mermaid
 erDiagram
@@ -329,3 +368,10 @@ Verified live (Step 3): 6/6 referenced parents delete-blocked, 0 rows persisted.
 `TimetableEntry` make section/teacher double-booking structurally impossible. Ownership
 is **derived** from `TeacherAssignment` (no FK) — assignment-removal integrity is a
 business guard, not a DB rule.
+
+**M10 note:** notifications use **no Cascade, no SetNull** — both FKs Restrict
+(`NotificationRecipient → Notification`, `NotificationRecipient → User`). Verified live
+(Step 3): recipient owner reads/writes only own rows; a `Notification` is readable iff an
+EXISTS recipient row; isolation proven (Teacher A ≠ Teacher B, parent ≠ other parent).
+`@@unique(notificationId, userId)` is the one-copy-per-user idempotency floor; `delete()`
+hard-removes the caller's own recipient row (leaf), archive = reversible soft delete.

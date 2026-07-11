@@ -225,18 +225,32 @@ tasks** (business 207, api 266, validation 50); mobile ios export ✓ (Step 7).
 
 ## Next Task
 
-**STOPPED — M9 (Timetable Management, ADR-017) COMPLETE, all 10 steps shipped;
-awaiting milestone approval to freeze.** A new read-mostly domain, purely additive over frozen
-M1–M8: `+BellSchedule/Period/TimetableEntry` tables + `Weekday` enum, two adopted `timetable:*`
-permission constants, three tRPC routers, mobile read screen + web admin console. **No frozen-table
-change** (proven by `migrate diff` — zero drift), **no new RLS policy shape**, **no new permission
-grant**. Ownership derives from `TeacherAssignment` (never `ClassTeacherAssignment`); double-booking
-structurally impossible (two DB uniques); every mutation audited in-tx. **Permission-only, NO feature
-flag** (ADR-017 §4 — no flag infra exists; the ADR-013/M6 precedent). Gate green: lint 14/14 · typecheck
-14/14 · test 7/7 (business 348, api 318) · db:validate ✓ · mobile typecheck ✓ · web build ✓ (with env).
-RLS isolation + delete-rule probes proven live on `m9_verify`. Deferred: notifications, substitute
-teachers, recurring templates, multiple bell schedules/year. Limitations in
-`docs/features/timetable.md` / `docs/status/Timetable.md`.
+**STOPPED — M10 (Notifications & Communication, ADR-018) COMPLETE, all 10 steps shipped;
+awaiting milestone approval to freeze.** A complete **in-app** notification system, purely additive over
+frozen M1–M9: `+Notification/NotificationRecipient` tables + `NotificationType/NotificationPriority` enums,
+two adopted `notification:manage_own`/`announcement:send` constants, one tRPC router (8 procedures), mobile
+bell + inbox, web bell + dropdown + `/notifications` page + admin announcement composer. **No frozen-table
+change** (proven by `migrate diff` — zero drift), **no new RLS policy shape**, **no new permission grant**.
+Notifications are generated **after commit** by a business `*AndNotify` composition wrapping the frozen
+publish services (Homework/Exam/ReportCard) — **services untouched**, routers repoint (the canonical pattern,
+ADR-018 §3, moved out of transport per Step-5 review). Recipients resolved once + stored explicitly (reuse
+Enrollment/TeacherAssignment); emit is best-effort. **Permission-only, NO feature flag.** **No push/SMS/
+email/chat.** Gate green: lint/typecheck/test **35/35** (business 367, api 326) · db:validate ✓ · mobile
+typecheck ✓ · web build ✓ (`/notifications`). RLS isolation proven live on `m9_verify` (Teacher A ≠ B,
+parent ≠ other). Deferred: timetable auto-emit (reserved `TIMETABLE_UPDATED`), study-material source, push/SMS
+delivery (the ADR-005 seam), notification preferences. Limitations in `docs/features/notifications.md` /
+`docs/status/Notifications.md`.
+
+<details><summary>Prior — M9 next-task note</summary>
+
+**M9 (Timetable Management, ADR-017) COMPLETE, all 10 steps shipped.** A read-mostly domain, purely additive
+over frozen M1–M8: `+BellSchedule/Period/TimetableEntry` + `Weekday` enum, two `timetable:*` constants, three
+routers, mobile read screen + web admin console. Ownership from `TeacherAssignment` (never
+`ClassTeacherAssignment`); double-booking structurally impossible; permission-only, no flag. Deferred:
+substitute teachers, recurring templates, multiple bell schedules/year. `docs/features/timetable.md` /
+`docs/status/Timetable.md`.
+
+</details>
 
 <details><summary>Prior — M7 next-task note</summary>
 

@@ -54,6 +54,7 @@ Component catalog for `packages/ui` (shared tokens/primitives) and app-level dom
 | `OfflineBanner` + `SyncQueueIndicator` | teacher attendance | `offline` flag (OFFLINE_STRATEGY) | flag |
 | `FeeInvoiceCard` / `PaymentSheet` (Razorpay) / `ReceiptViewer` | fees screens | **flag: fees** | GL |
 | `TimetableGrid` (**M9, implemented**) | WEB-TT-01..03 (`components/timetable/ui.tsx`) | periods×Mon–Sat; break rows span; click-cell→modal editor OR read-only; empty cells clickable. Also `YearSelect`, `downloadCsv`/`entriesToCsv`. Mobile read view is a plain screen (`(app)/timetable`). **No flag** (ADR-017 §4); conflict warnings via mutation errors, not client prediction | M9 |
+| `NotificationBell` (**M10, implemented**) | mobile home header (`components/notifications-ui.tsx`), web dashboard header (`components/notification/ui.tsx`) | bell + unread badge (`notification.unreadCount`, `99+` cap); web adds a recent-notifications dropdown. Shared helpers `deepLinkForType` (type→destination screen) + `timeAgo`. Inbox screens = MOB-NOT-01 / WEB-NOT-01; web `/notifications` adds the admin `AnnouncementComposer`. **No flag** (ADR-018) | M10 |
 | `TrendChart` / `DistributionChart` | WEB-ANA-01 | **flag: analytics** | flag |
 
 ## Rules

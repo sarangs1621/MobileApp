@@ -145,7 +145,25 @@ Notes:
 | `announcement:read` | any | school | school | school (scoped to child's class/division + school-wide) | school |
 | `message:create_thread` | any | – | own students' guardians | – (reply only) | – |
 | `message:send` | any | – | own threads | own threads | – |
-| `notification:manage_own` (list, markRead, register/deregister device) | self | self | self | self | self |
+| `notification:manage_own` (list, unreadCount, markRead, markAllRead, archive, unarchive, delete — **M10, ADR-018**) | self | self | self | self | self |
+| `announcement:send` (compose+send an ANNOUNCEMENT — **M10**, supersedes the planned `announcement:create:*` split above) | any | school | – | – | – |
+
+### Notifications & Communication (M10, ADR-018 — implemented)
+
+Built as **M10** (see `docs/milestones/M10.md`). **Permission-only — no feature flag.** In-app only (no
+push/SMS/email). `notification:manage_own` is **self-scope** for every role (a user acts only on their own
+recipient rows — enforced in the service; RLS is defense-in-depth, isolation proven: Teacher A ≠ Teacher B,
+parent ≠ other parent). `announcement:send` is SA/OA only.
+
+Notes:
+- Notifications are generated **after** a publish commits by a business `*AndNotify` composition (the frozen
+  publish services are untouched); announcement is the one manual admin action. Recipients are resolved once
+  (reuse Enrollment/TeacherAssignment) and stored explicitly.
+- The planned `announcement:create:school`/`:division` + `announcement:read` rows are **superseded** by M10 —
+  announcements ship as `Notification(type=ANNOUNCEMENT)` sent under `announcement:send`; reading is the normal
+  inbox (`notification:manage_own`). No separate `Announcement` table.
+- **Not built in M10** (deferred): push/SMS/WhatsApp delivery, notification preferences, timetable/study-material
+  notification sources.
 
 ### Timetable Management (M9, ADR-017 — implemented)
 

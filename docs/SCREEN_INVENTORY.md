@@ -40,7 +40,7 @@ Every screen, keyed by the IDs used in `NAVIGATION_MAP.md` and `USER_FLOWS.md`. 
 | ID | Screen | APIs | MS |
 |---|---|---|---|
 | MOB-MSG-01 | Message thread | `messages.*` | M5 |
-| MOB-NOT-01 | Notification centre | `notifications.list/markRead` | M3 |
+| MOB-NOT-01 | Notification inbox (**M10, implemented**) | home-header bell + unread badge (`notification.unreadCount`); `(app)/notifications` list (`notification.list`, pull-to-refresh) — tap = markRead + deep-link to destination screen, per-row archive, mark-all-read | M10 |
 | MOB-SET-01 | Settings | locale → `profile.update`; logout (token dereg) | M1 |
 
 ## Web — auth & shell
@@ -87,6 +87,7 @@ Every screen, keyed by the IDs used in `NAVIGATION_MAP.md` and `USER_FLOWS.md`. 
 | WEB-SET-02 | Feature flags | super admin toggle (audited) | M1 |
 | WEB-FEE-01..04 | Fee structures / invoices / dues / payments | **flag: fees**; receipt PDFs | GL |
 | WEB-TT-01..03 | Timetable console (**M9, implemented**) | admin (`timetable:manage`): (01) bell schedule & period CRUD; (02) section grid = periods×Mon–Sat, click-cell→modal (drag-free), conflict warnings, CSV; (03) teacher read view + CSV. Year/class/section filters. **No flag** (ADR-017 §4) | M9 |
+| WEB-NOT-01 | Notifications (**M10, implemented**) | dashboard-header bell + unread badge + recent-notifications dropdown; `/notifications` page — inbox (mark read + deep-link, archive, mark-all-read) + admin announcement composer (`announcement:send`): bulk whole-school or one section, priority, recipient-count confirmation | M10 |
 | WEB-ANA-01 | Analytics | attendance trends, result distribution | flag |
 
 ## Cross-cutting screen requirements
@@ -104,3 +105,7 @@ Every screen, keyed by the IDs used in `NAVIGATION_MAP.md` and `USER_FLOWS.md`. 
    slots / parent child's section, weekday-grouped, enriched DTO — no id lookups); the Home dashboard gains a
    **"Today's schedule"** card + Timetable nav, gated on `timetable:read`. Web timetable console = WEB-TT-01..03
    above (admin `timetable:manage`).
+8. **M10 (implemented):** a notification bell + unread badge in the mobile home header and the web dashboard
+   header (every role — `notification:manage_own`); MOB-NOT-01 / WEB-NOT-01 above are the inboxes. Tapping a
+   notification marks it read and deep-links to the destination screen (by type — mobile routes are studentId-
+   keyed, so it routes to the section, not the raw entity). Admins compose announcements on WEB-NOT-01.

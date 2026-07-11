@@ -1,6 +1,6 @@
 # ADR-018 — Notification Architecture — M10
 
-**Status:** Proposed — **M10 Step 1 (design)** · **Date:** 2026-07-11 · **Deciders:** Architecture, Product
+**Status:** Accepted — **M10 implemented** (Steps 1–10; awaiting milestone approval) · **Date:** 2026-07-11 · **Deciders:** Architecture, Product
 **Related:** ADR-002 (business layer is the authorization gate) · ADR-003 (repositories; Prisma only in `packages/db`) ·
 ADR-005 (`@repo/notifications` — the channel-**delivery** seam: IN_APP/PUSH/SMS/WHATSAPP adapters) · ADR-007 (AuditLog in-transaction) ·
 ADR-008 (loose `schoolId`) · ADR-011/012/013 (**recipients derived from `Enrollment`/`TeacherAssignment`**, resolved once at emit time) ·
