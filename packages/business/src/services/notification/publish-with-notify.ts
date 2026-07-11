@@ -1,11 +1,17 @@
-import type { ExamDto, HomeworkDto, ReportCardDto } from "@repo/types";
+import type { ExamDto, HomeworkDto, LeaveRequestDto, ReportCardDto } from "@repo/types";
 
 import type { ServiceContext } from "../../context";
+import { decideLeave } from "../attendance";
 import { publishExam } from "../exam";
 import { publishHomework } from "../homework";
 import { publishReportCard } from "../report-card";
 
-import { emitExamPublished, emitHomeworkPublished, emitReportCardPublished } from "./events";
+import {
+  emitExamPublished,
+  emitHomeworkPublished,
+  emitLeaveDecided,
+  emitReportCardPublished,
+} from "./events";
 
 /**
  * Publish-with-notification COMPOSITION (M10 Step 5, ADR-018 §3) — the application
@@ -44,4 +50,18 @@ export async function publishReportCardAndNotify(
   const card = await publishReportCard(ctx, reportCardId);
   await emitReportCardPublished(ctx, card);
   return card;
+}
+
+/**
+ * M12 (ADR-020 §3): approve/reject a leave request, then notify the parent. The
+ * frozen M4 `decideLeave` is UNCHANGED — this composer calls it and fires the
+ * best-effort emit after it commits. The attendance router repoints to this.
+ */
+export async function decideLeaveAndNotify(
+  ctx: ServiceContext,
+  input: { leaveId: string; decision: "APPROVED" | "REJECTED" },
+): Promise<LeaveRequestDto> {
+  const leave = await decideLeave(ctx, input);
+  await emitLeaveDecided(ctx, leave);
+  return leave;
 }

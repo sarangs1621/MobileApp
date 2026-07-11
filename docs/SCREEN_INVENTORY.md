@@ -43,6 +43,7 @@ Every screen, keyed by the IDs used in `NAVIGATION_MAP.md` and `USER_FLOWS.md`. 
 | MOB-NOT-01 | Notification inbox (**M10, implemented**) | home-header bell + unread badge (`notification.unreadCount`); `(app)/notifications` list (`notification.list`, pull-to-refresh) — tap = markRead + deep-link (`actionUrl` → e.g. `/announcements/:id`, else type default), per-row archive, mark-all-read | M10 |
 | MOB-ANN-01 | Announcements (**M11, implemented**) | `(app)/announcements` feed (`announcement.list`, published+targeted) + detail (`get`, attachment downloads); authors get a Drafts tab + create/edit draft (`create`/`update`); permission-gated home nav | M11 |
 | MOB-CAL-01 | School calendar (**M11, implemented**) | `(app)/calendar` — Upcoming (`calendar.upcoming`) / Month (`calendar.month`) with a type filter (covers upcoming holidays + exam schedule); read-only (`calendar:read`) | M11 |
+| MOB-BEH-01 | Behaviour (**M12, implemented**) | student profile → *Behaviour incidents* (`behaviour.listByStudent`) + *Record incident* (`create`); `(app)/behaviour` teacher referrals (`listByTeacher`); `(app)/behaviour/[id]` detail + resolve/close; parent `(app)/behaviour/children` → child history; BEHAVIOUR notification deep-links to `/behaviour/:id` | M12 |
 | MOB-SET-01 | Settings | locale → `profile.update`; logout (token dereg) | M1 |
 
 ## Web — auth & shell
@@ -92,6 +93,7 @@ Every screen, keyed by the IDs used in `NAVIGATION_MAP.md` and `USER_FLOWS.md`. 
 | WEB-NOT-01 | Notifications (**M10, implemented**) | dashboard-header bell + unread badge + recent-notifications dropdown; `/notifications` page — inbox (mark read + deep-link, archive, mark-all-read) + admin announcement composer (`announcement:send`): bulk whole-school or one section, priority, recipient-count confirmation | M10 |
 | WEB-ANN-01 | Announcement console (**M11, implemented**) | `/announcements` — Drafts/Published/Archive tabs + scope filter; composer creates/edits drafts (admin full scope + class/section pickers; teacher own sections), **attachment upload/remove/download** (DRAFT), lifecycle (publish/archive admin-only, delete author draft). `announcement:read`/`manage`/`draft`. **No flag** | M11 |
 | WEB-CAL-01 | Calendar management (**M11, implemented**) | `/calendar` — month grid + event list + type filter; admin (`academic:manage`) create/edit/delete (native date inputs); **CSV export** (`calendar:read`). **No flag** | M11 |
+| WEB-BEH-01 | Behaviour console (**M12, implemented**) | `/behaviour` — admin (`behaviour:manage`) list with student/teacher/severity/status filters, resolve/close per row, **CSV export** of the filtered view. Leave admin approve/reject is the existing `/attendance/leave` (now auto-notifies via the repointed `leave.decide`). **No flag** | M12 |
 | WEB-ANA-01 | Analytics | attendance trends, result distribution | flag |
 
 ## Cross-cutting screen requirements
@@ -118,3 +120,9 @@ Every screen, keyed by the IDs used in `NAVIGATION_MAP.md` and `USER_FLOWS.md`. 
    notifications now deep-link to `/announcements/:id` (the M10 inbox prefers the event `actionUrl`). Authoring:
    teachers draft (own sections), admins publish; web is the full console (attachment uploads, class/section
    targeting), mobile is lighter.
+10. **M12 (implemented):** Student discipline (MOB-BEH-01 / WEB-BEH-01), gated on `behaviour:read`/`record`/`manage`
+    in the home/dashboard nav. Teachers record from a student's profile (behaviour tab); admins run the web console
+    (filters + resolve/close + CSV); parents view their child's history. BEHAVIOUR notifications deep-link to
+    `/behaviour/:id`; LEAVE notifications deep-link to `/attendance/leave` (the M4 leave screens are reused — parent
+    apply/history + admin approve/reject, which now auto-notifies the parent). The brief's leave/behaviour **calendar
+    view is deferred** (M11 calendar covers calendar needs; not in the M12 DoD).

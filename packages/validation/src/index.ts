@@ -786,3 +786,64 @@ export const listUpcomingCalendarInput = z.object({
   academicYearId: idSchema.optional(),
   eventType: calendarEventTypeSchema.optional(),
 });
+
+// ---------------------------------------------------------------------------
+// Student Discipline (M12, ADR-020)
+// ---------------------------------------------------------------------------
+
+const behaviourCategorySchema = z.enum([
+  "DISCIPLINE",
+  "BULLYING",
+  "UNIFORM",
+  "HOMEWORK",
+  "MISCONDUCT",
+  "LATE",
+  "OTHER",
+]);
+const behaviourSeveritySchema = z.enum(["LOW", "MEDIUM", "HIGH", "CRITICAL"]);
+const behaviourStatusSchema = z.enum(["OPEN", "IN_PROGRESS", "RESOLVED", "CLOSED"]);
+
+/** `teacherId` is admin-only (the referring teacher); on the teacher path the service
+ *  ignores it and sets teacherId = self. */
+export const createBehaviourIncidentInput = z.object({
+  studentId: idSchema,
+  // Admin-only pin (any year); on the teacher path the ACTIVE-year enrollment is derived.
+  enrollmentId: idSchema.optional(),
+  category: behaviourCategorySchema,
+  severity: behaviourSeveritySchema,
+  title: z.string().min(1).max(200),
+  description: z.string().min(1).max(5000),
+  actionTaken: z.string().max(5000).nullable().optional(),
+  teacherId: idSchema.optional(),
+  notify: z.boolean().optional(),
+});
+
+export const updateBehaviourIncidentInput = z.object({
+  id: idSchema,
+  category: behaviourCategorySchema.optional(),
+  severity: behaviourSeveritySchema.optional(),
+  title: z.string().min(1).max(200).optional(),
+  description: z.string().min(1).max(5000).optional(),
+  actionTaken: z.string().max(5000).nullable().optional(),
+  status: z.enum(["OPEN", "IN_PROGRESS"]).optional(),
+});
+
+export const listIncidentsInput = z.object({
+  studentId: idSchema.optional(),
+  teacherId: idSchema.optional(),
+  status: behaviourStatusSchema.optional(),
+  severity: behaviourSeveritySchema.optional(),
+  limit: z.number().int().min(1).max(100).optional(),
+  before: z.string().datetime().optional(),
+});
+
+export const listBehaviourByStudentInput = z.object({
+  studentId: idSchema,
+  limit: z.number().int().min(1).max(100).optional(),
+  before: z.string().datetime().optional(),
+});
+
+export const listBehaviourByTeacherInput = z.object({
+  limit: z.number().int().min(1).max(100).optional(),
+  before: z.string().datetime().optional(),
+});

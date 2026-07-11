@@ -149,6 +149,20 @@ export const PERMISSIONS = {
    * parents hold no academic:read, so this is the cross-role calendar read. Writes ride
    * academic:manage (holiday/M6.5 precedent). */
   CALENDAR_READ: "calendar:read",
+
+  /* ---- M12 Student Discipline (ADR-020) — permission-only, no feature flag.
+   * The manage/record/read split mirrors M7's report_card manage/remark/read. Leave
+   * reuses the existing leave:apply/decide/read (M4) verbatim — no new leave grant. */
+  /** Full behaviour lifecycle for any student: create/update/resolve/close + read all.
+   * SUPER_ADMIN / OFFICE_ADMIN. */
+  BEHAVIOUR_MANAGE: "behaviour:manage",
+  /** Record + progress OWN behaviour incidents (create/update/resolve/close) for OWN
+   * students. TEACHER only; teacherId is server-set to self and the student must be in
+   * an own section (service scope) — the report_card:remark shape (ADR-020 §6). */
+  BEHAVIOUR_RECORD: "behaviour:record",
+  /** Read behaviour incidents. Teacher → own + own-section; parent → own child;
+   * admin → all (service scope). */
+  BEHAVIOUR_READ: "behaviour:read",
 } as const;
 
 export type Permission = (typeof PERMISSIONS)[keyof typeof PERMISSIONS];
@@ -231,6 +245,10 @@ export const ROLE_PERMISSIONS: Readonly<Record<RoleKey, readonly Permission[]>> 
     PERMISSIONS.ANNOUNCEMENT_MANAGE,
     PERMISSIONS.ANNOUNCEMENT_READ,
     PERMISSIONS.CALENDAR_READ,
+    // M12: full behaviour lifecycle + read, school-wide (ADR-020). Leave decide/read
+    // already granted via ATTENDANCE_MANAGE (M4).
+    PERMISSIONS.BEHAVIOUR_MANAGE,
+    PERMISSIONS.BEHAVIOUR_READ,
   ],
   // OFFICE_ADMIN: full academic + People management (M3) + Attendance (M4), school-wide.
   OFFICE_ADMIN: [
@@ -261,6 +279,9 @@ export const ROLE_PERMISSIONS: Readonly<Record<RoleKey, readonly Permission[]>> 
     PERMISSIONS.ANNOUNCEMENT_MANAGE,
     PERMISSIONS.ANNOUNCEMENT_READ,
     PERMISSIONS.CALENDAR_READ,
+    // M12: full behaviour lifecycle + read, school-wide (ADR-020).
+    PERMISSIONS.BEHAVIOUR_MANAGE,
+    PERMISSIONS.BEHAVIOUR_READ,
   ],
   // TEACHER: reads academic structure + reads students/enrollments/documents in
   // their OWN sections and their OWN staff profile (row-scope in the service).
@@ -302,6 +323,10 @@ export const ROLE_PERMISSIONS: Readonly<Record<RoleKey, readonly Permission[]>> 
     PERMISSIONS.ANNOUNCEMENT_READ,
     PERMISSIONS.ANNOUNCEMENT_DRAFT,
     PERMISSIONS.CALENDAR_READ,
+    // M12: records own behaviour incidents (own students, teacherId=self) + reads
+    // own + own-section incidents. Leave read already granted (M4). No leave decide.
+    PERMISSIONS.BEHAVIOUR_RECORD,
+    PERMISSIONS.BEHAVIOUR_READ,
   ],
   // PARENT: reads only their OWN children (students/enrollments/documents) and
   // their OWN parent record (row-scope in the service). M4: reads own child's
@@ -331,6 +356,8 @@ export const ROLE_PERMISSIONS: Readonly<Record<RoleKey, readonly Permission[]>> 
     // M11: reads announcements (targeted in service) + reads the calendar (ADR-019 §7).
     PERMISSIONS.ANNOUNCEMENT_READ,
     PERMISSIONS.CALENDAR_READ,
+    // M12: reads own child's behaviour incidents; applies for + reads leave (M4).
+    PERMISSIONS.BEHAVIOUR_READ,
   ],
   ACCOUNTANT: [...SELF_PROFILE, PERMISSIONS.NOTIFICATION_MANAGE_OWN],
 };

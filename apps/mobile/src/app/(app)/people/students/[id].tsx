@@ -37,6 +37,7 @@ export default function StudentProfileScreen() {
   const role = me.data?.role;
   const canReadParents = role !== undefined && can(role, PERMISSIONS.PARENT_READ);
   const canReadAttendance = role !== undefined && can(role, PERMISSIONS.ATTENDANCE_READ);
+  const canReadBehaviour = role !== undefined && can(role, PERMISSIONS.BEHAVIOUR_READ);
 
   const enabled = id !== undefined;
   const student = trpc.student.get.useQuery({ id: id ?? "" }, { enabled });
@@ -86,6 +87,23 @@ export default function StudentProfileScreen() {
             <Field label="Nationality" value={student.data.nationality} />
             <Field label="Address" value={student.data.address} />
           </ListRow>
+
+          {canReadBehaviour ? (
+            <Link
+              href={{
+                pathname: "/behaviour/student/[studentId]",
+                params: { studentId: student.data.id },
+              }}
+              asChild
+            >
+              <Pressable
+                accessibilityRole="button"
+                className="min-h-11 justify-center rounded-md border border-border bg-card px-4 py-3"
+              >
+                <Text className="font-medium text-primary">Behaviour incidents</Text>
+              </Pressable>
+            </Link>
+          ) : null}
 
           <Text className="text-sm font-medium text-muted-foreground">Enrollment history</Text>
           {enrollments.data === undefined ? (

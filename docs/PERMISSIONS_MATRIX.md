@@ -193,6 +193,29 @@ Notes:
 - **Not built in M11** (deferred): CUSTOM (hand-picked) audiences, timed (non-all-day) calendar events, M5→calendar
   exam sync, published-announcement correction/versioning.
 
+### Student Discipline & Leave (M12, ADR-020 — implemented)
+
+Built as **M12** (see `docs/milestones/M12.md`). **Permission-only — no feature flag.** Behaviour incidents over
+frozen M1–M11; the `manage`/`record`/`read` split mirrors the M7 report-card `manage`/`remark`/`read` shape. **Leave
+reuses the existing `leave:apply/decide/read` (M4) verbatim — no new leave permission**; M12 only adds a parent
+notification when a decision is made (the `leave.decide` router repoints to `decideLeaveAndNotify`). Behaviour read is
+business-scoped; RLS is coarse defense-in-depth (admin ALL / teacher own-incidents / parent own-child / anon none).
+
+| Permission | SA | OA | T | P | AC |
+|---|---|---|---|---|---|
+| `behaviour:manage` (create/update/resolve/close/read any student + the console) | any | school | – | – | – |
+| `behaviour:record` (create/update/resolve/close **own** incidents for **own-section** students; `teacherId`=self) | – | – | ownSection | – | – |
+| `behaviour:read` (incident history) | any | school | own + ownSection | ownChild | – |
+| `leave:apply` / `leave:decide` / `leave:read` *(frozen M4 — unchanged)* | see Attendance (M4) | | | | |
+
+- **Teachers record, admins oversee** — `behaviour:record` is the teacher capability (server-set `teacherId=self`,
+  own-section student scope, the `report_card:remark` shape); `behaviour:manage` is the admin console + any-student
+  lifecycle. Both can resolve/close their own; CLOSED is terminal.
+- **`behaviour:read` is business-scoped** — admin all; teacher own referrals + a student's full history when the
+  student is in an own section (broader than the own-incident RLS, intentionally — business is the gate); parent own
+  child. The console list is admin-only (`behaviour:manage`).
+- **Accountants:** none (out of scope). **No feature flag.**
+
 ### Timetable Management (M9, ADR-017 — implemented)
 
 Built as **M9** (see `docs/milestones/M9.md`). **Permission-only — the `timetable` flag is NOT used**

@@ -70,6 +70,7 @@ model User {
   classTeacherAssignments ClassTeacherAssignment[] // M7 foundation: sections where this user is the class teacher (virtual back-relation only)
   timetableEntries        TimetableEntry[] // M9: slots this user teaches (virtual back-relation only)
   notifications           NotificationRecipient[] // M10: in-app notifications addressed to this user (virtual back-relation only)
+  behaviourIncidents      BehaviourIncident[]      @relation("BehaviourTeacher") // M12: incidents this user (teacher) referred (virtual back-relation only)
   staff                   Staff? // M3: employment profile, 1:1 (userId unique on Staff)
   parent                  Parent? // M3: parent portal login, 1:1 (userId unique on Parent)
   // + raw SQL: RLS ON — read-self + admin-read-all (m1_rls_hardening)
@@ -126,6 +127,7 @@ model AcademicYear {
   timetableEntries        TimetableEntry[] // M9: virtual back-relation only
   announcements           Announcement[] // M11: virtual back-relation only (no change to frozen M2 model)
   calendarEvents          SchoolCalendarEvent[] // M11: virtual back-relation only
+  behaviourIncidents      BehaviourIncident[] // M12: virtual back-relation only
   // + raw SQL: UNIQUE (schoolId) WHERE status = 'ACTIVE'  — one ACTIVE year
   // + raw SQL: CHECK (startDate < endDate)
   // + raw SQL: RLS ON — admin-only ALL (academic_rls migration; defense-in-depth)
@@ -329,25 +331,26 @@ enum EnrollmentStatus {
 // admissionNo unique per school; calendar dob is @db.Date (IST convention, no
 // UTC off-by-one). photoPath is a PRIVATE storage path signed on read (ADR-004).
 model Student {
-  id          String            @id @default(cuid())
-  schoolId    String // loose tenant ref (ADR-008)
-  admissionNo String
-  firstName   String
-  lastName    String
-  dob         DateTime?         @db.Date
-  gender      Gender?
-  bloodGroup  String?
-  nationality String?
-  aadhaar     String? // optional national ID; sensitive — unique per school when present (raw SQL below)
-  passport    String?
-  address     String?
-  photoPath   String? // PRIVATE storage path, signed on read (ADR-004)
-  status      StudentStatus     @default(ACTIVE)
-  createdAt   DateTime          @default(now())
-  updatedAt   DateTime          @updatedAt
-  enrollments Enrollment[]
-  parents     StudentParent[]
-  documents   StudentDocument[]
+  id                 String              @id @default(cuid())
+  schoolId           String // loose tenant ref (ADR-008)
+  admissionNo        String
+  firstName          String
+  lastName           String
+  dob                DateTime?           @db.Date
+  gender             Gender?
+  bloodGroup         String?
+  nationality        String?
+  aadhaar            String? // optional national ID; sensitive — unique per school when present (raw SQL below)
+  passport           String?
+  address            String?
+  photoPath          String? // PRIVATE storage path, signed on read (ADR-004)
+  status             StudentStatus       @default(ACTIVE)
+  createdAt          DateTime            @default(now())
+  updatedAt          DateTime            @updatedAt
+  enrollments        Enrollment[]
+  parents            StudentParent[]
+  documents          StudentDocument[]
+  behaviourIncidents BehaviourIncident[] // M12: discipline history that follows the person across years (virtual back-relation only)
   // + raw SQL: partial unique — Aadhaar unique per school when present:
   //   WHERE "aadhaar" IS NOT NULL  (a shared national ID is a data error)
   // + raw SQL: RLS ON — admin ALL; teacher SELECT own-section; parent SELECT own-child (people_rls, Step 4)
@@ -482,6 +485,9 @@ model Staff {
   announcementsCreated            Announcement[]           @relation("AnnouncementCreatedBy")
   announcementAttachmentsUploaded AnnouncementAttachment[] @relation("AnnouncementAttachmentUploadedBy")
   calendarEventsCreated           SchoolCalendarEvent[]    @relation("CalendarEventCreatedBy")
+  // M12: virtual back-relations only — behaviour incident audit actors (B3)
+  behaviourIncidentsCreated       BehaviourIncident[]      @relation("BehaviourCreatedBy")
+  behaviourIncidentsResolved      BehaviourIncident[]      @relation("BehaviourResolvedBy")
   // + raw SQL: RLS ON — admin ALL; staff SELECT self (userId = auth.uid()) (people_rls, Step 4)
 
   @@unique([schoolId, employeeId])
@@ -517,6 +523,7 @@ model Enrollment {
   marks               Mark[] // M5: virtual back-relation only
   homeworkSubmissions HomeworkSubmission[] // M6: virtual back-relation only
   reportCards         ReportCard[] // M7: virtual back-relation only (owner side; ADR-014)
+  behaviourIncidents  BehaviourIncident[] // M12: incidents in this year/section context (virtual back-relation only)
   // + raw SQL: partial unique — roll number unique per section per year:
   //   WHERE "sectionId" IS NOT NULL AND "rollNo" IS NOT NULL
   // + raw SQL: CHECK ("rollNo" IS NULL OR "sectionId" IS NOT NULL) — rollNo only after allocation
@@ -1474,6 +1481,8 @@ enum NotificationType {
   STUDY_MATERIAL
   ANNOUNCEMENT
   SYSTEM
+  BEHAVIOUR // M12: a behaviour incident was recorded (→ student's parents)
+  LEAVE // M12: a leave request was approved/rejected (→ the requesting parent)
 }
 
 enum NotificationPriority {
@@ -1641,4 +1650,79 @@ model SchoolCalendarEvent {
   @@index([eventType, startDate]) // exam schedule / holidays (brief)
   @@index([schoolId])
   @@index([academicYearId])
+}
+
+// ============ Student Discipline (M12) ============
+// ADR-020 is the source of truth. One additive table over frozen M1–M11 — the LEAVE half
+// of M12 is ALREADY M4's frozen LeaveRequest (reused, not rebuilt; ADR-020 Context), so no
+// leave table/enum is created here. BehaviourIncident is a longitudinal STUDENT discipline
+// record (teacher referral → optional M10 Notification(type=BEHAVIOUR) to the student's
+// parents via the canonical *AndNotify path, ADR-018 §3 — M10 reused, not edited).
+// Lifecycle OPEN→IN_PROGRESS→RESOLVED→CLOSED, immutable after CLOSED. Keeps BOTH studentId
+// (person, cross-year) and enrollmentId (year/section context) — a justified divergence
+// from the ADR-011 attendance idiom (ADR-020 §1, deviation #3). teacherId → User (RLS "own
+// incidents" = teacherId = auth.uid(), the ADR-015 teacher-is-User idiom); createdBy/
+// resolvedBy → Staff are the B3 audit actors. All FKs RESTRICT. Every mutation writes
+// AuditLog in the same transaction (ADR-007). RLS is a separate migration (discipline_rls,
+// Step 3). Purely additive — the frozen back-relations (Student/Enrollment/AcademicYear/
+// User/Staff) are VIRTUAL (no SQL column); proven by `prisma migrate diff`.
+
+enum BehaviourCategory {
+  DISCIPLINE
+  BULLYING
+  UNIFORM
+  HOMEWORK
+  MISCONDUCT
+  LATE
+  OTHER
+}
+
+enum BehaviourSeverity {
+  LOW
+  MEDIUM
+  HIGH
+  CRITICAL
+}
+
+enum BehaviourStatus {
+  OPEN
+  IN_PROGRESS
+  RESOLVED
+  CLOSED
+}
+
+model BehaviourIncident {
+  id                String            @id @default(cuid())
+  schoolId          String // loose tenant ref (ADR-008)
+  academicYearId    String
+  studentId         String // the person — discipline history follows the student across years (ADR-020 §1)
+  enrollmentId      String // the year/section/class context the incident occurred in
+  teacherId         String // referring/owning teacher → User (RLS own-incident = teacherId = auth.uid())
+  category          BehaviourCategory
+  severity          BehaviourSeverity
+  title             String
+  description       String
+  actionTaken       String? // optional record of action taken
+  status            BehaviourStatus   @default(OPEN)
+  parentNotified    Boolean           @default(false) // set true post-commit iff the M10 emit succeeded (best-effort; ADR-020 §3)
+  createdByStaffId  String // B3 audit actor
+  resolvedByStaffId String? // B3 audit actor, stamped on resolve/close
+  resolvedAt        DateTime?
+  createdAt         DateTime          @default(now())
+  updatedAt         DateTime          @updatedAt
+  academicYear      AcademicYear      @relation(fields: [academicYearId], references: [id], onDelete: Restrict)
+  student           Student           @relation(fields: [studentId], references: [id], onDelete: Restrict)
+  enrollment        Enrollment        @relation(fields: [enrollmentId], references: [id], onDelete: Restrict)
+  teacher           User              @relation("BehaviourTeacher", fields: [teacherId], references: [id], onDelete: Restrict)
+  createdBy         Staff             @relation("BehaviourCreatedBy", fields: [createdByStaffId], references: [id], onDelete: Restrict)
+  resolvedBy        Staff?            @relation("BehaviourResolvedBy", fields: [resolvedByStaffId], references: [id], onDelete: Restrict)
+  // + raw SQL: CHECK — status IN ('RESOLVED','CLOSED') ⟹ resolvedByStaffId IS NOT NULL AND resolvedAt IS NOT NULL
+  // + raw SQL: RLS ON — admin ALL; teacher own incidents (teacherId = auth.uid()); parent own child; anon none (discipline_rls, Step 3)
+
+  @@index([studentId]) // a student's discipline history (hot path — brief "student")
+  @@index([status]) // console filter (brief "status")
+  @@index([severity]) // console filter (brief "severity")
+  @@index([createdAt]) // date scan / default sort (brief "date")
+  @@index([teacherId]) // listByTeacher + RLS own-incident path
+  @@index([schoolId])
 }

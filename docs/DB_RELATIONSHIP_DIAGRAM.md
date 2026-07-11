@@ -387,3 +387,18 @@ are virtual (no SQL column) → `migrate diff` is zero-ALTER. CHECKs: Announceme
 startDate`. RLS is **coarse** (admin ALL / authenticated published-or-read / anon none) —
 a DRAFT delete removes attachments then the row in one service tx (Restrict); per-user
 announcement targeting is a business-layer filter, not a DB rule.
+
+**M12 note (ADR-020):** one additive table, **all FKs Restrict**. `BehaviourIncident →
+AcademicYear` + `→ Student` + `→ Enrollment` + `→ User` (teacher, the ADR-015
+teacher-is-User idiom for RLS `teacherId = auth.uid()`) + `→ Staff` (createdBy, resolvedBy).
+It **keeps both `studentId` and `enrollmentId`** — a justified divergence from the ADR-011
+attendance idiom (discipline is a longitudinal *person* record; attendance is per-session).
+`schoolId` loose (ADR-008). Back-relations added to frozen `Student`/`Enrollment`/
+`AcademicYear`/`User`/`Staff` are virtual (no SQL column). Two **enum values** (`BEHAVIOUR`,
+`LEAVE`) are added to the frozen `NotificationType` — an `ALTER TYPE … ADD VALUE`, not a
+frozen-*table* ALTER → `migrate diff` shows only CREATEs + this ADD VALUE, **zero ALTER on
+any frozen table**. CHECK: `status IN (RESOLVED,CLOSED) ⟹ resolvedByStaffId AND resolvedAt
+NOT NULL`. RLS is **coarse** (admin ALL / teacher own-incidents / parent own-child / anon
+none); per-user read scope is a business-layer filter. **The M12 leave workflow reuses the
+frozen M4 `LeaveRequest`/`LeaveStatus`** — no new leave table (a second one is impossible +
+freeze-forbidden); M12 adds only a notification wrap on `decideLeave`.

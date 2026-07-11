@@ -678,7 +678,9 @@ export type NotificationTypeKey =
   | "TIMETABLE_UPDATED"
   | "STUDY_MATERIAL"
   | "ANNOUNCEMENT"
-  | "SYSTEM";
+  | "SYSTEM"
+  | "BEHAVIOUR"
+  | "LEAVE";
 
 export type NotificationPriorityKey = "LOW" | "NORMAL" | "HIGH" | "URGENT";
 
@@ -751,6 +753,39 @@ export interface CalendarEventDto {
   endDate: string;
   isAllDay: boolean;
   createdByStaffId: string;
+  createdAt: IsoUtcString;
+  updatedAt: IsoUtcString;
+}
+
+// ---------------------------------------------------------------------------
+// Student Discipline (M12, ADR-020)
+// ---------------------------------------------------------------------------
+
+export type BehaviourCategoryKey =
+  "DISCIPLINE" | "BULLYING" | "UNIFORM" | "HOMEWORK" | "MISCONDUCT" | "LATE" | "OTHER";
+export type BehaviourSeverityKey = "LOW" | "MEDIUM" | "HIGH" | "CRITICAL";
+export type BehaviourStatusKey = "OPEN" | "IN_PROGRESS" | "RESOLVED" | "CLOSED";
+
+/** A student discipline incident / teacher referral (ADR-020 §1). Carries both
+ *  `studentId` (the person, cross-year) and `enrollmentId` (year/section context).
+ *  `teacherId` is the referring/owning teacher's User id. */
+export interface BehaviourIncidentDto {
+  id: string;
+  schoolId: string;
+  academicYearId: string;
+  studentId: string;
+  enrollmentId: string;
+  teacherId: string;
+  category: BehaviourCategoryKey;
+  severity: BehaviourSeverityKey;
+  title: string;
+  description: string;
+  actionTaken: string | null;
+  status: BehaviourStatusKey;
+  parentNotified: boolean;
+  createdByStaffId: string;
+  resolvedByStaffId: string | null;
+  resolvedAt: IsoUtcString | null;
   createdAt: IsoUtcString;
   updatedAt: IsoUtcString;
 }

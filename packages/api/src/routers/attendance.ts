@@ -5,7 +5,7 @@ import {
   createHoliday,
   createServiceContext,
   decideCorrection,
-  decideLeave,
+  decideLeaveAndNotify,
   deleteHoliday,
   findSession,
   listHolidays,
@@ -89,9 +89,11 @@ export const leaveRouter = router({
   create: protectedProcedure
     .input(applyLeaveInput)
     .mutation(({ ctx, input }) => applyLeave(createServiceContext(ctx.user), input)),
+  // M12 (ADR-020 §3): repointed to the *AndNotify composer so an approve/reject
+  // notifies the parent. The frozen M4 decideLeave is UNCHANGED — the composer calls it.
   decide: protectedProcedure
     .input(decideLeaveInput)
-    .mutation(({ ctx, input }) => decideLeave(createServiceContext(ctx.user), input)),
+    .mutation(({ ctx, input }) => decideLeaveAndNotify(createServiceContext(ctx.user), input)),
   cancel: protectedProcedure
     .input(leaveIdInput)
     .mutation(({ ctx, input }) => cancelLeave(createServiceContext(ctx.user), input.leaveId)),

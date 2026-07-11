@@ -132,6 +132,14 @@ export default function DashboardPage() {
           School calendar
         </Link>
       ) : null}
+      {can(me.data.role, PERMISSIONS.BEHAVIOUR_MANAGE) ? (
+        <Link
+          href="/behaviour"
+          className="min-h-11 self-start rounded-md border border-border px-4 py-2 font-medium text-foreground"
+        >
+          Behaviour & discipline
+        </Link>
+      ) : null}
       <button
         type="button"
         onClick={() => void handleLogout()}

@@ -23,6 +23,10 @@ export function deepLinkForType(type: NotificationTypeKey): Href | null {
       return "/exam/markable";
     case "TIMETABLE_UPDATED":
       return "/timetable";
+    case "LEAVE":
+      return "/attendance/leave";
+    // BEHAVIOUR carries its own /behaviour/:id actionUrl (preferred by the inbox);
+    // no id-free default here.
     default:
       return null;
   }

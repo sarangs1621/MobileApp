@@ -13,11 +13,17 @@ export {
   type ListNotificationsInput,
 } from "./notification.service";
 export { mapNotification } from "./mappers";
-export { emitHomeworkPublished, emitExamPublished, emitReportCardPublished } from "./events";
+export {
+  emitHomeworkPublished,
+  emitExamPublished,
+  emitReportCardPublished,
+  emitLeaveDecided,
+} from "./events";
 export {
   publishHomeworkAndNotify,
   publishExamAndNotify,
   publishReportCardAndNotify,
+  decideLeaveAndNotify,
 } from "./publish-with-notify";
 export {
   createAnnouncement,

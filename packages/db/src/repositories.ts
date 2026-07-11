@@ -34,6 +34,10 @@ import {
 } from "./repositories/attendance-session.repository";
 import { createAuditLogRepository, type AuditLogRepository } from "./repositories/audit.repository";
 import {
+  createBehaviourIncidentRepository,
+  type BehaviourIncidentRepository,
+} from "./repositories/behaviour-incident.repository";
+import {
   createBellScheduleRepository,
   type BellScheduleRepository,
 } from "./repositories/bell-schedule.repository";
@@ -167,6 +171,7 @@ export * from "./repositories/notification-recipient.repository";
 export * from "./repositories/announcement.repository";
 export * from "./repositories/announcement-attachment.repository";
 export * from "./repositories/calendar-event.repository";
+export * from "./repositories/behaviour-incident.repository";
 export type { DbClient } from "./db-client";
 
 /** Aggregate of repositories injected into services via `ServiceContext`. */
@@ -210,6 +215,7 @@ export interface Repositories {
   announcements: AnnouncementRepository;
   announcementAttachments: AnnouncementAttachmentRepository;
   calendarEvents: CalendarEventRepository;
+  behaviourIncidents: BehaviourIncidentRepository;
 }
 
 export function createRepositories(client: DbClient): Repositories {
@@ -253,6 +259,7 @@ export function createRepositories(client: DbClient): Repositories {
     announcements: createAnnouncementRepository(client),
     announcementAttachments: createAnnouncementAttachmentRepository(client),
     calendarEvents: createCalendarEventRepository(client),
+    behaviourIncidents: createBehaviourIncidentRepository(client),
   };
 }
 

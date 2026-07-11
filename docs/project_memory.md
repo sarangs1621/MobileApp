@@ -225,6 +225,28 @@ tasks** (business 207, api 266, validation 50); mobile ios export ✓ (Step 7).
 
 ## Next Task
 
+**STOPPED — M12 (Student Discipline & Leave Management, ADR-020) COMPLETE, all 9 steps shipped; awaiting milestone
+approval to freeze.** Behaviour incidents over frozen M1–M11 + parent-leave **notifications**. Key discovery: the leave
+half was **already built in M4** (ADR-011) — `LeaveRequest`/`LeaveStatus`/services/screens/`leave:*` permissions all
+frozen; a second table is impossible (Prisma collision) + freeze-forbidden. So M12 = **build discipline + reuse leave**.
+Additive: `+BehaviourIncident` (keeps **both** `studentId`+`enrollmentId` — justified divergence from ADR-011;
+`teacherId→User`, createdBy/resolvedBy→Staff), 3 enums (`BehaviourCategory`/`Severity`/`Status`), **+2 `NotificationType`
+values** (`BEHAVIOUR`/`LEAVE` — an `ALTER TYPE ADD VALUE`, not a frozen-table ALTER), 3 permissions
+(`behaviour:manage`/`record`/`read`; leave perms reused). Lifecycle OPEN→IN_PROGRESS→RESOLVED→CLOSED, immutable after
+CLOSED; teacher `teacherId=self`+own-section+ACTIVE-year-enrollment-derived; `close` self-stamps (CHECK). Create→optional
+M10 `BEHAVIOUR` notify (parents, `parentNotified` on delivery); `leave.decide` **repointed** to `decideLeaveAndNotify`
+(frozen `decideLeave` byte-identical) → `LEAVE` notify to parent. `behaviour.*` (8) router; mobile behaviour tab/record/
+detail/parent-picker + deep-links; web `/behaviour` console (student/teacher/severity/status filters + resolve/close +
+CSV). RLS **coarse** (admin ALL / teacher own-incidents / parent own-child / anon none) — empirically proven; per-user
+read is a **business filter**. **Permission-only, NO flag.** Purely additive (`migrate diff` zero-ALTER on any frozen
+table, zero drift, fresh deploy 23 migrations, 6/6 FK RESTRICT + CHECK in pg_constraint). Gate green: lint/typecheck
+14/14 · test (business 419, api 346) · db:validate ✓ · mobile typecheck ✓ · web build ✓ (36/36, `/behaviour`). Deferred:
+leave attachment + reviewRemark, explicit "excused" attendance write, leave/behaviour calendar view. Docs:
+`docs/features/discipline.md` + `leave-management.md`, `docs/status/Discipline.md` + `LeaveManagement.md`,
+`docs/milestones/M12.md`.
+
+<details><summary>Prior — M11 next-task note</summary>
+
 **STOPPED — M11 (Announcements, Circulars & School Calendar, ADR-019) COMPLETE, all 9 steps shipped;
 awaiting milestone approval to freeze.** Persistent school communication over frozen M1–M10: `+Announcement`
 (DRAFT→PUBLISHED→ARCHIVED) + `+AnnouncementAttachment` (private bucket, signed-on-read) + `+SchoolCalendarEvent`
@@ -241,6 +263,8 @@ empirically. **No CUSTOM audience, no push/SMS/email/chat.** **Permission-only, 
 deep-linking. Deferred: CUSTOM audiences, timed calendar events, M5→calendar exam sync, announcement correction.
 Runbook: provision the `announcement-attachments` bucket before live uploads. Docs: `docs/features/announcements.md`
 + `calendar.md`, `docs/status/Announcements.md` + `Calendar.md`, `docs/milestones/M11.md`.
+
+</details>
 
 <details><summary>Prior — M10 next-task note</summary>
 

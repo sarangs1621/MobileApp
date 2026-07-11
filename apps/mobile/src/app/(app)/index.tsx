@@ -38,6 +38,8 @@ export default function AppHome() {
   const showTimetable = canReadTimetable && (role === "TEACHER" || isParent);
   const canReadAnnouncements = has(PERMISSIONS.ANNOUNCEMENT_READ);
   const canReadCalendar = has(PERMISSIONS.CALENDAR_READ);
+  const canReadBehaviour = has(PERMISSIONS.BEHAVIOUR_READ);
+  const canRecordBehaviour = has(PERMISSIONS.BEHAVIOUR_RECORD) || has(PERMISSIONS.BEHAVIOUR_MANAGE);
 
   // Today-context, from existing queries only.
   const children = trpc.student.list.useQuery(undefined, { enabled: isParent });
@@ -170,6 +172,21 @@ export default function AppHome() {
               href="/timetable"
               label={isParent ? "My children’s timetable" : "My weekly timetable"}
             />
+          </NavCard>
+        ) : null}
+
+        {canReadBehaviour ? (
+          <NavCard title="Behaviour & discipline">
+            {isParent ? (
+              <NavLink href="/behaviour/children" label="My children’s behaviour" />
+            ) : canRecordBehaviour ? (
+              <NavLink href="/behaviour" label="My behaviour referrals" />
+            ) : null}
+            {!isParent ? (
+              <Text className="px-1 text-xs text-muted-foreground">
+                Open a student’s profile to view or record incidents.
+              </Text>
+            ) : null}
           </NavCard>
         ) : null}
 

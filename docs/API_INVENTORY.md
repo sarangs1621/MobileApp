@@ -378,6 +378,25 @@ exists (ADR-004). Per-user announcement targeting is a business filter (RLS is c
 | `calendar.get` / `month` / `range` / `upcoming` | Q | `calendar:read` | all in-scope roles; school-wide (no targeting) |
 | `calendar.create` / `update` / `delete` | M | `academic:manage` | admin; range-validated; ✓ audit |
 
+## Student Discipline & Leave (M12 — ADR-020, implemented; permission-only)
+
+Behaviour incidents over frozen M1–M11 + the **frozen M4 leave** workflow's notification wrap. Thin transport → business
+enforces permission, author/read scope, the lifecycle transition graph, in-tx audit, and the optional post-commit M10
+notification. Leave is **not re-implemented** — `leave.decide` (M4 router) was **repointed** to `decideLeaveAndNotify`
+(the frozen `decideLeave` is byte-identical; the composer notifies the parent).
+
+| Procedure | T | Permission | Notes |
+|---|---|---|---|
+| `behaviour.list` | Q | `behaviour:manage` | admin console; filters student/teacher/severity/status |
+| `behaviour.listByStudent` | Q | `behaviour:read` | admin all; teacher own-section; parent own child |
+| `behaviour.listByTeacher` | Q | `behaviour:read` | the acting teacher's own referrals (teacherId = self) |
+| `behaviour.get` | Q | `behaviour:read` | scope-gated (admin / owning teacher / own-section / own-child) |
+| `behaviour.create` | M | manage / record | admin names teacher; teacher `teacherId=self` + own-section, ACTIVE-year enrollment derived; OPEN; optional M10 BEHAVIOUR notify; ✓ audit |
+| `behaviour.update` | M | manage / record (own) | OPEN↔IN_PROGRESS only; CLOSED immutable; ✓ audit |
+| `behaviour.resolve` | M | manage / record (own) | →RESOLVED (stamps resolver); ✓ audit |
+| `behaviour.close` | M | manage / record (own) | →CLOSED (terminal; self-stamps if unresolved); ✓ audit |
+| `leave.decide` *(M4 router, M12 repoint)* | M | `leave:decide` | approve/reject → `decideLeaveAndNotify`: frozen decide + post-commit M10 LEAVE notify to the parent |
+
 ## Add-on routers (flag-gated: check flag → FORBIDDEN when off)
 
 | Procedure | Flag | T | Permission | Audit | Notif |

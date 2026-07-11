@@ -16,6 +16,7 @@ import {
   leaveRouter,
 } from "./routers/attendance";
 import { authRouter } from "./routers/auth";
+import { behaviourRouter } from "./routers/behaviour";
 import { calendarRouter } from "./routers/calendar";
 import { classTeacherRouter } from "./routers/class-teacher";
 import { assessmentRouter, examRouter, gradeScaleRouter, markRouter } from "./routers/exam";
@@ -76,6 +77,7 @@ export const appRouter = router({
   notification: notificationRouter,
   announcement: announcementRouter,
   calendar: calendarRouter,
+  behaviour: behaviourRouter,
 });
 
 export type AppRouter = typeof appRouter;

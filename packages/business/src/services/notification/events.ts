@@ -1,4 +1,4 @@
-import type { ExamDto, HomeworkDto, ReportCardDto } from "@repo/types";
+import type { ExamDto, HomeworkDto, LeaveRequestDto, ReportCardDto } from "@repo/types";
 
 import type { ServiceContext } from "../../context";
 
@@ -77,6 +77,30 @@ export function emitReportCardPublished(ctx: ServiceContext, card: ReportCardDto
       body: "Your child's report card is now available.",
       actionUrl: `/report-cards/${card.id}`,
       userIds,
+    });
+  });
+}
+
+/**
+ * Leave approved/rejected → the requesting parent (M12, ADR-020 §3). Reuses the M10
+ * emit; the frozen M4 `decideLeave` is untouched (the wrap composes it — see
+ * publish-with-notify.ts). A parent without a login `userId` has no inbox → no-op.
+ */
+export function emitLeaveDecided(ctx: ServiceContext, leave: LeaveRequestDto): Promise<void> {
+  return safeEmit("leave.decided", async () => {
+    const parent = await ctx.repositories.parents.findById(leave.parentId);
+    if (!parent?.userId) {
+      return;
+    }
+    const approved = leave.status === "APPROVED";
+    await createBulkNotification(ctx, {
+      type: "LEAVE",
+      title: approved ? "Leave approved" : "Leave rejected",
+      body: approved
+        ? "Your leave request has been approved."
+        : "Your leave request has been rejected.",
+      actionUrl: "/attendance/leave",
+      userIds: [parent.userId],
     });
   });
 }
