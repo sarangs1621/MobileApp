@@ -16,7 +16,7 @@ import {
   lockRegister,
   markableAssessments,
   marksForEnrollment,
-  publishExam,
+  publishExamAndNotify,
   saveMarks,
   submitRegister,
   unlockRegister,
@@ -54,9 +54,10 @@ export const examRouter = router({
   update: protectedProcedure
     .input(updateExamInput)
     .mutation(({ ctx, input }) => updateExam(createServiceContext(ctx.user), input.examId, input)),
-  publish: protectedProcedure
-    .input(examIdInput)
-    .mutation(({ ctx, input }) => publishExam(createServiceContext(ctx.user), input.examId)),
+  publish: protectedProcedure.input(examIdInput).mutation(({ ctx, input }) =>
+    // M10: business composer publishes then notifies post-commit (ADR-018 §3).
+    publishExamAndNotify(createServiceContext(ctx.user), input.examId),
+  ),
   list: protectedProcedure
     .input(academicYearIdInput)
     .query(({ ctx, input }) => listExams(createServiceContext(ctx.user), input.academicYearId)),

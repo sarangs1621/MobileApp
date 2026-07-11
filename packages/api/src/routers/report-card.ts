@@ -8,7 +8,7 @@ import {
   getReportCard,
   listReportCardsForEnrollment,
   listReportCardsForSection,
-  publishReportCard,
+  publishReportCardAndNotify,
   reopenReportCard,
   revokeReportCard,
   submitReportCard,
@@ -80,11 +80,10 @@ export const reportCardRouter = router({
     .input(reopenReportCardInput)
     .mutation(({ ctx, input }) => reopenReportCard(createServiceContext(ctx.user), input)),
   /** Admin publishes (APPROVED → PUBLISHED), superseding any prior published version in one tx. */
-  publish: protectedProcedure
-    .input(reportCardIdInput)
-    .mutation(({ ctx, input }) =>
-      publishReportCard(createServiceContext(ctx.user), input.reportCardId),
-    ),
+  publish: protectedProcedure.input(reportCardIdInput).mutation(({ ctx, input }) =>
+    // M10: business composer publishes then notifies post-commit (ADR-018 §3).
+    publishReportCardAndNotify(createServiceContext(ctx.user), input.reportCardId),
+  ),
   /** Admin revokes a published card (PUBLISHED → REVOKED). Reason required. */
   revoke: protectedProcedure
     .input(revokeReportCardInput)

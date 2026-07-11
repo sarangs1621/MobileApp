@@ -17,7 +17,7 @@ import {
   mintHomeworkUploadUrl,
   mintSubmissionAttachmentDownloadUrl,
   mintSubmissionUploadUrl,
-  publishHomework,
+  publishHomeworkAndNotify,
   removeHomeworkAttachment,
   reopenHomework,
   resubmitHomework,
@@ -64,11 +64,10 @@ export const homeworkRouter = router({
     .mutation(({ ctx, input }) =>
       updateHomework(createServiceContext(ctx.user), input.homeworkId, input),
     ),
-  publish: protectedProcedure
-    .input(homeworkIdInput)
-    .mutation(({ ctx, input }) =>
-      publishHomework(createServiceContext(ctx.user), input.homeworkId),
-    ),
+  publish: protectedProcedure.input(homeworkIdInput).mutation(({ ctx, input }) =>
+    // M10: business composer publishes then notifies post-commit (ADR-018 §3).
+    publishHomeworkAndNotify(createServiceContext(ctx.user), input.homeworkId),
+  ),
   close: protectedProcedure
     .input(homeworkIdInput)
     .mutation(({ ctx, input }) => closeHomework(createServiceContext(ctx.user), input.homeworkId)),

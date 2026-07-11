@@ -81,16 +81,22 @@ The given field list has **`isArchived`/`archivedAt` but no `isDeleted`**, so:
   other recipient are untouched (the recipient is a leaf; Restrict permits deleting the child). No `isDeleted` column
   is invented. *(Forced by the field list — flagged at STOP, deviation #3.)*
 
-### 3. Generation — post-commit `emit*` from **transport**, business services untouched (STEP 5)
+### 3. Generation — a business-layer `*AndNotify` **composition**; the router calls one thin business fn (STEP 5)
 
-The freeze rule is **"Notification delivery wraps those services instead of changing them."** The wrap seam is the
-**router** (thin transport, not business logic):
+The freeze rule is **"Notification delivery wraps those services instead of changing them."** The wrap is a **new
+business-layer composition** — orchestration stays in the business layer, **not** in transport — that calls the
+frozen publish service, then, once it has committed, fires the emit:
 
 ```ts
-// homework router (transport) — the ONLY change to a frozen file: one post-commit line
-const hw = await publishHomework(ctx, input);   // frozen service — UNCHANGED, commits its own tx + audit
-await emitHomeworkPublished(ctx, hw);           // NEW business orchestrator — resolve recipients + createBulk
-return hw;
+// packages/business/src/services/notification/publish-with-notify.ts  (BUSINESS layer, additive)
+export async function publishHomeworkAndNotify(ctx, homeworkId) {
+  const hw = await publishHomework(ctx, homeworkId);  // frozen service — UNCHANGED, commits its own tx + audit
+  await emitHomeworkPublished(ctx, hw);               // resolve recipients + createBulk (best-effort)
+  return hw;
+}
+
+// homework router (transport) stays THIN — one business call, no orchestration:
+publish: …mutation(({ ctx, input }) => publishHomeworkAndNotify(createServiceContext(ctx.user), input.homeworkId))
 ```
 
 - **`emit*` runs only after the publish transaction has committed** (`publishHomework` returned) — satisfies "events
@@ -98,10 +104,14 @@ return hw;
   `NotificationRecipient` rows in one tx, audited) — no dynamic recipient query at read time.
 - **Best-effort, non-blocking:** the publish already succeeded and is committed; an `emit*` failure is **caught and
   logged**, never propagated — a notification-write hiccup must not fail (or appear to fail) a committed publish.
-- **No new business logic in the frozen services** — `emit*` orchestrators live in the **new** notification domain
-  (`packages/business/src/services/notification/`). The `migrate diff` / DB freeze proof is unaffected; the code
-  change is **one post-commit call per publish router** (M6/M7 + announcement). *(Stated for knowing veto —
-  deviation #4.)*
+- **No new business logic in the frozen services** — the `emit*` orchestrator and the `*AndNotify` composer both live
+  in the **new** notification domain (`packages/business/src/services/notification/`); the composer calls the frozen
+  publish service without touching it. The `migrate diff` / DB freeze proof is unaffected; the only change to a frozen
+  file is the **router repointing to the composer** (still one thin business call). *(Deviation #4.)*
+- **Canonical pattern (recorded for future milestones).** Any later milestone adding notifications to an existing
+  action MUST follow this shape: add an `emit*` + a `*AndNotify` composer in the notification domain and repoint the
+  router — **never** inline the publish-then-notify orchestration in transport, and **never** edit the frozen service.
+  This keeps every notification integration consistent and the transport layer thin (ADR-002).
 - **"No duplicate notifications"** = the existing publish guard. `publishHomework`/`publishExam`/`publishReportCard`
   each reject a re-publish of an already-published entity (Conflict thrown before `emit*` is reached), so a client
   retry can't double-fire. A **legitimate** second publish (homework reopen→republish; report-card
@@ -163,9 +173,12 @@ out of scope — a future additive table keyed on `(userId, type)`.
    enum value is **reserved** (future-additive); M10 wires no study-material event.
 3. **`delete()` = hard-delete the caller's recipient row** (no `isDeleted` field given). Archive is the soft delete
    (decision #2). Only reading consistent with the Step-2 field list.
-4. **The wrap adds one post-commit `emit*` call to each frozen publish router (M6/M7).** Business **services** and
-   all tables stay byte-identical; the freeze proof is `migrate diff` (DB-only) + "no service file changed". Called
-   out so the transport edit is vetoed knowingly.
+4. **The wrap is a business-layer `*AndNotify` composition; each frozen publish router repoints to it.** Business
+   **services** and all tables stay byte-identical (the composer *calls* the frozen service, never edits it); the only
+   change to a frozen file is the router swapping `publishX` → `publishXAndNotify` — one thin business call, no
+   orchestration in transport. The freeze proof is `migrate diff` (DB-only) + "no service file changed". *(Revised per
+   Step-5 review: orchestration moved out of transport into the business layer and recorded as the canonical pattern —
+   §3.)*
 5. **A legitimate re-publish emits again** (homework reopen→republish; report-card correction). Allowed — content
    changed, it's a new event. Client-retry double-fire is prevented by the existing publish guard, not by us.
 
@@ -207,6 +220,7 @@ out of scope — a future additive table keyed on `(userId, type)`.
 This ADR fixes the design. **No migration, SQL, DTO, or UI is written here** — Step 2 (additive migration +
 `migrate diff` proof) onward executes it. Five items need an explicit nod before Step 2, because they shape the
 schema/scope: **(a)** timetable notifications = **defer** auto-emit (deviation #1 — the one real design call);
-**(b)** `delete()` = hard-delete own recipient row, archive = soft delete (#3); **(c)** the wrap adds a post-commit
-`emit*` to frozen publish **routers** (#4); **(d)** exam→section/subject teachers, announcement→SCHOOL|SECTION scope
+**(b)** `delete()` = hard-delete own recipient row, archive = soft delete (#3); **(c)** the wrap is a business-layer
+`*AndNotify` composition the routers repoint to (#4 — revised: orchestration in business, not transport); **(d)**
+exam→section/subject teachers, announcement→SCHOOL|SECTION scope
 (decision #4); **(e)** re-publish emits again (#5).
