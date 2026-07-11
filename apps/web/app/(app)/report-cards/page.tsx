@@ -30,10 +30,9 @@ const STATUSES: readonly ReportCardStatusKey[] = [
 /**
  * Report Cards console (M7, ADR-014). Role-aware, thin transport: parents read their
  * children's PUBLISHED cards; admins (report_card:manage) and class teachers
- * (report_card:remark) work section rosters. There is no list-by-filter endpoint —
- * the list is composed from enrollment.sectionRoster + reportCard.listForEnrollment
- * (the service is authoritative; this only hides UI). Lifecycle actions live on the
- * detail page.
+ * (report_card:remark) work section rosters. The section list uses reportCard.listForSection
+ * (ClassTeacherAssignment-scoped; carries studentName/rollNo); the admin Generate picker uses
+ * enrollment.sectionRoster (studentName). The service is authoritative; this only hides UI.
  */
 export default function ReportCardsPage() {
   const me = trpc.auth.me.useQuery();
