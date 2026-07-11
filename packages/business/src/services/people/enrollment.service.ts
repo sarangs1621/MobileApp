@@ -49,6 +49,11 @@ export async function listEnrollmentsByStudent(
   // Class/section NAME join via repositories (NOT the academic service — that carries
   // assertCan(ACADEMIC_READ), which a parent lacks). Reading a label for a row the caller
   // already sees is a lookup, not an academic-structure grant (ADR-016, F5).
+  const years = await Promise.all(
+    [...new Set(rows.map((r) => r.academicYearId))].map((id) =>
+      ctx.repositories.academicYears.findById(id),
+    ),
+  );
   const classes = await Promise.all(
     [...new Set(rows.map((r) => r.classId))].map((id) => ctx.repositories.classes.findById(id)),
   );
@@ -57,10 +62,12 @@ export async function listEnrollmentsByStudent(
       ctx.repositories.sections.findById(id),
     ),
   );
+  const yearName = new Map(years.filter((y) => y !== null).map((y) => [y.id, y.name]));
   const className = new Map(classes.filter((c) => c !== null).map((c) => [c.id, c.name]));
   const sectionName = new Map(sections.filter((s) => s !== null).map((s) => [s.id, s.name]));
   return rows.map((r) => ({
     ...mapEnrollment(r),
+    academicYearName: yearName.get(r.academicYearId) ?? "—",
     className: className.get(r.classId) ?? "—",
     sectionName: r.sectionId ? (sectionName.get(r.sectionId) ?? null) : null,
   }));

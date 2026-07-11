@@ -162,6 +162,7 @@ export interface EnrollmentRosterRowDto extends EnrollmentDto {
  * read (via repositories, not the academic service) — so parents get labels without `academic:read`.
  */
 export interface EnrollmentHistoryRowDto extends EnrollmentDto {
+  academicYearName: string;
   className: string;
   sectionName: string | null;
 }
