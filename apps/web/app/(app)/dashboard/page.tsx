@@ -7,6 +7,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useEffect } from "react";
 
+import { NotificationBell } from "@/src/components/notification/ui";
 import { getSupabaseClient } from "@/src/lib/supabase/client";
 import { trpc } from "@/src/trpc/react";
 
@@ -57,11 +58,16 @@ export default function DashboardPage() {
 
   return (
     <main className="mx-auto flex min-h-screen max-w-2xl flex-col justify-center gap-4 p-6">
-      <h1 className="text-3xl font-semibold text-foreground">School Portal</h1>
-      <p className="text-muted-foreground">
-        Signed in as <span className="font-medium text-foreground">{me.data.role}</span>. Your
-        dashboard appears here once features are enabled.
-      </p>
+      <div className="flex items-start justify-between gap-3">
+        <div className="flex flex-col gap-1">
+          <h1 className="text-3xl font-semibold text-foreground">School Portal</h1>
+          <p className="text-muted-foreground">
+            Signed in as <span className="font-medium text-foreground">{me.data.role}</span>. Your
+            dashboard appears here once features are enabled.
+          </p>
+        </div>
+        <NotificationBell />
+      </div>
       {can(me.data.role, PERMISSIONS.ACADEMIC_READ) ? (
         <Link
           href="/academic/years"
