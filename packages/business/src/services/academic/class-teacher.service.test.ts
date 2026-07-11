@@ -238,7 +238,11 @@ describe("class-teacher assignment management (admin-only, academic:manage)", ()
     repos.classTeacherAssignments.findBySectionYear.mockResolvedValueOnce(null); // slot free
     const { ctx } = makeCtx(officeAdmin, repos);
     const dto = await assignClassTeacher(ctx, input);
-    expect(dto).toMatchObject({ sectionId: "sec-5a", teacherId: "u-classteacher" });
+    expect(dto).toMatchObject({
+      sectionId: "sec-5a",
+      teacherId: "u-classteacher",
+      teacherName: "Olivia Office",
+    });
     expect(repos.audit.record).toHaveBeenCalledWith(
       expect.objectContaining({
         action: "CLASS_TEACHER_ASSIGN",
