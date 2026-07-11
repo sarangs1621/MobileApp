@@ -24,6 +24,7 @@ import {
   idInput,
   sectionTimetableInput,
   teacherTimetableInput,
+  timetableReadInput,
   updateBellScheduleInput,
   updatePeriodInput,
   updateTimetableEntryInput,
@@ -92,25 +93,17 @@ export const timetableRouter = router({
   /** A section's weekly grid — admin any; parent own child's section (service scope). */
   bySection: protectedProcedure
     .input(sectionTimetableInput)
-    .query(({ ctx, input }) =>
-      getSectionTimetable(createServiceContext(ctx.user), input.academicYearId, input.sectionId),
-    ),
-  /** A teacher's weekly grid — admin any; teacher own only (service scope). */
+    .query(({ ctx, input }) => getSectionTimetable(createServiceContext(ctx.user), input)),
+  /** A teacher's weekly grid — admin any; teacher own only (year → active, teacher → caller). */
   byTeacher: protectedProcedure
     .input(teacherTimetableInput)
-    .query(({ ctx, input }) =>
-      getTeacherTimetable(createServiceContext(ctx.user), input.academicYearId, input.teacherId),
-    ),
+    .query(({ ctx, input }) => getTeacherTimetable(createServiceContext(ctx.user), input)),
   /** A parent's timetable — every section their children are ACTIVE in this year. */
   forParent: protectedProcedure
-    .input(academicYearIdInput)
-    .query(({ ctx, input }) =>
-      getParentTimetable(createServiceContext(ctx.user), input.academicYearId),
-    ),
+    .input(timetableReadInput)
+    .query(({ ctx, input }) => getParentTimetable(createServiceContext(ctx.user), input)),
   /** Today's classes (IST weekday) — teacher own; parent child's section. */
   today: protectedProcedure
-    .input(academicYearIdInput)
-    .query(({ ctx, input }) =>
-      getTodayTimetable(createServiceContext(ctx.user), input.academicYearId),
-    ),
+    .input(timetableReadInput)
+    .query(({ ctx, input }) => getTodayTimetable(createServiceContext(ctx.user), input)),
 });

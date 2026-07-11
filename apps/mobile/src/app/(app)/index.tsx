@@ -33,6 +33,8 @@ export default function AppHome() {
   const canManageHomework = has(PERMISSIONS.HOMEWORK_MANAGE);
   const canReadHomework = has(PERMISSIONS.HOMEWORK_READ);
   const canReadReportCards = has(PERMISSIONS.REPORT_CARD_READ);
+  const canReadTimetable = has(PERMISSIONS.TIMETABLE_READ);
+  const showTimetable = canReadTimetable && (role === "TEACHER" || isParent);
 
   // Today-context, from existing queries only.
   const children = trpc.student.list.useQuery(undefined, { enabled: isParent });
@@ -40,6 +42,8 @@ export default function AppHome() {
     enabled: role === "TEACHER" && canManageHomework,
   });
   const mySections = [...new Set((teaching.data ?? []).map((t) => t.sectionName))];
+  const today = trpc.timetable.today.useQuery({}, { enabled: showTimetable });
+  const todayRows = today.data ?? [];
 
   return (
     <View className="flex-1 bg-background">
@@ -71,6 +75,27 @@ export default function AppHome() {
         {role === "TEACHER" && mySections.length > 0 ? (
           <ContextCard title="Your sections">
             <Text className="text-foreground">{mySections.join(" · ")}</Text>
+          </ContextCard>
+        ) : null}
+
+        {showTimetable ? (
+          <ContextCard title="Today’s schedule">
+            {today.isLoading ? (
+              <Muted>Loading…</Muted>
+            ) : todayRows.length === 0 ? (
+              <Muted>No classes scheduled today.</Muted>
+            ) : (
+              todayRows.map((e) => (
+                <Text key={e.id} className="text-foreground">
+                  {e.startTime} {e.subjectName}
+                  <Text className="text-muted-foreground">
+                    {" · "}
+                    {isParent ? e.teacherName : e.sectionName}
+                    {e.room ? ` · ${e.room}` : ""}
+                  </Text>
+                </Text>
+              ))
+            )}
           </ContextCard>
         ) : null}
 
@@ -130,6 +155,15 @@ export default function AppHome() {
         {canReadReportCards && isParent ? (
           <NavCard title="Report cards">
             <NavLink href="/report-cards/children" label="My children’s report cards" />
+          </NavCard>
+        ) : null}
+
+        {showTimetable ? (
+          <NavCard title="Timetable">
+            <NavLink
+              href="/timetable"
+              label={isParent ? "My children’s timetable" : "My weekly timetable"}
+            />
           </NavCard>
         ) : null}
 

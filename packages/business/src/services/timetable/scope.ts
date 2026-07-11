@@ -2,9 +2,18 @@ import { ForbiddenError, NotFoundError, ValidationError } from "@repo/core";
 import type { BellSchedule, Enrollment, Period, TimetableEntry } from "@repo/db";
 
 import type { ServiceContext } from "../../context";
-import { isFullAccess, parentChildIds } from "../people/scope";
+import { activeYearId, isFullAccess, parentChildIds } from "../people/scope";
 
 export { isFullAccess };
+
+/** Resolve a year id: the given one, else the school's ACTIVE year. Throws if neither. */
+export async function resolveYearId(ctx: ServiceContext, given?: string): Promise<string> {
+  const yearId = given ?? (await activeYearId(ctx));
+  if (!yearId) {
+    throw new ValidationError("No active academic year");
+  }
+  return yearId;
+}
 
 /* ---- in-school loaders (tenant guard; ADR-008) ---- */
 

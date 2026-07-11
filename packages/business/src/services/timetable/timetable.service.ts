@@ -17,6 +17,7 @@ import {
   loadEntryInSchool,
   loadPeriodInSchool,
   parentActiveEnrollmentsInYear,
+  resolveYearId,
 } from "./scope";
 
 /**
@@ -147,46 +148,65 @@ export async function deleteTimetableEntry(ctx: ServiceContext, id: string): Pro
   });
 }
 
-/* ---- reads (enriched; ADR-017 §3 row scope) ---- */
+/* ---- reads (enriched; ADR-017 §3 row scope) ----
+ * `academicYearId` is OPTIONAL on every read and defaults to the school's ACTIVE
+ * year — a PARENT has no `academic:read` and cannot supply one, so the server
+ * resolves it (the homework/exam convention). `teacherId` defaults to the caller. */
+
+export interface TimetableReadQuery {
+  academicYearId?: string | undefined;
+}
+export interface TeacherTimetableQuery extends TimetableReadQuery {
+  teacherId?: string | undefined;
+}
+export interface SectionTimetableQuery extends TimetableReadQuery {
+  sectionId: string;
+}
 
 /** A section's weekly grid. Admin → any; parent → own child's section only. */
 export async function getSectionTimetable(
   ctx: ServiceContext,
-  academicYearId: string,
-  sectionId: string,
+  query: SectionTimetableQuery,
 ): Promise<TimetableEntryDto[]> {
   assertCan(ctx.user, PERMISSIONS.TIMETABLE_READ);
-  await assertSectionReadScope(ctx, academicYearId, sectionId);
-  const rows = await ctx.repositories.timetableEntries.listBySection(academicYearId, sectionId);
+  const academicYearId = await resolveYearId(ctx, query.academicYearId);
+  await assertSectionReadScope(ctx, academicYearId, query.sectionId);
+  const rows = await ctx.repositories.timetableEntries.listBySection(
+    academicYearId,
+    query.sectionId,
+  );
   return enrichEntries(ctx, rows);
 }
 
 /**
  * A teacher's weekly grid (their OWN slots). Admin → any teacherId; teacher → only
  * self (a passed teacherId must equal the caller — ADR-017 §3, own-slots only).
+ * `teacherId` defaults to the caller; `academicYearId` to the active year.
  */
 export async function getTeacherTimetable(
   ctx: ServiceContext,
-  academicYearId: string,
-  teacherId: string,
+  query: TeacherTimetableQuery = {},
 ): Promise<TimetableEntryDto[]> {
   assertCan(ctx.user, PERMISSIONS.TIMETABLE_READ);
+  const teacherId = query.teacherId ?? ctx.user.userId;
   if (!isFullAccess(ctx) && teacherId !== ctx.user.userId) {
     throw new ValidationError("Teachers may only read their own timetable");
   }
+  const academicYearId = await resolveYearId(ctx, query.academicYearId);
   const rows = await ctx.repositories.timetableEntries.listByTeacher(academicYearId, teacherId);
   return enrichEntries(ctx, rows);
 }
 
 /**
  * A parent's timetable — the weekly grids of every section one of their children is
- * ACTIVE in this year. Parent-only (admins use the section/teacher views).
+ * ACTIVE in this year. Parent-facing (admins use the section/teacher views).
  */
 export async function getParentTimetable(
   ctx: ServiceContext,
-  academicYearId: string,
+  query: TimetableReadQuery = {},
 ): Promise<TimetableEntryDto[]> {
   assertCan(ctx.user, PERMISSIONS.TIMETABLE_READ);
+  const academicYearId = await resolveYearId(ctx, query.academicYearId);
   const sectionIds = await parentSectionIds(ctx, academicYearId);
   const perSection = await Promise.all(
     sectionIds.map((sid) => ctx.repositories.timetableEntries.listBySection(academicYearId, sid)),
@@ -200,9 +220,10 @@ export async function getParentTimetable(
  */
 export async function getTodayTimetable(
   ctx: ServiceContext,
-  academicYearId: string,
+  query: TimetableReadQuery = {},
 ): Promise<TimetableEntryDto[]> {
   assertCan(ctx.user, PERMISSIONS.TIMETABLE_READ);
+  const academicYearId = await resolveYearId(ctx, query.academicYearId);
   const today = istWeekday(new Date());
   let rows: TimetableEntry[];
   if (ctx.user.role === "PARENT") {

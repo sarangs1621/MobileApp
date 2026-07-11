@@ -639,7 +639,17 @@ export const updateTimetableEntryInput = z.object({
   room: roomSchema.nullable().optional(),
 });
 
-/** A section's weekly grid (year × section). */
-export const sectionTimetableInput = z.object({ academicYearId: idSchema, sectionId: idSchema });
-/** A teacher's weekly grid (year × teacher). */
-export const teacherTimetableInput = z.object({ academicYearId: idSchema, teacherId: idSchema });
+/* Reads: academicYearId is OPTIONAL (defaults to the ACTIVE year server-side — a
+ * parent has no academic:read to supply one); teacherId defaults to the caller. */
+/** A parent/today read (optional year override). */
+export const timetableReadInput = z.object({ academicYearId: idSchema.optional() });
+/** A section's weekly grid (section required; year defaults to active). */
+export const sectionTimetableInput = z.object({
+  academicYearId: idSchema.optional(),
+  sectionId: idSchema,
+});
+/** A teacher's weekly grid (both optional: year → active, teacher → caller). */
+export const teacherTimetableInput = z.object({
+  academicYearId: idSchema.optional(),
+  teacherId: idSchema.optional(),
+});
