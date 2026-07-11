@@ -102,6 +102,14 @@ export default function DashboardPage() {
           Homework
         </Link>
       ) : null}
+      {can(me.data.role, PERMISSIONS.TIMETABLE_MANAGE) ? (
+        <Link
+          href="/timetable"
+          className="min-h-11 self-start rounded-md border border-border px-4 py-2 font-medium text-foreground"
+        >
+          Timetable
+        </Link>
+      ) : null}
       <button
         type="button"
         onClick={() => void handleLogout()}
