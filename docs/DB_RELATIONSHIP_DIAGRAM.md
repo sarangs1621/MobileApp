@@ -196,6 +196,61 @@ year match, ACTIVE enrollment, StudentParent link, PUBLISHED-only submission.
 Ownership derives from `TeacherAssignment(teacher, subject, section)` at authz time —
 no owner column to rot.
 
+## Timetable (M9 — IMPLEMENTED per ADR-017)
+
+> This section reflects the **implemented** schema (`20260711010000_timetable_management`,
+> ADR-017), which supersedes the Dev PRD `TIMETABLE_PERIOD` sketch under "Ops, flags,
+> add-ons" below (`DIVISION`-era vocabulary, optional-FK distribution model). Grain:
+> **BellSchedule** (the year's day structure — **exactly one per year**, `UK(schoolId,
+> academicYearId)`) → **Period** (numbered clock-time slots) → **TimetableEntry** (one
+> weekly slot). Delete rules **live-verified** M9 Step 3 (rollback probes, 0 rows
+> persisted): every parent referenced by a timetable row is **Restrict**-blocked; the
+> derived-ownership edge to `TeacherAssignment` is deliberately **not** a FK.
+
+```mermaid
+erDiagram
+    ACADEMIC_YEAR ||--o| BELL_SCHEDULE : "restrict — EXACTLY ONE per year (UK schoolId+academicYearId)"
+    BELL_SCHEDULE ||--o{ PERIOD : "restrict — NO cascade (brief); empty schedule before delete"
+    ACADEMIC_YEAR ||--o{ TIMETABLE_ENTRY : "restrict — denormalized read path"
+    SECTION ||--o{ TIMETABLE_ENTRY : "restrict"
+    SUBJECT ||--o{ TIMETABLE_ENTRY : "restrict"
+    USER ||--o{ TIMETABLE_ENTRY : "teacher restrict — teacherId=auth.uid() (RLS)"
+    PERIOD ||--o{ TIMETABLE_ENTRY : "restrict"
+
+    BELL_SCHEDULE { string id "UK(schoolId, academicYearId) — one per year (ADR-017 §1)" }
+    PERIOD {
+        int order "1-based; CHECK order > 0; UK(bellScheduleId, order)"
+        time startTime "clock time @db.Time; CHECK startTime < endTime"
+        time endTime ""
+        bool isBreak "break periods hold NO class (business rejects an entry on one)"
+    }
+    TIMETABLE_ENTRY {
+        enum weekday "MON..SUN"
+        string teacherId "→ User (derived ownership via TeacherAssignment — NOT a FK)"
+        string room "nullable"
+        string id "UK(sectionId, weekday, periodId) + UK(teacherId, weekday, periodId) — double-booking impossible"
+    }
+```
+
+Delete-rule probes (M9 Step 3, all in one rolled-back tx):
+
+| Delete target | Result | Referenced by |
+|---|---|---|
+| `AcademicYear` | **BLOCKED** (Restrict) | BellSchedule + TimetableEntry |
+| `Section` | **BLOCKED** (Restrict) | TimetableEntry (+ TeacherAssignment) |
+| `Subject` | **BLOCKED** (Restrict) | TimetableEntry (+ TeacherAssignment) |
+| `Period` | **BLOCKED** (Restrict) | TimetableEntry |
+| `BellSchedule` | **BLOCKED** (Restrict) | Period (no cascade) |
+| `User` (teacher) | **BLOCKED** (Restrict) | TimetableEntry (+ TeacherAssignment) |
+| `TeacherAssignment` | **ALLOWED** | *nothing* — ownership is derived, not FK'd |
+
+**Derived-ownership caveat (Step-5 business guard):** because there is **no FK** from
+`TimetableEntry` to `TeacherAssignment`, the DB will **not** block deleting a
+`TeacherAssignment` that leaves timetable rows whose `(teacher, subject, section)` triple
+no longer has a backing assignment. Keeping timetable ownership valid on assignment
+removal is a **business-layer** responsibility (`TimetableService`) — the same posture
+as attendance/exam/homework, where ownership is resolved at authz time, not stored.
+
 ## Communication & notifications (M5-planned — NOT built)
 
 > The `HOMEWORK` entity in this sketch is **superseded by the implemented M6 model
@@ -245,7 +300,7 @@ erDiagram
         string razorpayOrderId "indexed for webhook"
         int amount "paise"
     }
-    TIMETABLE_PERIOD { string id "UK(divisionId, dayOfWeek, periodNo)" }
+    TIMETABLE_PERIOD { string id "SUPERSEDED by the M9 Timetable section above (BellSchedule/Period/TimetableEntry, ADR-017)" }
 ```
 
 Standalone (loose refs only): `SCHOOL` (tenant root), `AUDIT_LOG(actorUserId, entityType, entityId, before/afterJson)`, `IMPORT_JOB`, `FEATURE_FLAG(UK schoolId+key)`.
@@ -266,3 +321,11 @@ out. Verified live (Step 3): matrix 9/9 exact; a published card can never be orp
 cascade-deleted, and survives promotion/withdrawal/transfer because it keys to the immutable
 enrollment (ADR-014 §8). Cascade precision: deleting the `AcademicYear` is blocked upstream at
 `Enrollment→AcademicYear` (Restrict), so no cascade can reach a term a card scopes.
+
+**M9 note:** timetable uses **no Cascade, no SetNull** — all 7 FKs Restrict
+(BellSchedule→Year; Period→BellSchedule; TimetableEntry→Year/Section/Subject/User/Period).
+Verified live (Step 3): 6/6 referenced parents delete-blocked, 0 rows persisted. A
+`Period` CHECK enforces `startTime < endTime AND order > 0`; two uniques on
+`TimetableEntry` make section/teacher double-booking structurally impossible. Ownership
+is **derived** from `TeacherAssignment` (no FK) — assignment-removal integrity is a
+business guard, not a DB rule.
