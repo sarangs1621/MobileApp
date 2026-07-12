@@ -4,12 +4,13 @@ _The single always-load file. Keep under 2 pages. Update when a step completes._
 
 ## Current Milestone
 
-**M7 — Report Cards & Academic Results** (ADR-014; the academic reporting layer over
-M3–M6). `ReportCard` Enrollment-owned, `kind` EXAM/TERM/ANNUAL; lifecycle
-`DRAFT→SUBMITTED→APPROVED→PUBLISHED` (+ SUPERSEDED/REVOKED); snapshot (attendance %,
-rank, GPA) frozen at APPROVE; correction = new version (supersede-then-publish, one tx);
-class-teacher remark via ADR-015. **M7 Steps 1–10 COMPLETE — awaiting approval.** (M6.5
-Class Teacher Management, ADR-015, also complete — the dependency M7 consumes.) History below.
+**M13 — Fees & Payment Management** (ADR-021; the fee system over frozen M1–M12). The
+**first money domain** — money is `Int` **paise**. `FeeStructure`→`FeeComponent` (Cascade)
++ `Invoice`→`Payment` (Restrict, append-only); DRAFT→ISSUED→PARTIAL→PAID (immutable after
+PAID) · CANCELLED; total snapshotted at generate; idempotent section generation; OVERDUE
+compute-on-read; issue/record → M10 `INVOICE_ISSUED`/`PAYMENT_RECEIVED`. Parents view-only
+(no gateway); admins record. **Permission-only, no flag.** **M13 Steps 1–9 COMPLETE —
+awaiting approval.** History below (see Next Task for the detailed note).
 
 <details><summary>Prior milestone — M6 Homework & Assignment Management</summary>
 
@@ -225,25 +226,39 @@ tasks** (business 207, api 266, validation 50); mobile ios export ✓ (Step 7).
 
 ## Next Task
 
-**STOPPED — M12 (Student Discipline & Leave Management, ADR-020) COMPLETE, all 9 steps shipped; awaiting milestone
-approval to freeze.** Behaviour incidents over frozen M1–M11 + parent-leave **notifications**. Key discovery: the leave
-half was **already built in M4** (ADR-011) — `LeaveRequest`/`LeaveStatus`/services/screens/`leave:*` permissions all
-frozen; a second table is impossible (Prisma collision) + freeze-forbidden. So M12 = **build discipline + reuse leave**.
-Additive: `+BehaviourIncident` (keeps **both** `studentId`+`enrollmentId` — justified divergence from ADR-011;
-`teacherId→User`, createdBy/resolvedBy→Staff), 3 enums (`BehaviourCategory`/`Severity`/`Status`), **+2 `NotificationType`
-values** (`BEHAVIOUR`/`LEAVE` — an `ALTER TYPE ADD VALUE`, not a frozen-table ALTER), 3 permissions
-(`behaviour:manage`/`record`/`read`; leave perms reused). Lifecycle OPEN→IN_PROGRESS→RESOLVED→CLOSED, immutable after
-CLOSED; teacher `teacherId=self`+own-section+ACTIVE-year-enrollment-derived; `close` self-stamps (CHECK). Create→optional
-M10 `BEHAVIOUR` notify (parents, `parentNotified` on delivery); `leave.decide` **repointed** to `decideLeaveAndNotify`
-(frozen `decideLeave` byte-identical) → `LEAVE` notify to parent. `behaviour.*` (8) router; mobile behaviour tab/record/
-detail/parent-picker + deep-links; web `/behaviour` console (student/teacher/severity/status filters + resolve/close +
-CSV). RLS **coarse** (admin ALL / teacher own-incidents / parent own-child / anon none) — empirically proven; per-user
-read is a **business filter**. **Permission-only, NO flag.** Purely additive (`migrate diff` zero-ALTER on any frozen
-table, zero drift, fresh deploy 23 migrations, 6/6 FK RESTRICT + CHECK in pg_constraint). Gate green: lint/typecheck
-14/14 · test (business 419, api 346) · db:validate ✓ · mobile typecheck ✓ · web build ✓ (36/36, `/behaviour`). Deferred:
-leave attachment + reviewRemark, explicit "excused" attendance write, leave/behaviour calendar view. Docs:
-`docs/features/discipline.md` + `leave-management.md`, `docs/status/Discipline.md` + `LeaveManagement.md`,
-`docs/milestones/M12.md`.
+**STOPPED — M13 (Fees & Payment Management, ADR-021) COMPLETE, all 9 steps shipped; awaiting milestone approval to
+freeze.** A school fee system over frozen M1–M12 — the **first money domain** (all money `Int` **paise**, never float).
+Additive: 4 tables `FeeStructure`→`FeeComponent` (Cascade) + `Invoice`→`Payment` (Restrict, **append-only**), 2 enums
+(`InvoiceStatus` DRAFT/ISSUED/PARTIAL/PAID/OVERDUE/CANCELLED · `PaymentMethod` 6), **+2 `NotificationType` values**
+(`INVOICE_ISSUED`/`PAYMENT_RECEIVED` — `ALTER TYPE ADD VALUE`), 4 permissions (`fee:manage`/`fee:read`/`payment:record`/
+`payment:read`). Invoice keeps **both** `studentId`+`enrollmentId` (ADR-020 divergence — student ledger). **Total
+SNAPSHOTTED** from mandatory components at generate (M5/M7 precedent); `generateInvoices` section-scoped + **idempotent**
+(partial-unique `(enrollmentId,feeStructureId) WHERE status<>CANCELLED`); numbers race-safe (per-year `INV-`, continuous
+`RCPT-`, P2002-retry). Lifecycle DRAFT→ISSUED→PARTIAL→PAID (**immutable after PAID**) · CANCELLED (unpaid only);
+`recordPayment` one tx with **optimistic paidAmount guard** (concurrent-safe, M4/M5 hardening). **OVERDUE compute-on-read**
+(never stored; no cron). CHECKs paid≤total, balance=total−paid, amount>0 — proven. issue→`INVOICE_ISSUED`,
+record→`PAYMENT_RECEIVED` (parents, post-commit best-effort, **inline** like M12 — no `*AndNotify` symbol). `fee.*` (10) +
+`payment.*` (4) routers; mobile fees picker→ledger+dues→invoice detail+history+**admin quick-entry**→receipt (deep-links
+`/fees/invoices/:id`; **parents view-only, no gateway**); web `/fees` console (year/class/section/status filters,
+generate, issue/record/cancel, receipts, CSV, outstanding) + `/fees/structures` CRUD + `/fees/receipt/[paymentId]`
+printable. RLS **coarse** (admin ALL / parent own-child SELECT / anon none) — empirically proven; per-user read a
+**business filter**. **Permission-only, NO flag.** Purely additive (`migrate diff` zero-ALTER on any frozen table, zero
+drift, fresh deploy 26 migrations). Gate green: lint/typecheck 14/14 · test (**business 432, api 359**) · db:validate ✓ ·
+mobile typecheck ✓ · web build ✓ (38/38). **Deferred:** online gateway, refunds, concessions, overdue reminder/scheduler,
+stored receipt PDF. **Supersedes** the Dev PRD Razorpay/`fees`-flag/ACCOUNTANT placeholder. Docs:
+`docs/features/fees.md`, `docs/status/Fees.md`, `docs/milestones/M13.md`.
+
+<details><summary>Prior — M12 next-task note</summary>
+
+**STOPPED — M12 (Student Discipline & Leave Management, ADR-020) COMPLETE.** Behaviour incidents over frozen M1–M11 +
+parent-leave **notifications**. Leave half was **already built in M4** (ADR-011, frozen) — M12 = **build discipline +
+reuse leave**. Additive `+BehaviourIncident` (both `studentId`+`enrollmentId`; `teacherId→User`), 3 enums, +2
+`NotificationType` (`BEHAVIOUR`/`LEAVE`), 3 permissions. Lifecycle OPEN→IN_PROGRESS→RESOLVED→CLOSED, immutable after
+CLOSED; `leave.decide` repointed to `decideLeaveAndNotify`. `behaviour.*` (8); mobile + web `/behaviour` console. Coarse
+RLS, business read filter, permission-only. Gate green (business 419, api 346, web 36/36). Docs
+`docs/features/discipline.md` + `leave-management.md`, `docs/milestones/M12.md`.
+
+</details>
 
 <details><summary>Prior — M11 next-task note</summary>
 

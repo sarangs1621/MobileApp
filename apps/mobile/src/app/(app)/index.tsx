@@ -40,6 +40,8 @@ export default function AppHome() {
   const canReadCalendar = has(PERMISSIONS.CALENDAR_READ);
   const canReadBehaviour = has(PERMISSIONS.BEHAVIOUR_READ);
   const canRecordBehaviour = has(PERMISSIONS.BEHAVIOUR_RECORD) || has(PERMISSIONS.BEHAVIOUR_MANAGE);
+  const canReadFees = has(PERMISSIONS.FEE_READ);
+  const canManageFees = has(PERMISSIONS.FEE_MANAGE);
 
   // Today-context, from existing queries only.
   const children = trpc.student.list.useQuery(undefined, { enabled: isParent });
@@ -185,6 +187,22 @@ export default function AppHome() {
             {!isParent ? (
               <Text className="px-1 text-xs text-muted-foreground">
                 Open a student’s profile to view or record incidents.
+              </Text>
+            ) : null}
+          </NavCard>
+        ) : null}
+
+        {canReadFees ? (
+          <NavCard title="Fees">
+            <NavLink
+              href="/fees"
+              label={
+                canManageFees ? "Fees & payments" : isParent ? "My children’s fees" : "Student fees"
+              }
+            />
+            {isParent ? (
+              <Text className="px-1 text-xs text-muted-foreground">
+                View invoices, dues and receipts. Payments are collected at the school office.
               </Text>
             ) : null}
           </NavCard>

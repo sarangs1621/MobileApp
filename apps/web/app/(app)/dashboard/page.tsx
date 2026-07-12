@@ -140,6 +140,14 @@ export default function DashboardPage() {
           Behaviour & discipline
         </Link>
       ) : null}
+      {can(me.data.role, PERMISSIONS.FEE_MANAGE) ? (
+        <Link
+          href="/fees"
+          className="min-h-11 self-start rounded-md border border-border px-4 py-2 font-medium text-foreground"
+        >
+          Fees & payments
+        </Link>
+      ) : null}
       <button
         type="button"
         onClick={() => void handleLogout()}

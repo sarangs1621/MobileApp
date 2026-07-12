@@ -60,6 +60,10 @@ import {
 } from "./repositories/exam-section.repository";
 import { createExamRepository, type ExamRepository } from "./repositories/exam.repository";
 import {
+  createFeeStructureRepository,
+  type FeeStructureRepository,
+} from "./repositories/fee-structure.repository";
+import {
   createGradeScaleRepository,
   type GradeScaleRepository,
 } from "./repositories/grade-scale.repository";
@@ -80,6 +84,7 @@ import {
   createHomeworkRepository,
   type HomeworkRepository,
 } from "./repositories/homework.repository";
+import { createInvoiceRepository, type InvoiceRepository } from "./repositories/invoice.repository";
 import {
   createLeaveRequestRepository,
   type LeaveRequestRepository,
@@ -94,6 +99,7 @@ import {
   type NotificationRepository,
 } from "./repositories/notification.repository";
 import { createParentRepository, type ParentRepository } from "./repositories/parent.repository";
+import { createPaymentRepository, type PaymentRepository } from "./repositories/payment.repository";
 import { createPeriodRepository, type PeriodRepository } from "./repositories/period.repository";
 import {
   createReportCardRepository,
@@ -172,6 +178,9 @@ export * from "./repositories/announcement.repository";
 export * from "./repositories/announcement-attachment.repository";
 export * from "./repositories/calendar-event.repository";
 export * from "./repositories/behaviour-incident.repository";
+export * from "./repositories/fee-structure.repository";
+export * from "./repositories/invoice.repository";
+export * from "./repositories/payment.repository";
 export type { DbClient } from "./db-client";
 
 /** Aggregate of repositories injected into services via `ServiceContext`. */
@@ -216,6 +225,9 @@ export interface Repositories {
   announcementAttachments: AnnouncementAttachmentRepository;
   calendarEvents: CalendarEventRepository;
   behaviourIncidents: BehaviourIncidentRepository;
+  feeStructures: FeeStructureRepository;
+  invoices: InvoiceRepository;
+  payments: PaymentRepository;
 }
 
 export function createRepositories(client: DbClient): Repositories {
@@ -260,6 +272,9 @@ export function createRepositories(client: DbClient): Repositories {
     announcementAttachments: createAnnouncementAttachmentRepository(client),
     calendarEvents: createCalendarEventRepository(client),
     behaviourIncidents: createBehaviourIncidentRepository(client),
+    feeStructures: createFeeStructureRepository(client),
+    invoices: createInvoiceRepository(client),
+    payments: createPaymentRepository(client),
   };
 }
 

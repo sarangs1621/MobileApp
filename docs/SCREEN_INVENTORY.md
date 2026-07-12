@@ -44,6 +44,7 @@ Every screen, keyed by the IDs used in `NAVIGATION_MAP.md` and `USER_FLOWS.md`. 
 | MOB-ANN-01 | Announcements (**M11, implemented**) | `(app)/announcements` feed (`announcement.list`, published+targeted) + detail (`get`, attachment downloads); authors get a Drafts tab + create/edit draft (`create`/`update`); permission-gated home nav | M11 |
 | MOB-CAL-01 | School calendar (**M11, implemented**) | `(app)/calendar` — Upcoming (`calendar.upcoming`) / Month (`calendar.month`) with a type filter (covers upcoming holidays + exam schedule); read-only (`calendar:read`) | M11 |
 | MOB-BEH-01 | Behaviour (**M12, implemented**) | student profile → *Behaviour incidents* (`behaviour.listByStudent`) + *Record incident* (`create`); `(app)/behaviour` teacher referrals (`listByTeacher`); `(app)/behaviour/[id]` detail + resolve/close; parent `(app)/behaviour/children` → child history; BEHAVIOUR notification deep-links to `/behaviour/:id` | M12 |
+| MOB-FEE-01 | Fees (**M13, implemented**) | `(app)/fees` student picker (role-scoped); `(app)/fees/student/[studentId]` ledger + **outstanding dues** (`fee.listInvoicesByStudent`); `(app)/fees/invoices/[id]` invoice detail + payment history (`payment.listByInvoice`) + **admin quick payment entry** (`payment.record`); `(app)/fees/receipt/[paymentId]` receipt (`payment.receipt`). Parent **view-only** (no gateway); INVOICE_ISSUED/PAYMENT_RECEIVED notifications deep-link to `/fees/invoices/:id` | M13 |
 | MOB-SET-01 | Settings | locale → `profile.update`; logout (token dereg) | M1 |
 
 ## Web — auth & shell
@@ -88,12 +89,15 @@ Every screen, keyed by the IDs used in `NAVIGATION_MAP.md` and `USER_FLOWS.md`. 
 | WEB-AUD-01 | Audit viewer | super admin; filters entity/actor/date; before/after diff | M4 |
 | WEB-SET-01 | School settings | branding, locale default, typed settings (attendance mode, cutoff, working days — B4), holiday calendar (B1) | M2/M3 |
 | WEB-SET-02 | Feature flags | super admin toggle (audited) | M1 |
-| WEB-FEE-01..04 | Fee structures / invoices / dues / payments | **flag: fees**; receipt PDFs | GL |
+| ~~WEB-FEE-01..04 (flag: fees; Razorpay; receipt PDFs)~~ | **SUPERSEDED** by WEB-FEE-05..07 below (M13/ADR-021 — permission-only, no flag, no gateway) | — | — |
 | WEB-TT-01..03 | Timetable console (**M9, implemented**) | admin (`timetable:manage`): (01) bell schedule & period CRUD; (02) section grid = periods×Mon–Sat, click-cell→modal (drag-free), conflict warnings, CSV; (03) teacher read view + CSV. Year/class/section filters. **No flag** (ADR-017 §4) | M9 |
 | WEB-NOT-01 | Notifications (**M10, implemented**) | dashboard-header bell + unread badge + recent-notifications dropdown; `/notifications` page — inbox (mark read + deep-link, archive, mark-all-read) + admin announcement composer (`announcement:send`): bulk whole-school or one section, priority, recipient-count confirmation | M10 |
 | WEB-ANN-01 | Announcement console (**M11, implemented**) | `/announcements` — Drafts/Published/Archive tabs + scope filter; composer creates/edits drafts (admin full scope + class/section pickers; teacher own sections), **attachment upload/remove/download** (DRAFT), lifecycle (publish/archive admin-only, delete author draft). `announcement:read`/`manage`/`draft`. **No flag** | M11 |
 | WEB-CAL-01 | Calendar management (**M11, implemented**) | `/calendar` — month grid + event list + type filter; admin (`academic:manage`) create/edit/delete (native date inputs); **CSV export** (`calendar:read`). **No flag** | M11 |
 | WEB-BEH-01 | Behaviour console (**M12, implemented**) | `/behaviour` — admin (`behaviour:manage`) list with student/teacher/severity/status filters, resolve/close per row, **CSV export** of the filtered view. Leave admin approve/reject is the existing `/attendance/leave` (now auto-notifies via the repointed `leave.decide`). **No flag** | M12 |
+| WEB-FEE-05 | Fees console (**M13, implemented**) | `/fees` — admin (`fee:manage`): **generate** (structure + class→section + due date, shows created/skipped), **filters** academic year/class/section/status, per-row Issue/**Record payment**/Cancel/Receipts, **outstanding total**, **CSV export** (student ledger / outstanding report). **No flag** | M13 |
+| WEB-FEE-06 | Fee structures (**M13, implemented**) | `/fees/structures` — admin (`fee:manage`) create/edit named per-year templates + component lines (₹→paise), (de)activate; edits affect future invoices only (snapshot) | M13 |
+| WEB-FEE-07 | Receipt (**M13, implemented**) | `/fees/receipt/[paymentId]` — printable receipt (`window.print()` → PDF), render-on-demand from payment + invoice (no stored PDF); scope-gated | M13 |
 | WEB-ANA-01 | Analytics | attendance trends, result distribution | flag |
 
 ## Cross-cutting screen requirements
@@ -126,3 +130,9 @@ Every screen, keyed by the IDs used in `NAVIGATION_MAP.md` and `USER_FLOWS.md`. 
     `/behaviour/:id`; LEAVE notifications deep-link to `/attendance/leave` (the M4 leave screens are reused — parent
     apply/history + admin approve/reject, which now auto-notifies the parent). The brief's leave/behaviour **calendar
     view is deferred** (M11 calendar covers calendar needs; not in the M12 DoD).
+11. **M13 (implemented):** Fees & payments (MOB-FEE-01 / WEB-FEE-05..07), gated on `fee:read`/`fee:manage` +
+    `payment:record`/`payment:read` in the home/dashboard nav. Admins run the web console (generate, issue, record,
+    cancel, receipts, CSV) + manage structures; the office records payments (cash/UPI/cheque — **no online gateway**).
+    **Parents are view-only** — ledger, outstanding dues and receipts (no "Pay Now" button). INVOICE_ISSUED /
+    PAYMENT_RECEIVED notifications deep-link to `/fees/invoices/:id`. Receipts render on demand (print → PDF; no stored
+    file). **Refunds + concessions deferred**; OVERDUE is compute-on-read.

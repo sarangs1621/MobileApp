@@ -397,14 +397,37 @@ notification. Leave is **not re-implemented** — `leave.decide` (M4 router) was
 | `behaviour.close` | M | manage / record (own) | →CLOSED (terminal; self-stamps if unresolved); ✓ audit |
 | `leave.decide` *(M4 router, M12 repoint)* | M | `leave:decide` | approve/reject → `decideLeaveAndNotify`: frozen decide + post-commit M10 LEAVE notify to the parent |
 
+## Fees & Payments (M13 — ADR-021, implemented; permission-only)
+
+Fee structures, invoice generation, partial payments, receipts over frozen M1–M12 — the **first money domain** (all
+amounts are `Int` paise). Thin transport → business enforces permission, scope, the invoice lifecycle, the snapshotted
+total, guarded money movement, race-safe numbering, in-tx audit, and the post-commit M10 notification. **No online
+gateway, refunds, or concessions** (deferred). Supersedes the planned flag-gated `fees.*` add-on below.
+
+| Procedure | T | Permission | Notes |
+|---|---|---|---|
+| `fee.listStructures` | Q | `fee:manage` | admin; filter academicYearId/active |
+| `fee.getStructure` | Q | `fee:manage` | one structure + its components |
+| `fee.createStructure` | M | `fee:manage` | name + per-year components (paise); ✓ audit |
+| `fee.updateStructure` | M | `fee:manage` | rename / (de)activate / replace components (future invoices only — snapshot); ✓ audit |
+| `fee.listInvoices` | Q | `fee:manage` | admin console; filters student/enrollment/structure/status/**academicYear/section** |
+| `fee.listInvoicesByStudent` | Q | `fee:read` | student ledger — admin all; teacher own-section; parent own child |
+| `fee.getInvoice` | Q | `fee:read` | scope-gated; status is derived OVERDUE on read |
+| `fee.generateInvoices` | M | `fee:manage` | bulk per section from a structure; **idempotent** (skips existing); total **snapshotted**; race-safe number; ✓ audit |
+| `fee.issueInvoice` | M | `fee:manage` | DRAFT→ISSUED; post-commit M10 INVOICE_ISSUED → parents; ✓ audit |
+| `fee.cancelInvoice` | M | `fee:manage` | DRAFT/ISSUED (unpaid) → CANCELLED (terminal); ✓ audit |
+| `payment.record` | M | `payment:record` | ISSUED/PARTIAL → PARTIAL/PAID (guarded, atomic); race-safe receipt; overpay/wrong-state rejected; M10 PAYMENT_RECEIVED → parents; ✓ audit |
+| `payment.receipt` | Q | `payment:read` | one receipt (payment + invoice) by paymentId; scope-gated |
+| `payment.listByInvoice` | Q | `payment:read` | payment history for an invoice; scope-gated |
+| `payment.list` | Q | `payment:read` | admin-only school-wide log; filters method/date |
+
 ## Add-on routers (flag-gated: check flag → FORBIDDEN when off)
 
 | Procedure | Flag | T | Permission | Audit | Notif |
 |---|---|---|---|---|---|
-| `fees.structures.*` / `fees.invoices.*` | `fees` | Q/M | `fees:manage`/`fees:view` | ✓ | invoice issued → push |
-| `fees.createOrder` | `fees` | M | `fees:pay` | ✓ | – (Razorpay order) |
-| `fees.verifyPayment` | `fees` | M | `fees:pay` | ✓ | ✓ receipt |
-| `fees.reminders.send` | `fees` | M | `fees:manage` | ✓ | ✓ push+SMS/WA |
+| ~~`fees.structures.*` / `fees.invoices.*` (`fees` flag)~~ | — | — | — | — | **SUPERSEDED** by the Fees & Payments section above (M13/ADR-021 — permission-only, `fee.*`/`payment.*`, no flag) |
+| ~~`fees.createOrder` / `fees.verifyPayment` (`fees` flag, Razorpay)~~ | — | — | — | — | **DEFERRED** — no online gateway in M13 (out of scope) |
+| ~~`fees.reminders.send` (`fees` flag)~~ | — | — | — | — | **DEFERRED** — overdue reminders are future (M13 OVERDUE is compute-on-read) |
 | ~~`timetable.* CRUD + publish` (`timetable` flag)~~ | — | — | — | — | **SUPERSEDED** by the Timetable section above (M9/ADR-017 — permission-only, no publish/notify) |
 | `analytics.attendanceTrends` / `resultDistribution` / `classPerformance` | `analytics` | Q | `analytics:view` | – | – |
 

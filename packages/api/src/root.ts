@@ -20,8 +20,10 @@ import { behaviourRouter } from "./routers/behaviour";
 import { calendarRouter } from "./routers/calendar";
 import { classTeacherRouter } from "./routers/class-teacher";
 import { assessmentRouter, examRouter, gradeScaleRouter, markRouter } from "./routers/exam";
+import { feeRouter } from "./routers/fee";
 import { homeworkRouter, submissionRouter } from "./routers/homework";
 import { notificationRouter } from "./routers/notification";
+import { paymentRouter } from "./routers/payment";
 import {
   enrollmentRouter,
   parentRouter,
@@ -78,6 +80,8 @@ export const appRouter = router({
   announcement: announcementRouter,
   calendar: calendarRouter,
   behaviour: behaviourRouter,
+  fee: feeRouter,
+  payment: paymentRouter,
 });
 
 export type AppRouter = typeof appRouter;

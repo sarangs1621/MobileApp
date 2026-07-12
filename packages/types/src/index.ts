@@ -680,7 +680,9 @@ export type NotificationTypeKey =
   | "ANNOUNCEMENT"
   | "SYSTEM"
   | "BEHAVIOUR"
-  | "LEAVE";
+  | "LEAVE"
+  | "INVOICE_ISSUED"
+  | "PAYMENT_RECEIVED";
 
 export type NotificationPriorityKey = "LOW" | "NORMAL" | "HIGH" | "URGENT";
 
@@ -788,4 +790,73 @@ export interface BehaviourIncidentDto {
   resolvedAt: IsoUtcString | null;
   createdAt: IsoUtcString;
   updatedAt: IsoUtcString;
+}
+
+// ---------------------------------------------------------------------------
+// Fees & Payments (M13, ADR-021)
+// ---------------------------------------------------------------------------
+
+export type InvoiceStatusKey = "DRAFT" | "ISSUED" | "PARTIAL" | "PAID" | "OVERDUE" | "CANCELLED";
+export type PaymentMethodKey = "CASH" | "UPI" | "CARD" | "BANK_TRANSFER" | "CHEQUE" | "ONLINE";
+
+/** A single line of a fee structure (ADR-021 §1). `amount` is in paise (minor units). */
+export interface FeeComponentDto {
+  id: string;
+  feeStructureId: string;
+  name: string;
+  amount: number;
+  order: number;
+  mandatory: boolean;
+}
+
+/** A named, per-academic-year fee template (ADR-021 §1). */
+export interface FeeStructureDto {
+  id: string;
+  schoolId: string;
+  academicYearId: string;
+  name: string;
+  description: string | null;
+  active: boolean;
+  components: FeeComponentDto[];
+  createdAt: IsoUtcString;
+  updatedAt: IsoUtcString;
+}
+
+/**
+ * A student's fee bill for one enrollment (ADR-021 §1). All amounts are in paise.
+ * `status` is the DERIVED display status: a stored ISSUED/PARTIAL invoice past its
+ * `dueDate` (IST) surfaces as `OVERDUE` — which is never stored (ADR-021 §3).
+ */
+export interface InvoiceDto {
+  id: string;
+  schoolId: string;
+  studentId: string;
+  enrollmentId: string;
+  feeStructureId: string;
+  invoiceNumber: string;
+  issueDate: IstDateString;
+  dueDate: IstDateString;
+  status: InvoiceStatusKey;
+  totalAmount: number;
+  paidAmount: number;
+  balanceAmount: number;
+  remarks: string | null;
+  createdByStaffId: string;
+  createdAt: IsoUtcString;
+  updatedAt: IsoUtcString;
+}
+
+/** An immutable receipt for a payment against an invoice (ADR-021 §1). `amount` in paise. */
+export interface PaymentDto {
+  id: string;
+  schoolId: string;
+  invoiceId: string;
+  receiptNumber: string;
+  paymentDate: IstDateString;
+  amount: number;
+  method: PaymentMethodKey;
+  referenceNo: string | null;
+  remarks: string | null;
+  receivedByStaffId: string;
+  createdAt: IsoUtcString;
 }

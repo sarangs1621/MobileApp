@@ -402,3 +402,23 @@ NOT NULL`. RLS is **coarse** (admin ALL / teacher own-incidents / parent own-chi
 none); per-user read scope is a business-layer filter. **The M12 leave workflow reuses the
 frozen M4 `LeaveRequest`/`LeaveStatus`** — no new leave table (a second one is impossible +
 freeze-forbidden); M12 adds only a notification wrap on `decideLeave`.
+
+**M13 note (ADR-021):** four additive tables — the **first money domain** (all amounts
+are `Int` **paise**, never Float). `FeeStructure → AcademicYear` (Restrict) `─1:N→
+FeeComponent` (**Cascade** — composition child; the money-of-record is the invoice's
+snapshotted total). `Invoice → Student` + `→ Enrollment` + `→ FeeStructure` + `→ Staff`
+(createdBy), **all Restrict**; it **keeps both `studentId` and `enrollmentId`** (the ADR-020
+divergence — the student ledger needs the cross-year person view). `Payment → Invoice` +
+`→ Staff` (receivedBy), Restrict; **append-only** (never updated/deleted). `schoolId` loose
+(ADR-008) on all four; back-relations added to frozen `AcademicYear`/`Student`/`Enrollment`/
+`Staff` are virtual (no SQL column). Two **enum values** (`INVOICE_ISSUED`,
+`PAYMENT_RECEIVED`) are added to the frozen `NotificationType` (`ALTER TYPE … ADD VALUE`,
+not a table ALTER) → `migrate diff` shows only CREATEs + this ADD VALUE, **zero ALTER on
+any frozen table**. CHECKs: `Invoice` `totalAmount≥0`, `paidAmount≥0`, `paidAmount ≤
+totalAmount`, `balanceAmount = totalAmount − paidAmount`; `Payment` `amount > 0`. Uniques:
+`(schoolId, invoiceNumber)`, `(schoolId, receiptNumber)`, plus a **partial**
+`(enrollmentId, feeStructureId) WHERE status <> CANCELLED` (no double-billing). `InvoiceStatus`
+`{DRAFT, ISSUED, PARTIAL, PAID, OVERDUE, CANCELLED}` — **OVERDUE is compute-on-read, never
+stored**. `PaymentMethod` `{CASH, UPI, CARD, BANK_TRANSFER, CHEQUE, ONLINE}`. RLS is
+**coarse** (admin ALL / parent own-child / anon none; teacher read is business-only).
+Migrations: `20260712030000_fees_and_payments` (structural) + `20260712040000_fees_rls`.

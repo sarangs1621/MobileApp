@@ -216,6 +216,28 @@ business-scoped; RLS is coarse defense-in-depth (admin ALL / teacher own-inciden
   child. The console list is admin-only (`behaviour:manage`).
 - **Accountants:** none (out of scope). **No feature flag.**
 
+### Fees & Payments (M13, ADR-021 — implemented)
+
+Built as **M13** (see `docs/milestones/M13.md`). **Permission-only — no feature flag.** Fee structures, invoices and
+payments over frozen M1–M12; the `manage`/`read` + `record`/`read` split mirrors the M7/M12 shape. Money mutations
+(structures, invoices) are admin-only; **payment recording is a separate grant** so the front-office collection surface
+is auditable independently. Read is business-scoped; RLS is coarse defense-in-depth (admin ALL / parent own-child /
+anon none; teacher read is business-only).
+
+| Permission | SA | OA | T | P | AC |
+|---|---|---|---|---|---|
+| `fee:manage` (structures + invoice generate/issue/cancel + read all) | any | school | – | – | – |
+| `fee:read` (invoices / dues) | any | school | ownSection (read-only) | ownChild | – |
+| `payment:record` (record a payment against an invoice) | any | school | – | – | – |
+| `payment:read` (payments / receipts) | any | school | – | ownChild | – |
+
+- **Admins manage, the office collects** — `fee:manage` covers structures + the invoice lifecycle; `payment:record` is
+  the collection capability (cash/UPI/cheque at the office; **parents cannot pay online in v1** — no gateway).
+- **`fee:read` / `payment:read` are business-scoped** — admin all; teacher reads own-section invoices only (no payment
+  access); parent reads own child's invoices, dues and receipts (the fee portal). The admin console + payment log are
+  `fee:manage` / admin-only.
+- **Accountants:** none (out of scope — no payroll/accounting). **No feature flag.** Refunds + concessions deferred.
+
 ### Timetable Management (M9, ADR-017 — implemented)
 
 Built as **M9** (see `docs/milestones/M9.md`). **Permission-only — the `timetable` flag is NOT used**

@@ -847,3 +847,80 @@ export const listBehaviourByTeacherInput = z.object({
   limit: z.number().int().min(1).max(100).optional(),
   before: z.string().datetime().optional(),
 });
+
+/* ---- Fees & Payments (M13, ADR-021). Money is in paise (Int). Cross-field money
+ * invariants (paid<=total, balance, snapshot) live in the DB CHECK + business service. */
+
+const paymentMethodSchema = z.enum(["CASH", "UPI", "CARD", "BANK_TRANSFER", "CHEQUE", "ONLINE"]);
+/** Filterable invoice statuses — OVERDUE is compute-on-read and never stored (ADR-021 §3). */
+const invoiceStatusFilterSchema = z.enum(["DRAFT", "ISSUED", "PARTIAL", "PAID", "CANCELLED"]);
+/** A money amount in paise (non-negative integer). */
+const paiseSchema = z.number().int().min(0);
+
+const feeComponentInput = z.object({
+  name: z.string().trim().min(1).max(120),
+  amount: paiseSchema,
+  order: z.number().int().min(0),
+  mandatory: z.boolean(),
+});
+
+export const createStructureInput = z.object({
+  academicYearId: idSchema,
+  name: z.string().trim().min(1).max(120),
+  description: z.string().max(2000).nullable().optional(),
+  components: z.array(feeComponentInput).min(1),
+});
+
+export const updateStructureInput = z.object({
+  id: idSchema,
+  name: z.string().trim().min(1).max(120).optional(),
+  description: z.string().max(2000).nullable().optional(),
+  active: z.boolean().optional(),
+  components: z.array(feeComponentInput).min(1).optional(),
+});
+
+export const listStructuresInput = z.object({
+  academicYearId: idSchema.optional(),
+  active: z.boolean().optional(),
+});
+
+export const generateInvoicesInput = z.object({
+  feeStructureId: idSchema,
+  sectionId: idSchema,
+  dueDate: istDateSchema,
+  issueDate: istDateSchema.optional(),
+});
+
+export const listInvoicesInput = z.object({
+  studentId: idSchema.optional(),
+  enrollmentId: idSchema.optional(),
+  feeStructureId: idSchema.optional(),
+  status: invoiceStatusFilterSchema.optional(),
+  academicYearId: idSchema.optional(),
+  sectionId: idSchema.optional(),
+  limit: z.number().int().min(1).max(100).optional(),
+  before: z.string().datetime().optional(),
+});
+
+export const listInvoicesByStudentInput = z.object({
+  studentId: idSchema,
+  limit: z.number().int().min(1).max(100).optional(),
+  before: z.string().datetime().optional(),
+});
+
+export const recordPaymentInput = z.object({
+  invoiceId: idSchema,
+  amount: z.number().int().min(1),
+  method: paymentMethodSchema,
+  referenceNo: z.string().max(120).nullable().optional(),
+  remarks: z.string().max(2000).nullable().optional(),
+  paymentDate: istDateSchema.optional(),
+});
+
+export const listPaymentsInput = z.object({
+  method: paymentMethodSchema.optional(),
+  from: istDateSchema.optional(),
+  to: istDateSchema.optional(),
+  limit: z.number().int().min(1).max(100).optional(),
+  before: z.string().datetime().optional(),
+});

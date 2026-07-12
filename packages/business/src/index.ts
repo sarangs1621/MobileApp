@@ -22,6 +22,7 @@ export * from "./services/notification";
 export * from "./services/announcement";
 export * from "./services/calendar";
 export * from "./services/behaviour";
+export * from "./services/fee";
 export {
   assertCan,
   assertScope,

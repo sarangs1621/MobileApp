@@ -59,6 +59,9 @@ describe("authorization policy", () => {
       PERMISSIONS.CALENDAR_READ,
       // M12: read own child's behaviour incidents (row-scoped in service).
       PERMISSIONS.BEHAVIOUR_READ,
+      // M13: read own child's invoices/dues + payment receipts (the fee portal).
+      PERMISSIONS.FEE_READ,
+      PERMISSIONS.PAYMENT_READ,
     ]);
     expect(getPermissions("SUPER_ADMIN")).toContain(PERMISSIONS.USER_SET_ROLE);
     expect(getPermissions("SUPER_ADMIN")).toContain(PERMISSIONS.ANNOUNCEMENT_SEND);

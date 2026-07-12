@@ -163,6 +163,22 @@ export const PERMISSIONS = {
   /** Read behaviour incidents. Teacher → own + own-section; parent → own child;
    * admin → all (service scope). */
   BEHAVIOUR_READ: "behaviour:read",
+
+  /* ---- M13 Fees & Payments (ADR-021) — permission-only, no feature flag.
+   * The manage/read + record/read split mirrors the M7/M12 shape. Money mutations
+   * (structures, invoices) are admin-only; payment recording is a separate grant so
+   * the front-office collection surface is auditable independently. */
+  /** Full fee-structure + invoice lifecycle: create/update structures, generate/issue/
+   * cancel invoices, read all. SUPER_ADMIN / OFFICE_ADMIN (ADR-021 §7). */
+  FEE_MANAGE: "fee:manage",
+  /** Read invoices / dues. Admin → all; teacher → own-section (read-only); parent →
+   * own child (the fee portal). SA/OA/T/P (service scope). */
+  FEE_READ: "fee:read",
+  /** Record a payment against an invoice (office collection). SUPER_ADMIN /
+   * OFFICE_ADMIN. Refunds — deferred — would extend this grant (ADR-021 §7). */
+  PAYMENT_RECORD: "payment:record",
+  /** Read payments / receipts. Admin → all; parent → own child. SA/OA/P (service scope). */
+  PAYMENT_READ: "payment:read",
 } as const;
 
 export type Permission = (typeof PERMISSIONS)[keyof typeof PERMISSIONS];
@@ -249,6 +265,11 @@ export const ROLE_PERMISSIONS: Readonly<Record<RoleKey, readonly Permission[]>> 
     // already granted via ATTENDANCE_MANAGE (M4).
     PERMISSIONS.BEHAVIOUR_MANAGE,
     PERMISSIONS.BEHAVIOUR_READ,
+    // M13: full fee/invoice lifecycle + payment recording + reads, school-wide (ADR-021).
+    PERMISSIONS.FEE_MANAGE,
+    PERMISSIONS.FEE_READ,
+    PERMISSIONS.PAYMENT_RECORD,
+    PERMISSIONS.PAYMENT_READ,
   ],
   // OFFICE_ADMIN: full academic + People management (M3) + Attendance (M4), school-wide.
   OFFICE_ADMIN: [
@@ -282,6 +303,11 @@ export const ROLE_PERMISSIONS: Readonly<Record<RoleKey, readonly Permission[]>> 
     // M12: full behaviour lifecycle + read, school-wide (ADR-020).
     PERMISSIONS.BEHAVIOUR_MANAGE,
     PERMISSIONS.BEHAVIOUR_READ,
+    // M13: full fee/invoice lifecycle + payment recording + reads, school-wide (ADR-021).
+    PERMISSIONS.FEE_MANAGE,
+    PERMISSIONS.FEE_READ,
+    PERMISSIONS.PAYMENT_RECORD,
+    PERMISSIONS.PAYMENT_READ,
   ],
   // TEACHER: reads academic structure + reads students/enrollments/documents in
   // their OWN sections and their OWN staff profile (row-scope in the service).
@@ -327,6 +353,8 @@ export const ROLE_PERMISSIONS: Readonly<Record<RoleKey, readonly Permission[]>> 
     // own + own-section incidents. Leave read already granted (M4). No leave decide.
     PERMISSIONS.BEHAVIOUR_RECORD,
     PERMISSIONS.BEHAVIOUR_READ,
+    // M13: reads invoices/dues for own-section students, read-only (ADR-021 §7). No payment access.
+    PERMISSIONS.FEE_READ,
   ],
   // PARENT: reads only their OWN children (students/enrollments/documents) and
   // their OWN parent record (row-scope in the service). M4: reads own child's
@@ -358,6 +386,9 @@ export const ROLE_PERMISSIONS: Readonly<Record<RoleKey, readonly Permission[]>> 
     PERMISSIONS.CALENDAR_READ,
     // M12: reads own child's behaviour incidents; applies for + reads leave (M4).
     PERMISSIONS.BEHAVIOUR_READ,
+    // M13: reads own child's invoices/dues + payment receipts (the fee portal; ADR-021 §7).
+    PERMISSIONS.FEE_READ,
+    PERMISSIONS.PAYMENT_READ,
   ],
   ACCOUNTANT: [...SELF_PROFILE, PERMISSIONS.NOTIFICATION_MANAGE_OWN],
 };

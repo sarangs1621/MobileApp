@@ -128,6 +128,7 @@ model AcademicYear {
   announcements           Announcement[] // M11: virtual back-relation only (no change to frozen M2 model)
   calendarEvents          SchoolCalendarEvent[] // M11: virtual back-relation only
   behaviourIncidents      BehaviourIncident[] // M12: virtual back-relation only
+  feeStructures           FeeStructure[] // M13: virtual back-relation only
   // + raw SQL: UNIQUE (schoolId) WHERE status = 'ACTIVE'  — one ACTIVE year
   // + raw SQL: CHECK (startDate < endDate)
   // + raw SQL: RLS ON — admin-only ALL (academic_rls migration; defense-in-depth)
@@ -351,6 +352,7 @@ model Student {
   parents            StudentParent[]
   documents          StudentDocument[]
   behaviourIncidents BehaviourIncident[] // M12: discipline history that follows the person across years (virtual back-relation only)
+  invoices           Invoice[] // M13: fee history follows the person across years (virtual back-relation only)
   // + raw SQL: partial unique — Aadhaar unique per school when present:
   //   WHERE "aadhaar" IS NOT NULL  (a shared national ID is a data error)
   // + raw SQL: RLS ON — admin ALL; teacher SELECT own-section; parent SELECT own-child (people_rls, Step 4)
@@ -488,6 +490,8 @@ model Staff {
   // M12: virtual back-relations only — behaviour incident audit actors (B3)
   behaviourIncidentsCreated       BehaviourIncident[]      @relation("BehaviourCreatedBy")
   behaviourIncidentsResolved      BehaviourIncident[]      @relation("BehaviourResolvedBy")
+  invoicesCreated                 Invoice[] // M13: virtual back-relation only (created-by actor)
+  paymentsReceived                Payment[] // M13: virtual back-relation only (received-by actor)
   // + raw SQL: RLS ON — admin ALL; staff SELECT self (userId = auth.uid()) (people_rls, Step 4)
 
   @@unique([schoolId, employeeId])
@@ -524,6 +528,7 @@ model Enrollment {
   homeworkSubmissions HomeworkSubmission[] // M6: virtual back-relation only
   reportCards         ReportCard[] // M7: virtual back-relation only (owner side; ADR-014)
   behaviourIncidents  BehaviourIncident[] // M12: incidents in this year/section context (virtual back-relation only)
+  invoices            Invoice[] // M13: invoices raised for this enrollment (virtual back-relation only)
   // + raw SQL: partial unique — roll number unique per section per year:
   //   WHERE "sectionId" IS NOT NULL AND "rollNo" IS NOT NULL
   // + raw SQL: CHECK ("rollNo" IS NULL OR "sectionId" IS NOT NULL) — rollNo only after allocation
@@ -1483,6 +1488,8 @@ enum NotificationType {
   SYSTEM
   BEHAVIOUR // M12: a behaviour incident was recorded (→ student's parents)
   LEAVE // M12: a leave request was approved/rejected (→ the requesting parent)
+  INVOICE_ISSUED // M13: a fee invoice was issued (→ student's parents)
+  PAYMENT_RECEIVED // M13: a fee payment was recorded (→ student's parents)
 }
 
 enum NotificationPriority {
@@ -1725,4 +1732,125 @@ model BehaviourIncident {
   @@index([createdAt]) // date scan / default sort (brief "date")
   @@index([teacherId]) // listByTeacher + RLS own-incident path
   @@index([schoolId])
+}
+
+// ---------- fees & payments (M13 — ADR-021) ----------
+
+// A named, per-academic-year fee template (e.g. "2026–27 Admission Fee"). Its
+// FeeComponents are the line items; an Invoice snapshots their total at
+// generate-time (ADR-021 §2). schoolId is loose (ADR-008).
+model FeeStructure {
+  id             String         @id @default(cuid())
+  schoolId       String // loose tenant ref (ADR-008)
+  academicYearId String
+  name           String
+  description    String?
+  active         Boolean        @default(true)
+  createdAt      DateTime       @default(now())
+  updatedAt      DateTime       @updatedAt
+  academicYear   AcademicYear   @relation(fields: [academicYearId], references: [id], onDelete: Restrict)
+  components     FeeComponent[]
+  invoices       Invoice[]
+  // + raw SQL: RLS ON — admin ALL; teacher read; parent/anon none (fees_rls, Step 3)
+
+  @@index([schoolId])
+  @@index([academicYearId])
+}
+
+// A single line of a FeeStructure (amount in paise, ADR-021 §1). Composition
+// child — Cascade with its structure; the money-of-record is the invoice's
+// snapshotted total, not this template line.
+model FeeComponent {
+  id             String       @id @default(cuid())
+  feeStructureId String
+  name           String
+  amount         Int // paise (DATABASE_CONVENTIONS §12; never Float)
+  order          Int
+  mandatory      Boolean      @default(true)
+  feeStructure   FeeStructure @relation(fields: [feeStructureId], references: [id], onDelete: Cascade)
+
+  @@index([feeStructureId])
+}
+
+// A student's fee bill for one enrollment, generated from a FeeStructure.
+// totalAmount is SNAPSHOTTED at generate-time (ADR-021 §2). Money in paise.
+// DRAFT→ISSUED→PARTIAL→PAID (immutable after PAID) · CANCELLED. OVERDUE is
+// compute-on-read, never stored (ADR-021 §3).
+model Invoice {
+  id               String        @id @default(cuid())
+  schoolId         String // loose tenant ref (ADR-008)
+  studentId        String // fee history follows the person across years (ADR-021 §1; student ledger)
+  enrollmentId     String // the year/section/class the invoice was raised for
+  feeStructureId   String
+  invoiceNumber    String // per-school sequential; race-safe mint (ADR-021 §1)
+  issueDate        DateTime      @db.Date
+  dueDate          DateTime      @db.Date
+  status           InvoiceStatus @default(DRAFT)
+  totalAmount      Int // paise — snapshot of the structure's components at generate-time
+  paidAmount       Int           @default(0) // paise
+  balanceAmount    Int // paise — kept = totalAmount - paidAmount by CHECK
+  remarks          String?
+  createdByStaffId String // B3 audit actor
+  createdAt        DateTime      @default(now())
+  updatedAt        DateTime      @updatedAt
+  student          Student       @relation(fields: [studentId], references: [id], onDelete: Restrict)
+  enrollment       Enrollment    @relation(fields: [enrollmentId], references: [id], onDelete: Restrict)
+  feeStructure     FeeStructure  @relation(fields: [feeStructureId], references: [id], onDelete: Restrict)
+  createdBy        Staff         @relation(fields: [createdByStaffId], references: [id], onDelete: Restrict)
+  payments         Payment[]
+  // + raw SQL: CHECK — totalAmount>=0, paidAmount>=0, paidAmount<=totalAmount, balanceAmount = totalAmount - paidAmount
+  // + raw SQL: partial UNIQUE (enrollmentId, feeStructureId) WHERE status <> 'CANCELLED' — no double-billing (ADR-021 §2)
+  // + raw SQL: RLS ON — admin ALL; teacher read; parent own-child; anon none (fees_rls, Step 3)
+
+  @@unique([schoolId, invoiceNumber])
+  @@index([studentId])
+  @@index([enrollmentId])
+  @@index([feeStructureId])
+  @@index([status])
+  @@index([dueDate])
+  @@index([schoolId])
+}
+
+// An immutable, append-only payment against an Invoice (brief: "Payment never
+// deleted"). amount in paise. recordPayment updates the invoice in the same
+// $transaction (ADR-021 §3). schoolId is loose (denormalised for the receipt
+// sequence + RLS).
+model Payment {
+  id                String        @id @default(cuid())
+  schoolId          String // loose tenant ref (ADR-008) — receipt sequence + RLS
+  invoiceId         String
+  receiptNumber     String // per-school sequential; race-safe mint
+  paymentDate       DateTime      @db.Date
+  amount            Int // paise (DATABASE_CONVENTIONS §12)
+  method            PaymentMethod
+  referenceNo       String? // UPI/cheque/txn ref
+  remarks           String?
+  receivedByStaffId String // who collected it (B3 actor)
+  createdAt         DateTime      @default(now())
+  invoice           Invoice       @relation(fields: [invoiceId], references: [id], onDelete: Restrict)
+  receivedBy        Staff         @relation(fields: [receivedByStaffId], references: [id], onDelete: Restrict)
+  // + raw SQL: CHECK — amount > 0 (a refund is a future row, not this table)
+  // + raw SQL: RLS ON — admin ALL; teacher read; parent own-child; anon none (fees_rls, Step 3)
+
+  @@unique([schoolId, receiptNumber])
+  @@index([invoiceId])
+  @@index([receiptNumber])
+}
+
+enum InvoiceStatus {
+  DRAFT
+  ISSUED
+  PARTIAL
+  PAID
+  OVERDUE // compute-on-read display state only — never stored (ADR-021 §3)
+  CANCELLED
+}
+
+enum PaymentMethod {
+  CASH
+  UPI
+  CARD
+  BANK_TRANSFER
+  CHEQUE
+  ONLINE
 }
