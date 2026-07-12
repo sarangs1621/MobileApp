@@ -2,12 +2,13 @@
 
 import type { ReactNode } from "react";
 
+import { NotificationBell } from "@/src/components/notification/ui";
+import { trpc } from "@/src/trpc/react";
+
 import { ToastProvider } from "../ui";
 
 import { Sidebar } from "./sidebar";
 
-import { NotificationBell } from "@/src/components/notification/ui";
-import { trpc } from "@/src/trpc/react";
 
 /**
  * App shell (ADR-UX1 §3) — fixed sidebar + top bar around every protected page.

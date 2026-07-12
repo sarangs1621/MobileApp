@@ -7,11 +7,12 @@ import { LogOut, School } from "lucide-react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 
+import { getSupabaseClient } from "@/src/lib/supabase/client";
+
 import { Avatar } from "../ui";
 
 import { visibleNavGroups } from "./nav-config";
 
-import { getSupabaseClient } from "@/src/lib/supabase/client";
 
 const ROLE_LABEL: Record<RoleKey, string> = {
   SUPER_ADMIN: "Super Admin",

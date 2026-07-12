@@ -3,12 +3,13 @@
 import Link from "next/link";
 import { useState } from "react";
 
+import { trpc } from "@/src/trpc/react";
+
 import { INVOICE_STATUS_LABEL } from "../fees/ui";
 
 import { downloadCsv } from "./csv";
 import { AreaTrend, BarSeries, Kpi, LineTrend, Panel, StatusPie, formatPaise } from "./ui";
 
-import { trpc } from "@/src/trpc/react";
 
 const pct = (v: number | null): string => (v === null ? "—" : `${v}%`);
 
