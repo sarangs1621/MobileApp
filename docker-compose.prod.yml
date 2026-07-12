@@ -1,0 +1,30 @@
+# Production stack (ADR-025 §7). Only the web service — the database, auth and
+# storage are the managed Supabase project (no Postgres container in prod).
+#
+#   docker compose -f docker-compose.prod.yml up -d --build
+#
+# Env comes from the deployment host's `.env` (never committed). The compose
+# healthcheck probes /api/ready (DB + storage) so the orchestrator only routes
+# traffic to a fully-ready instance; the Dockerfile's HEALTHCHECK covers liveness.
+
+services:
+  web:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    image: school-portal-web:latest
+    env_file:
+      - .env
+    ports:
+      - "3000:3000"
+    restart: unless-stopped
+    healthcheck:
+      test:
+        - "CMD"
+        - "node"
+        - "-e"
+        - "fetch('http://127.0.0.1:3000/api/ready').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))"
+      interval: 30s
+      timeout: 10s
+      start_period: 30s
+      retries: 3

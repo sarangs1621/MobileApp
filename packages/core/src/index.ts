@@ -63,6 +63,7 @@ export class ValidationError extends DomainError {
 }
 
 export { can, canAny, canAll, getPermissions } from "./authorization";
+export { logger, errorFields, type LogLevel, type LogFields } from "./logger";
 export {
   bandForPercentage,
   computeGpa,

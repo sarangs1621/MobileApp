@@ -1810,6 +1810,7 @@ model Invoice {
   @@index([status])
   @@index([dueDate])
   @@index([schoolId])
+  @@index([schoolId, createdAt]) // keyset-paginated fee-invoice list (M17 perf review; Document[schoolId,createdAt] analog)
 }
 
 // An immutable, append-only payment against an Invoice (brief: "Payment never
@@ -1836,6 +1837,7 @@ model Payment {
   @@unique([schoolId, receiptNumber])
   @@index([invoiceId])
   @@index([receiptNumber])
+  @@index([schoolId, createdAt]) // keyset-paginated payment list (M17 perf review; sort+cursor on createdAt)
 }
 
 enum InvoiceStatus {

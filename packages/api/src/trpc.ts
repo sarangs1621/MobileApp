@@ -1,9 +1,10 @@
-import { DomainError } from "@repo/core";
+import { DomainError, errorFields, logger } from "@repo/core";
 import { initTRPC, TRPCError } from "@trpc/server";
 import superjson from "superjson";
 import { ZodError } from "zod";
 
 import type { Context } from "./context";
+import { checkRateLimit, rateLimitFor } from "./rate-limit";
 
 /**
  * tRPC initialization. `superjson` preserves Dates/etc.; the error formatter
@@ -59,7 +60,60 @@ const mapDomainErrors = t.middleware(async ({ next }) => {
   return result;
 });
 
-const baseProcedure = t.procedure.use(mapDomainErrors);
+/**
+ * App-level rate limiting for sensitive mutations (ADR-025 §2). Only the paths in
+ * `rateLimitFor` are limited (publish/approve/upload mints); everything else passes
+ * through. Keyed by `path:userId` — the actor identity already on `ctx` (login
+ * itself is Supabase-direct and rate-limited there, not here). Runs before the
+ * domain-error mapping so an over-limit caller is rejected early.
+ */
+const rateLimit = t.middleware(({ ctx, path, next }) => {
+  const cfg = rateLimitFor(path);
+  if (cfg) {
+    const key = `${path}:${ctx.user?.userId ?? "anon"}`;
+    if (!checkRateLimit(key, cfg.limit, cfg.windowMs)) {
+      throw new TRPCError({
+        code: "TOO_MANY_REQUESTS",
+        message: "Too many requests. Please wait a moment and try again.",
+      });
+    }
+  }
+  return next();
+});
+
+/**
+ * Structured request logging (ADR-025 §3). Outermost so it measures the full
+ * procedure duration and sees the final outcome. One JSON line per call:
+ * INFO on success, ERROR on failure (with the underlying error/stack). Pure
+ * observation — the result is returned unchanged.
+ */
+const requestLogging = t.middleware(async ({ ctx, path, type, next }) => {
+  const start = Date.now();
+  const result = await next();
+  // Keep test output clean — the transport per-request log would emit one JSON
+  // line (with stacks for expected-error cases) per procedure call. The logger
+  // module itself is unit-tested directly in @repo/core.
+  if (process.env.VITEST) return result;
+  const fields = {
+    requestId: ctx.requestId,
+    userId: ctx.user?.userId,
+    schoolId: ctx.user?.schoolId,
+    route: path,
+    durationMs: Date.now() - start,
+  };
+  if (result.ok) {
+    logger.info(`${type} ${path}`, { ...fields, status: "ok" });
+  } else {
+    logger.error(`${type} ${path} failed`, {
+      ...fields,
+      status: result.error.code,
+      ...errorFields(result.error.cause ?? result.error),
+    });
+  }
+  return result;
+});
+
+const baseProcedure = t.procedure.use(requestLogging).use(rateLimit).use(mapDomainErrors);
 
 /** Open to anyone (e.g. health). */
 export const publicProcedure = baseProcedure;

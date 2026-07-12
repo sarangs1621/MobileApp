@@ -38,7 +38,12 @@ function handler(req: Request): Promise<Response> {
         },
       );
       const authUser = await getAuthUser(supabase, getBearerToken(req));
-      return createContext({ authUser, storage: createStoragePort() });
+      return createContext({
+        authUser,
+        storage: createStoragePort(),
+        // Correlation id from an upstream proxy/LB if present; else generated.
+        requestId: req.headers.get("x-request-id") ?? undefined,
+      });
     },
   });
 }

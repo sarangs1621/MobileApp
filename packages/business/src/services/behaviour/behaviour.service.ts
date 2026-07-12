@@ -1,5 +1,13 @@
 import { PERMISSIONS } from "@repo/constants";
-import { can, ConflictError, ForbiddenError, NotFoundError, ValidationError } from "@repo/core";
+import {
+  can,
+  ConflictError,
+  errorFields,
+  ForbiddenError,
+  logger,
+  NotFoundError,
+  ValidationError,
+} from "@repo/core";
 import type { BehaviourIncident } from "@repo/db";
 import type {
   BehaviourCategoryKey,
@@ -202,7 +210,11 @@ export async function createBehaviourIncident(
         return mapBehaviourIncident(flagged);
       }
     } catch (err) {
-      console.error(`[behaviour] notify failed for ${created.id}`, err);
+      logger.error("behaviour notify failed", {
+        route: "behaviour.create",
+        incidentId: created.id,
+        ...errorFields(err),
+      });
     }
   }
 

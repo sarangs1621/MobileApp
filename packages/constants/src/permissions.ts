@@ -197,6 +197,12 @@ export const PERMISSIONS = {
   /** Update branding/logo/school-profile/academic/system settings — the whole
    * admin console. SUPER_ADMIN / OFFICE_ADMIN ("Office Admin: configured perms"). */
   SETTINGS_MANAGE: "settings:manage",
+
+  // ---- Operations (M17, ADR-025 §9) ----
+  /** Super-Admin-only operational tooling — diagnostics, audit-log export, storage
+   * verification, cache clear (all read-only / non-destructive; no business data is
+   * modified). SUPER_ADMIN ONLY — never granted to OFFICE_ADMIN. */
+  SYSTEM_MANAGE: "system:manage",
 } as const;
 
 export type Permission = (typeof PERMISSIONS)[keyof typeof PERMISSIONS];
@@ -294,6 +300,8 @@ export const ROLE_PERMISSIONS: Readonly<Record<RoleKey, readonly Permission[]>> 
     PERMISSIONS.DOCUMENT_READ,
     // M16: manage all school configuration (ADR-024 §6).
     PERMISSIONS.SETTINGS_MANAGE,
+    // M17: operational tooling — SUPER_ADMIN ONLY (ADR-025 §9); NOT granted to OFFICE_ADMIN below.
+    PERMISSIONS.SYSTEM_MANAGE,
   ],
   // OFFICE_ADMIN: full academic + People management (M3) + Attendance (M4), school-wide.
   OFFICE_ADMIN: [

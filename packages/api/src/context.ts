@@ -13,17 +13,27 @@ export interface Context {
   user: Principal | null;
   /** Absent when the host wires no storage (tests, hosts without documents). */
   storage?: StoragePort | null | undefined;
+  /** Correlation id for structured request logs (ADR-025 §3). `createContext`
+   *  always sets it; optional so test callers can build a context without one. */
+  requestId?: string;
 }
 
 export interface CreateContextOptions {
   authUser: AuthUser | null;
   storage?: StoragePort | undefined;
+  /** Host may supply a correlation id (e.g. an inbound `x-request-id`); else generated. */
+  requestId?: string | undefined;
 }
 
-export async function createContext({ authUser, storage }: CreateContextOptions): Promise<Context> {
+export async function createContext({
+  authUser,
+  storage,
+  requestId,
+}: CreateContextOptions): Promise<Context> {
   const storagePort = storage ?? null;
+  const id = requestId ?? crypto.randomUUID();
   if (!authUser) {
-    return { user: null, storage: storagePort };
+    return { user: null, storage: storagePort, requestId: id };
   }
-  return { user: await resolvePrincipal(authUser.userId), storage: storagePort };
+  return { user: await resolvePrincipal(authUser.userId), storage: storagePort, requestId: id };
 }

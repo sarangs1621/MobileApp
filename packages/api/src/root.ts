@@ -1,5 +1,14 @@
-import { checkReadiness } from "@repo/business";
+import {
+  assertSystemManage,
+  checkReadiness,
+  createServiceContext,
+  exportAuditLog,
+  getDiagnostics,
+  verifyStorage,
+} from "@repo/business";
+import { auditExportInput } from "@repo/validation";
 
+import { clearRateLimits } from "./rate-limit";
 import {
   academicTermRouter,
   academicYearRouter,
@@ -37,7 +46,7 @@ import {
 import { reportCardRouter } from "./routers/report-card";
 import { brandingRouter, configurationRouter, settingsRouter } from "./routers/settings";
 import { bellScheduleRouter, periodRouter, timetableRouter } from "./routers/timetable";
-import { publicProcedure, router } from "./trpc";
+import { protectedProcedure, publicProcedure, router, storageProcedure } from "./trpc";
 
 /**
  * The application router. M1 exposes system probes + authentication; feature
@@ -52,6 +61,28 @@ export const appRouter = router({
     })),
     /** Readiness — dependencies (DB) are reachable; safe to receive traffic. */
     ready: publicProcedure.query(() => checkReadiness()),
+
+    // ---- Operations (M17, ADR-025 §9). All SUPER_ADMIN-only (system:manage),
+    // enforced in the business layer; read-only / non-destructive. ----
+
+    /** Runtime diagnostics — version/uptime/environment + DB readiness. */
+    diagnostics: protectedProcedure.query(({ ctx }) =>
+      getDiagnostics(createServiceContext(ctx.user)),
+    ),
+    /** Tenant-scoped audit-log export (keyset-paginated; reads ADR-007). */
+    auditExport: protectedProcedure
+      .input(auditExportInput)
+      .query(({ ctx, input }) => exportAuditLog(createServiceContext(ctx.user), input)),
+    /** Verify each private storage bucket is reachable. */
+    storageCheck: storageProcedure.query(({ ctx }) =>
+      verifyStorage(createServiceContext(ctx.user), ctx.storage),
+    ),
+    /** Clear the in-process rate-limit cache. Authorization in business; the
+     *  cache itself is transport-owned, so the clear runs here (ADR-025 §9). */
+    cacheClear: protectedProcedure.mutation(({ ctx }) => {
+      assertSystemManage(ctx.user);
+      return { clearedRateLimitKeys: clearRateLimits() };
+    }),
   }),
   auth: authRouter,
   academicYear: academicYearRouter,

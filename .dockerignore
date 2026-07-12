@@ -1,0 +1,22 @@
+# Keep the build context small and never leak host artifacts/secrets.
+# NOTE: all package.json + source stay in context so `pnpm install
+# --frozen-lockfile` matches the workspace lockfile (incl. apps/mobile);
+# the runner stage copies only the web standalone bundle, so mobile deps
+# never reach the runtime image.
+**/node_modules
+**/.next
+**/.turbo
+**/dist
+**/build
+.git
+.github
+**/.env
+**/.env.*
+!**/.env.example
+**/*.log
+**/coverage
+**/.DS_Store
+apps/web/e2e
+apps/web/playwright-report
+apps/web/test-results
+graphify-out

@@ -1,5 +1,5 @@
 import { PERMISSIONS } from "@repo/constants";
-import { can, ConflictError } from "@repo/core";
+import { can, ConflictError, errorFields, logger } from "@repo/core";
 import type { AnnouncementStatus } from "@repo/db";
 import type { AnnouncementDto } from "@repo/types";
 
@@ -162,7 +162,11 @@ export async function publishAnnouncement(
         userIds,
       });
     } catch (err) {
-      console.error(`[announcement] notify failed for ${published.id}`, err);
+      logger.error("announcement notify failed", {
+        route: "announcement.publish",
+        announcementId: published.id,
+        ...errorFields(err),
+      });
     }
   }
 

@@ -4,15 +4,28 @@ _The single always-load file. Keep under 2 pages. Update when a step completes._
 
 ## Current Milestone
 
+**M17 — Production Readiness, Security & Operations** (ADR-025; harden M1–M16 for production).
+**NO new business feature, no domain rule, no module redesign** — additive infrastructure only.
+Shipped: **CSP** + app-level **rate limiting** (Step 2); centralized JSON **logger** (`@repo/core`,
+Step 3); enhanced **/api/health** (liveness+version/uptime/env) & **/api/ready** (DB+storage,
+Step 4); web + mobile **error boundaries** (Step 5); **2 perf indexes** (`Invoice`/`Payment
+[schoolId,createdAt]`, migration `20260712080000`, proven additive — Step 6); **Dockerfile** +
+compose + scripts (Step 7); **CI** full gate + docker build + audit (Step 8); **BACKUP.md** DR
+runbooks (Step 9); **`system:manage`** (SUPER_ADMIN only) + `system.*` ops tools (Step 10);
+**SECURITY_AUDIT.md** (M1–M17, 0 FAIL, 7 WARN — Step 11); docs (Step 12). **Freeze carve-out
+(ADR-025 §0):** observability/error instrumentation may touch frozen files with no behaviour
+change (constraint 5). **Only schema change = the 2 indexes. Only permission = system:manage.**
+**M17 Steps 1–12 COMPLETE — awaiting approval.**
+
+<details><summary>Prior milestone — M16 School Administration &amp; Configuration</summary>
+
 **M16 — School Administration & Configuration** (ADR-024; admin panel over frozen M1–M15).
 **3 additive config tables** `SchoolSettings` + `BrandingSettings` + `SystemSettings` (each
-`schoolId @unique`, one row/school, upsert; no relational FK; `Locale` reused), **1 permission**
-`settings:manage` (SA/OA writes; reads are a role-shaped projection, no read grant), new private
-bucket `branding`. **`School` (M1) NOT reused** — frozen. Per-table split driven by RLS audience:
-Branding broadly-readable, School/System admin-only. **Config influences only future actions and
-is read by NO frozen engine in v1** (numbering/timezone/language/academic stored, wired later —
-ADR-014/023 seam-deferred posture). **Permission-only, no flag. M16 Steps 1–9 COMPLETE — awaiting
-approval.**
+`schoolId @unique`, upsert; `Locale` reused), **1 permission** `settings:manage` (SA/OA writes;
+reads role-shaped), new private bucket `branding`. **`School` (M1) NOT reused.** Config inert
+w.r.t. frozen engines in v1. **M16 Steps 1–9 COMPLETE — awaiting approval.**
+
+</details>
 
 <details><summary>Prior milestone — M15 Documents, Certificates & Downloads</summary>
 
@@ -241,6 +254,26 @@ tasks** (business 207, api 266, validation 50); mobile ios export ✓ (Step 7).
 
 ## Next Task
 
+**STOPPED — M17 (Production Readiness, Security & Operations, ADR-025) COMPLETE, all 12 steps shipped; awaiting milestone
+approval to freeze.** Hardening over frozen M1–M16 — **zero business-feature change**. Additive-only: security (CSP
+report-only + rate limiting on publish/approve/upload; stale `package-lock.json` removed), structured JSON logging
+(`@repo/core/logger`, transport middleware, 5 `console.error`→`logger.error`), monitoring (`/api/health` liveness +
+version/uptime/env, `/api/ready` DB+storage via injected `pingStorage`), error boundaries (web App-Router
+error/global-error/not-found; mobile expo-router `ErrorBoundary`), **2 justified indexes** (`Invoice`/`Payment
+[schoolId,createdAt]`, migration `20260712080000_perf_indexes`, `migrate diff` 2 CreateIndex zero-ALTER + `EXPLAIN
+ANALYZE` proven), deployment (`Dockerfile` Next-standalone, dev+prod compose, build/deploy scripts), CI/CD (full gate +
+`pnpm audit --audit-level high` + docker-build job), backup/DR runbooks (`BACKUP.md`), ops (**`system:manage` SUPER_ADMIN
+only** + `system.*` diagnostics/audit-export/storage-check/cache-clear, all read-only; `audit.list` read added), full
+security audit (`SECURITY_AUDIT.md` — 0 FAIL, 7 tracked WARN). **Freeze carve-out (ADR-025 §0):** instrumentation may
+touch frozen files with no behaviour change. **Only schema change = the 2 indexes; only new permission = `system:manage`;
+no feature flag.** Gate green: lint 14/14 · typecheck 14/14 · test (business 456, api 403) · db:validate ✓ · web build
+41/41 (standalone). **`docker build` runs in CI** (no local daemon). **Follow-ups (out of additive scope):** frozen-M14
+analytics N+1 rewrites, `mark.repository` defense-in-depth schoolId param, CSP enforce phase, credential rotation, real
+SMS, PITR/HIBP on Pro, ops-console UI. Docs: ADR-025, `M17.md`, `DEPLOYMENT/SECURITY/OPERATIONS/BACKUP/ENVIRONMENT.md`,
+`PERFORMANCE_REVIEW.md`, `SECURITY_AUDIT.md`.
+
+<details><summary>Prior — M16 next-task note</summary>
+
 **STOPPED — M16 (School Administration & Configuration, ADR-024) COMPLETE, all 9 steps shipped; awaiting milestone
 approval to freeze.** A school administration panel over frozen M1–M15 — everything is **configuration**; no engine logic
 changes. Additive: **3 tables** `SchoolSettings` + `BrandingSettings` + `SystemSettings` (each `schoolId @unique` → one
@@ -262,6 +295,8 @@ mobile typecheck ✓ · web build **41/41** (`/settings`). **Deferred:** audit-h
 surface), wiring numbering/timezone/etc into frozen engines, mobile full-profile editing; "backup/export" = CSV export.
 Runbook: provision the private `branding` bucket before live logo uploads (§3e). **Permission-only, NO flag.** Docs:
 `docs/features/settings.md`, `docs/status/Settings.md`, `docs/milestones/M16.md`, ADR-024.
+
+</details>
 
 <details><summary>Prior — M15 next-task note</summary>
 

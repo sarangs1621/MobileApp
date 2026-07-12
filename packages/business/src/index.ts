@@ -26,6 +26,7 @@ export * from "./services/fee";
 export * from "./services/analytics";
 export * from "./services/document";
 export * from "./services/settings";
+export * from "./services/system";
 export {
   assertCan,
   assertScope,

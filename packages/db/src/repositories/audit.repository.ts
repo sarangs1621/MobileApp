@@ -16,9 +16,27 @@ export interface AuditEntry {
   after?: Prisma.InputJsonValue;
 }
 
-/** Append-only audit writer. Called within the same transaction as the mutation. */
+/** Keyset-paginated audit read (M17 ops export). `before` = older-than cursor. */
+export interface AuditLogListFilter {
+  limit: number;
+  before?: Date | undefined;
+}
+
+export interface AuditLogRow {
+  id: string;
+  actorUserId: string;
+  action: string;
+  entityType: string;
+  entityId: string;
+  beforeJson: Prisma.JsonValue | null;
+  afterJson: Prisma.JsonValue | null;
+  createdAt: Date;
+}
+
+/** Append-only audit writer + read (read added M17 for the ops audit export). */
 export interface AuditLogRepository {
   record(entry: AuditEntry): Promise<void>;
+  list(schoolId: string, filter: AuditLogListFilter): Promise<AuditLogRow[]>;
 }
 
 export function createAuditLogRepository(client: DbClient): AuditLogRepository {
@@ -37,5 +55,26 @@ export function createAuditLogRepository(client: DbClient): AuditLogRepository {
         },
       });
     },
+
+    // Tenant-scoped, keyset-paginated by createdAt — uses @@index([schoolId, createdAt]).
+    list: (schoolId, filter) =>
+      client.auditLog.findMany({
+        where: {
+          schoolId,
+          ...(filter.before ? { createdAt: { lt: filter.before } } : {}),
+        },
+        orderBy: { createdAt: "desc" },
+        take: filter.limit,
+        select: {
+          id: true,
+          actorUserId: true,
+          action: true,
+          entityType: true,
+          entityId: true,
+          beforeJson: true,
+          afterJson: true,
+          createdAt: true,
+        },
+      }),
   };
 }

@@ -1,3 +1,4 @@
+import { errorFields, logger } from "@repo/core";
 import type { ExamDto, HomeworkDto, LeaveRequestDto, ReportCardDto } from "@repo/types";
 
 import type { ServiceContext } from "../../context";
@@ -25,8 +26,10 @@ async function safeEmit(label: string, run: () => Promise<unknown>): Promise<voi
   try {
     await run();
   } catch (err) {
-    // no-console allows warn/error; a real logger is a future concern.
-    console.error(`[notifications] ${label} emit failed`, err);
+    logger.error("notification emit failed", {
+      route: `notification.${label}`,
+      ...errorFields(err),
+    });
   }
 }
 

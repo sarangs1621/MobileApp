@@ -1,5 +1,12 @@
 import { PERMISSIONS } from "@repo/constants";
-import { ConflictError, ForbiddenError, NotFoundError, ValidationError } from "@repo/core";
+import {
+  ConflictError,
+  errorFields,
+  ForbiddenError,
+  logger,
+  NotFoundError,
+  ValidationError,
+} from "@repo/core";
 import type { Invoice, Payment } from "@repo/db";
 import type { InvoiceDto, PaymentDto, PaymentMethodKey } from "@repo/types";
 
@@ -157,7 +164,11 @@ export async function recordPayment(
       userIds,
     });
   } catch (err) {
-    console.error(`[fee] payment-received notify failed for ${payment.id}`, err);
+    logger.error("fee.payment-received notify failed", {
+      route: "fee.recordPayment",
+      paymentId: payment.id,
+      ...errorFields(err),
+    });
   }
 
   return { payment: mapPayment(payment), invoice: mapInvoice(invoice) };

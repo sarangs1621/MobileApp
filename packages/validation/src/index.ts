@@ -21,6 +21,13 @@ export const cursorPaginationInput = z.object({
 });
 export type CursorPaginationInput = z.infer<typeof cursorPaginationInput>;
 
+/** Ops audit-log export (M17, ADR-025 §9). Keyset by `before` (older-than). */
+export const auditExportInput = z.object({
+  limit: z.number().int().min(1).max(1000).default(200),
+  before: z.coerce.date().optional(),
+});
+export type AuditExportInput = z.infer<typeof auditExportInput>;
+
 /** Sort direction. */
 export const sortDirSchema = z.enum(["asc", "desc"]).default("asc");
 

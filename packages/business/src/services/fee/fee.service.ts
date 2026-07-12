@@ -1,5 +1,5 @@
 import { PERMISSIONS } from "@repo/constants";
-import { ConflictError, ValidationError } from "@repo/core";
+import { ConflictError, errorFields, logger, ValidationError } from "@repo/core";
 import type { Invoice } from "@repo/db";
 import type { FeeStructureDto, InvoiceDto, InvoiceStatusKey } from "@repo/types";
 
@@ -319,7 +319,11 @@ export async function issueInvoice(ctx: ServiceContext, id: string): Promise<Inv
       userIds,
     });
   } catch (err) {
-    console.error(`[fee] invoice-issued notify failed for ${issued.id}`, err);
+    logger.error("fee.invoice-issued notify failed", {
+      route: "fee.issueInvoice",
+      invoiceId: issued.id,
+      ...errorFields(err),
+    });
   }
 
   return mapInvoice(issued);
