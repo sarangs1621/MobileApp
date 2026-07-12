@@ -44,6 +44,10 @@ All ADRs live in `docs/architecture/`.
 - ADR-003 — Repositories as the data-access boundary
 - ADR-007 — Audit log (money mutations)
 
+**Analytics / reporting**
+- ADR-022 — Analytics & Reporting (read-only analytics/dashboards over frozen M1–M13; **compute-on-read** aggregates; **no new tables, no new permission** — reuses each domain's existing read + scope, with an admin guard for school-wide panels; new read-only repo aggregates `invoice.aggregateForSchool`, `enrollment.countByYear`/`listByYear`, `attendanceRecord.statusCounts`; reuses `attendanceSummary`/`gpaForEnrollment`/`mapInvoice`; Recharts on web + hand-rolled on mobile; CSV export client-side) — **M14, implemented**
+- ADR-003 — Repositories as the data-access boundary
+
 **Notifications**
 - ADR-005 — Notification provider abstraction
 

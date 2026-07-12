@@ -54,6 +54,17 @@ export interface InvoiceRepository {
   ): Promise<Invoice | null>;
   /** Count for per-academic-year invoice numbering (via the structure's year). */
   countForYear(schoolId: string, academicYearId: string): Promise<number>;
+  /** READ-ONLY analytics aggregate (M14) — billed/collected/outstanding + per-status counts. */
+  aggregateForSchool(
+    schoolId: string,
+    filter?: { academicYearId?: string },
+  ): Promise<{
+    totalBilled: number;
+    totalCollected: number;
+    totalOutstanding: number;
+    count: number;
+    byStatus: Record<string, number>;
+  }>;
   list(schoolId: string, filter: ListInvoicesFilter): Promise<Invoice[]>;
   update(id: string, input: UpdateInvoiceInput): Promise<Invoice>;
   /**
@@ -97,6 +108,34 @@ export function createInvoiceRepository(client: DbClient): InvoiceRepository {
 
     countForYear: (schoolId, academicYearId) =>
       client.invoice.count({ where: { schoolId, feeStructure: { academicYearId } } }),
+
+    aggregateForSchool: async (schoolId, filter) => {
+      const where: Prisma.InvoiceWhereInput = {
+        schoolId,
+        ...(filter?.academicYearId
+          ? { feeStructure: { academicYearId: filter.academicYearId } }
+          : {}),
+      };
+      const [totals, byStatusRows] = await Promise.all([
+        client.invoice.aggregate({
+          where,
+          _sum: { totalAmount: true, paidAmount: true, balanceAmount: true },
+          _count: true,
+        }),
+        client.invoice.groupBy({ by: ["status"], where, _count: true }),
+      ]);
+      const byStatus: Record<string, number> = {};
+      for (const r of byStatusRows) {
+        byStatus[r.status] = r._count;
+      }
+      return {
+        totalBilled: totals._sum.totalAmount ?? 0,
+        totalCollected: totals._sum.paidAmount ?? 0,
+        totalOutstanding: totals._sum.balanceAmount ?? 0,
+        count: totals._count,
+        byStatus,
+      };
+    },
 
     list: (schoolId, filter) => {
       const where: Prisma.InvoiceWhereInput = { schoolId };

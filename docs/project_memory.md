@@ -226,6 +226,18 @@ tasks** (business 207, api 266, validation 50); mobile ios export ✓ (Step 7).
 
 ## Next Task
 
+**STOPPED — M14 (Analytics & Reporting, ADR-022) COMPLETE — awaiting approval.** Read-only analytics + dashboards over
+frozen M1–M13, **purely additive with ZERO schema change**. **No new permission:** every analytics query reuses its
+domain's existing read + scope (`attendance`/`marks`/`fee`/`report_card`/`behaviour`/`student:read`), with an **admin
+guard on school-wide panels**. Aggregates are **compute-on-read** (live) via new **read-only repo methods**
+(`invoice.aggregateForSchool`, `enrollment.countByYear`/`listByYear`, `attendanceRecord.statusCounts`) reusing
+`attendanceSummary`/`gpaForEnrollment`/`mapInvoice`; **cached/summary tables deferred**. `analytics.*` router (10
+queries, all `protectedProcedure`, thin transport); web `/(app)/dashboard` becomes a real role-aware dashboard (KPIs +
+**Recharts** charts + client-side CSV export, INVITED-activation preserved); mobile home gains a **hand-rolled** "At a
+glance" overview (`StatTile`/`StatGrid`/`PercentBar`, no chart lib) + recent announcements. New dep `recharts` (web
+only). **Permission-only, NO flag.** Docs: `docs/features/analytics.md`, `docs/status/Analytics.md`,
+`docs/milestones/M14.md`, ADR-022.
+
 **STOPPED — M13 (Fees & Payment Management, ADR-021) COMPLETE, all 9 steps shipped; awaiting milestone approval to
 freeze.** A school fee system over frozen M1–M12 — the **first money domain** (all money `Int` **paise**, never float).
 Additive: 4 tables `FeeStructure`→`FeeComponent` (Cascade) + `Invoice`→`Payment` (Restrict, **append-only**), 2 enums

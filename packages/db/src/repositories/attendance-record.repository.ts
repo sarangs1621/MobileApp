@@ -31,6 +31,16 @@ export interface AttendanceRecordRepository {
   upsert(input: UpsertAttendanceRecordInput): Promise<AttendanceRecordWithDate>;
   /** Set status/remarks by id (correction approval). */
   updateStatus(id: string, status: AttendanceStatus): Promise<AttendanceRecord>;
+  /**
+   * READ-ONLY analytics (M14) — per-status record counts over a session-date range,
+   * optionally narrowed to sections. Backs school/section attendance %; no rows loaded.
+   */
+  statusCounts(params: {
+    schoolId: string;
+    sectionIds?: readonly string[];
+    from: Date;
+    to: Date;
+  }): Promise<{ status: AttendanceStatus; count: number }[]>;
 }
 
 export function createAttendanceRecordRepository(client: DbClient): AttendanceRecordRepository {
@@ -71,5 +81,19 @@ export function createAttendanceRecordRepository(client: DbClient): AttendanceRe
       }),
     updateStatus: (id, status) =>
       client.attendanceRecord.update({ where: { id }, data: { status } }),
+    statusCounts: async ({ schoolId, sectionIds, from, to }) => {
+      const rows = await client.attendanceRecord.groupBy({
+        by: ["status"],
+        where: {
+          schoolId,
+          session: {
+            date: { gte: from, lte: to },
+            ...(sectionIds ? { sectionId: { in: [...sectionIds] } } : {}),
+          },
+        },
+        _count: true,
+      });
+      return rows.map((r) => ({ status: r.status, count: r._count }));
+    },
   };
 }

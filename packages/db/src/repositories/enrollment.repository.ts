@@ -44,10 +44,11 @@ export interface EnrollmentRepository {
   ): Promise<Enrollment | null>;
   /** Distinct studentIds enrolled in any of these sections (teacher read-scope);
    *  narrowed to a year when `academicYearId` is given. */
-  studentIdsInSections(
-    sectionIds: readonly string[],
-    academicYearId?: string,
-  ): Promise<string[]>;
+  studentIdsInSections(sectionIds: readonly string[], academicYearId?: string): Promise<string[]>;
+  /** READ-ONLY analytics (M14) — enrollment counts per academic year (student-growth series). */
+  countByYear(schoolId: string): Promise<{ academicYearId: string; count: number }[]>;
+  /** READ-ONLY analytics (M14) — every enrollment in a year (top-performer / at-risk sweep). */
+  listByYear(schoolId: string, academicYearId: string): Promise<Enrollment[]>;
   create(input: CreateEnrollmentInput): Promise<Enrollment>;
   update(id: string, data: UpdateEnrollmentInput): Promise<Enrollment>;
 }
@@ -89,6 +90,16 @@ export function createEnrollmentRepository(client: DbClient): EnrollmentReposito
       });
       return rows.map((r) => r.studentId);
     },
+    countByYear: async (schoolId) => {
+      const rows = await client.enrollment.groupBy({
+        by: ["academicYearId"],
+        where: { schoolId },
+        _count: true,
+      });
+      return rows.map((r) => ({ academicYearId: r.academicYearId, count: r._count }));
+    },
+    listByYear: (schoolId, academicYearId) =>
+      client.enrollment.findMany({ where: { schoolId, academicYearId } }),
     create: (input) => client.enrollment.create({ data: input }),
     update: (id, data) =>
       client.enrollment.update({

@@ -136,3 +136,9 @@ Every screen, keyed by the IDs used in `NAVIGATION_MAP.md` and `USER_FLOWS.md`. 
     **Parents are view-only** — ledger, outstanding dues and receipts (no "Pay Now" button). INVOICE_ISSUED /
     PAYMENT_RECEIVED notifications deep-link to `/fees/invoices/:id`. Receipts render on demand (print → PDF; no stored
     file). **Refunds + concessions deferred**; OVERDUE is compute-on-read.
+12. **M14 (implemented):** the web **Dashboard** (WEB-DASH-01, `(app)/dashboard`) changed from a **placeholder**
+    (role + nav links) to a **real role-aware analytics dashboard** — KPIs + charts (Recharts) + client-side CSV
+    export + quick links; the INVITED-activation flow is preserved. The mobile **Home** (`(app)/index.tsx`) gained
+    an analytics **"At a glance"** overview + a recent-announcements slot (same screen — no new route). Read-only
+    over frozen M1–M13; **no new permission** (each panel reuses its domain read + scope; school-wide panels are
+    admin-only); **no new screens/routes**. **No flag** (ADR-022).

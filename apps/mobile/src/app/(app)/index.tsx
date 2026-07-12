@@ -3,6 +3,8 @@ import { can } from "@repo/core";
 import { Link, type Href } from "expo-router";
 import { Pressable, ScrollView, Text, View } from "react-native";
 
+import { formatDate } from "../../components/announcements-ui";
+import { formatPaise } from "../../components/fees-ui";
 import { NotificationBell } from "../../components/notifications-ui";
 import { trpc } from "../../lib/trpc";
 import { useAuthStore } from "../../stores/auth-store";
@@ -52,6 +54,21 @@ export default function AppHome() {
   const today = trpc.timetable.today.useQuery({}, { enabled: showTimetable });
   const todayRows = today.data ?? [];
 
+  // M14 analytics — one role-aware query drives the "at a glance" overview (self-authorizing).
+  const overview = trpc.analytics.dashboard.useQuery(undefined, {
+    enabled:
+      role === "SUPER_ADMIN" || role === "OFFICE_ADMIN" || role === "TEACHER" || role === "PARENT",
+  });
+  const recentAnnouncements = trpc.announcement.list.useQuery(
+    { limit: 5 },
+    { enabled: canReadAnnouncements },
+  );
+  // Resolve ids → names from queries the page already runs (no new API, no raw-id labels).
+  const childName = new Map(
+    (children.data ?? []).map((c) => [c.id, `${c.firstName} ${c.lastName}`]),
+  );
+  const sectionName = new Map((teaching.data ?? []).map((t) => [t.sectionId, t.sectionName]));
+
   return (
     <View className="flex-1 bg-background">
       <View className="flex-row items-center border-b border-border px-4 py-4">
@@ -65,6 +82,96 @@ export default function AppHome() {
       </View>
 
       <ScrollView contentContainerClassName="p-4 gap-4">
+        {overview.isLoading ? (
+          <ContextCard title="At a glance">
+            <Muted>Loading…</Muted>
+          </ContextCard>
+        ) : overview.data?.role === "PARENT" ? (
+          overview.data.children.map((child) => (
+            <ContextCard
+              key={child.studentId}
+              title={childName.get(child.studentId) ?? "Your child"}
+            >
+              <StatGrid>
+                <StatTile label="Attendance" value={pct(child.attendancePercentage)} />
+                <StatTile label="GPA" value={child.gpa === null ? "—" : child.gpa.toFixed(1)} />
+                <StatTile
+                  label="Homework"
+                  value={
+                    child.homeworkCompletionRate === null
+                      ? "—"
+                      : `${Math.round(child.homeworkCompletionRate * 100)}%`
+                  }
+                />
+                <StatTile label="Dues" value={formatPaise(child.dues)} />
+                <StatTile
+                  label="Behaviour"
+                  value={`${child.openBehaviourCount}/${child.behaviourCount}`}
+                />
+              </StatGrid>
+            </ContextCard>
+          ))
+        ) : overview.data?.role === "TEACHER" ? (
+          <ContextCard title="At a glance">
+            <StatGrid>
+              <StatTile
+                label="Referrals"
+                value={String(overview.data.teacher.behaviourReferralCount)}
+              />
+            </StatGrid>
+            {overview.data.teacher.sections.length === 0 ? (
+              <Muted>No sections assigned.</Muted>
+            ) : (
+              overview.data.teacher.sections.map((s) => (
+                <PercentBar
+                  key={s.sectionId}
+                  label={sectionName.get(s.sectionId) ?? "Section"}
+                  pct={s.attendancePercentage}
+                />
+              ))
+            )}
+          </ContextCard>
+        ) : overview.data?.role === "ADMIN" ? (
+          <ContextCard title="School at a glance">
+            <StatGrid>
+              <StatTile label="Students" value={String(overview.data.school.headcount)} />
+              <StatTile label="Attendance" value={pct(overview.data.school.attendancePercentage)} />
+              <StatTile
+                label="Collected today"
+                value={formatPaise(overview.data.school.collectionToday)}
+              />
+              <StatTile
+                label="Outstanding"
+                value={formatPaise(overview.data.school.fees.totalOutstanding)}
+              />
+            </StatGrid>
+          </ContextCard>
+        ) : null}
+
+        {canReadAnnouncements ? (
+          <View className="gap-2 rounded-md border border-border bg-card p-4">
+            <Text className="text-sm font-medium text-muted-foreground">Recent announcements</Text>
+            {recentAnnouncements.isLoading ? (
+              <Muted>Loading…</Muted>
+            ) : (recentAnnouncements.data ?? []).length === 0 ? (
+              <Muted>Nothing new.</Muted>
+            ) : (
+              (recentAnnouncements.data ?? []).slice(0, 3).map((a) => (
+                <Link key={a.id} href={`/announcements/${a.id}`} asChild>
+                  <Pressable className="min-h-11 justify-center">
+                    <Text className="font-medium text-foreground" numberOfLines={1}>
+                      {a.title}
+                    </Text>
+                    <Text className="text-xs text-muted-foreground">
+                      {formatDate(a.publishedAt ?? a.createdAt)}
+                    </Text>
+                  </Pressable>
+                </Link>
+              ))
+            )}
+          </View>
+        ) : null}
+
         {isParent ? (
           <ContextCard title="Your children">
             {children.isLoading ? (
@@ -249,6 +356,40 @@ function ContextCard({ title, children }: { title: string; children: React.React
 
 function Muted({ children }: { children: React.ReactNode }) {
   return <Text className="text-sm text-muted-foreground">{children}</Text>;
+}
+
+/** Weighted-% → display string (null = no data). */
+function pct(v: number | null): string {
+  return v === null ? "—" : `${v}%`;
+}
+
+function StatGrid({ children }: { children: React.ReactNode }) {
+  return <View className="flex-row flex-wrap gap-2">{children}</View>;
+}
+
+function StatTile({ label, value }: { label: string; value: string }) {
+  return (
+    <View className="min-w-[30%] flex-1 rounded-md border border-border bg-background p-3">
+      <Text className="text-xs text-muted-foreground">{label}</Text>
+      <Text className="text-lg font-semibold text-foreground">{value}</Text>
+    </View>
+  );
+}
+
+/** Hand-rolled attendance bar (mobile v1 has no chart lib — ADR-022 §7). */
+function PercentBar({ label, pct: value }: { label: string; pct: number | null }) {
+  const width = value === null ? 0 : Math.max(0, Math.min(100, value));
+  return (
+    <View className="gap-1">
+      <View className="flex-row justify-between">
+        <Text className="text-sm text-foreground">{label}</Text>
+        <Text className="text-sm text-muted-foreground">{pct(value)}</Text>
+      </View>
+      <View className="h-2 rounded-full bg-muted">
+        <View className="h-2 rounded-full bg-primary" style={{ width: `${width}%` }} />
+      </View>
+    </View>
+  );
 }
 
 function NavLink({ href, label }: { href: Href; label: string }) {

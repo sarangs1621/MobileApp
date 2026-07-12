@@ -8,6 +8,7 @@ import {
   subjectRouter,
   teacherAssignmentRouter,
 } from "./routers/academic";
+import { analyticsRouter } from "./routers/analytics";
 import { announcementRouter } from "./routers/announcement";
 import {
   attendanceCorrectionRouter,
@@ -82,6 +83,7 @@ export const appRouter = router({
   behaviour: behaviourRouter,
   fee: feeRouter,
   payment: paymentRouter,
+  analytics: analyticsRouter,
 });
 
 export type AppRouter = typeof appRouter;

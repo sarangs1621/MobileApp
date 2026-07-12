@@ -421,6 +421,27 @@ gateway, refunds, or concessions** (deferred). Supersedes the planned flag-gated
 | `payment.listByInvoice` | Q | `payment:read` | payment history for an invoice; scope-gated |
 | `payment.list` | Q | `payment:read` | admin-only school-wide log; filters method/date |
 
+## Analytics & Reporting (M14 — ADR-022, implemented; permission-only)
+
+Read-only analytics/dashboards over frozen M1–M13. All procedures are **queries** on the **protected** gate — thin
+transport, no writes, no audit, **ZERO schema change**. **No new permission:** each query authorizes by reusing the
+underlying domain read + scope (`attendance`/`marks`/`fee`/`report_card`/`behaviour`/`student:read`); **school-wide
+panels are admin-only** (SA/OA guard). Aggregates are **compute-on-read** (no summary tables/cron). Supersedes the
+planned flag-gated `analytics.*` add-on below.
+
+| Procedure | T | Permission | Notes |
+|---|---|---|---|
+| `analytics.studentSummary` | Q | domain reads (`{studentId}`, own-child/section scope) | one student's KPIs (attendance %, GPA, dues) |
+| `analytics.examTrend` | Q | `marks:read` (`{studentId}`) | a student's marks trend across exams |
+| `analytics.attendanceTrend` | Q | `attendance:read` (`{studentId}`) | a student's attendance % over time |
+| `analytics.teacherSummary` | Q | domain reads (self scope) | the acting teacher's sections at a glance |
+| `analytics.classPerformance` | Q | `marks:read` (`{sectionId}`, own-section) | one section's performance distribution |
+| `analytics.schoolSummary` | Q | admin-only | school-wide KPIs |
+| `analytics.feeCollection` | Q | `fee:read` (admin-only) | collection/outstanding; optional `{academicYearId?}` |
+| `analytics.topPerformers` | Q | `marks:read` (admin-only) | top students; optional `{limit?}` |
+| `analytics.atRiskStudents` | Q | admin-only | low attendance/marks + open behaviour flags |
+| `analytics.dashboard` | Q | role-aware (reuses domain reads) | the caller's role dashboard payload (KPIs + series) |
+
 ## Add-on routers (flag-gated: check flag → FORBIDDEN when off)
 
 | Procedure | Flag | T | Permission | Audit | Notif |

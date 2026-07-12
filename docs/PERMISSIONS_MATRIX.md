@@ -238,6 +238,21 @@ anon none; teacher read is business-only).
   `fee:manage` / admin-only.
 - **Accountants:** none (out of scope — no payroll/accounting). **No feature flag.** Refunds + concessions deferred.
 
+### Analytics & Reporting (M14, ADR-022 — implemented)
+
+Built as **M14** (see `docs/milestones/M14.md`). **No new permission.** Analytics is read-only aggregation of data the
+principal can already read, so each panel authorizes by **reusing the underlying domain read + its scope** —
+`attendance:read` / `marks:read` / `fee:read` / `report_card:read` / `behaviour:read` / `student:read` (admin school /
+teacher own-section / parent own-child). School-wide panels (`schoolSummary`, `feeCollection`, `topPerformers`,
+`atRiskStudents`) add an **admin-only guard** (SUPER_ADMIN / OFFICE_ADMIN). The composite `analytics.dashboard`
+self-authorizes per panel. **No feature flag.**
+
+- The flag-gated, SA-only **`analytics:view`** add-on row (below) is **superseded** — it predates teacher/parent
+  dashboards and needs feature-flag infra that does not exist (the M9/M10 supersession precedent). M14 ships analytics
+  permission-only via domain-read reuse.
+- Over-exposure is structurally impossible: the raw-read gate is the aggregate gate. Verified by the analytics transport
+  permission-matrix tests (teacher/parent denied the admin panels; unauthenticated → UNAUTHORIZED).
+
 ### Timetable Management (M9, ADR-017 — implemented)
 
 Built as **M9** (see `docs/milestones/M9.md`). **Permission-only — the `timetable` flag is NOT used**
@@ -266,7 +281,7 @@ Notes:
 | `fees:view` | `fees` | any | school | – | ownChild (own invoices) | school |
 | `fees:pay` | `fees` | – | – | – | ownChild | – |
 | ~~`timetable:manage` / `timetable:read` (`timetable` flag)~~ | — | — | — | — | — | **implemented in M9 permission-only** — see the Timetable section above |
-| `analytics:view` | `analytics` | any | – (**decided v1.3**: Dev PRD §8.16 scopes dashboards to the principal; extend to OA later only if asked) | – | – | – |
+| ~~`analytics:view` (`analytics` flag)~~ | — | — | — | — | — | **superseded in M14 permission-only** — see the Analytics section above (reuses domain reads; no flag) |
 | `flags:manage` | — | any | – | – | – | – |
 
 ## Student document visibility (M3)

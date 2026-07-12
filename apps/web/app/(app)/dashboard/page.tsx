@@ -7,14 +7,20 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useEffect } from "react";
 
+import {
+  AdminDashboard,
+  ParentDashboard,
+  TeacherDashboard,
+} from "@/src/components/analytics/dashboards";
 import { NotificationBell } from "@/src/components/notification/ui";
 import { getSupabaseClient } from "@/src/lib/supabase/client";
 import { trpc } from "@/src/trpc/react";
 
 /**
- * Dashboard placeholder. Resolves the DB profile (`auth.me`), activates a
- * first-time INVITED account (`auth.registerProfile`), shows the role, and logs
- * out. No CRUD — feature screens arrive in later milestones.
+ * Role-aware analytics dashboard (M14, ADR-022). Resolves the DB profile (`auth.me`),
+ * activates a first-time INVITED account, then renders live KPIs + charts for the role
+ * (admin / teacher / parent) over frozen data — read-only, computed on demand. Quick
+ * links to the feature areas follow. No new API; charts are Recharts (ADR-022 §7).
  */
 export default function DashboardPage() {
   const router = useRouter();
@@ -56,98 +62,71 @@ export default function DashboardPage() {
     );
   }
 
+  const role = me.data.role;
+  const isAdmin = role === "SUPER_ADMIN" || role === "OFFICE_ADMIN";
+
+  const links: { href: string; label: string; show: boolean }[] = [
+    {
+      href: "/academic/years",
+      label: "Academic structure",
+      show: can(role, PERMISSIONS.ACADEMIC_READ),
+    },
+    { href: "/people/students", label: "People", show: can(role, PERMISSIONS.STUDENT_READ) },
+    { href: "/attendance/mark", label: "Attendance", show: can(role, PERMISSIONS.ATTENDANCE_READ) },
+    { href: "/exams", label: "Examinations", show: can(role, PERMISSIONS.EXAM_MANAGE) },
+    { href: "/homework", label: "Homework", show: can(role, PERMISSIONS.HOMEWORK_READ) },
+    { href: "/timetable", label: "Timetable", show: can(role, PERMISSIONS.TIMETABLE_MANAGE) },
+    {
+      href: "/announcements",
+      label: "Announcements",
+      show: can(role, PERMISSIONS.ANNOUNCEMENT_READ),
+    },
+    { href: "/calendar", label: "School calendar", show: can(role, PERMISSIONS.CALENDAR_READ) },
+    {
+      href: "/behaviour",
+      label: "Behaviour & discipline",
+      show: can(role, PERMISSIONS.BEHAVIOUR_MANAGE),
+    },
+    { href: "/fees", label: "Fees & payments", show: can(role, PERMISSIONS.FEE_MANAGE) },
+  ];
+
   return (
-    <main className="mx-auto flex min-h-screen max-w-2xl flex-col justify-center gap-4 p-6">
+    <main className="mx-auto flex min-h-screen max-w-6xl flex-col gap-6 p-6">
       <div className="flex items-start justify-between gap-3">
         <div className="flex flex-col gap-1">
           <h1 className="text-3xl font-semibold text-foreground">School Portal</h1>
           <p className="text-muted-foreground">
-            Signed in as <span className="font-medium text-foreground">{me.data.role}</span>. Your
-            dashboard appears here once features are enabled.
+            Signed in as <span className="font-medium text-foreground">{role}</span>
           </p>
         </div>
         <NotificationBell />
       </div>
-      {can(me.data.role, PERMISSIONS.ACADEMIC_READ) ? (
-        <Link
-          href="/academic/years"
-          className="min-h-11 self-start rounded-md border border-border px-4 py-2 font-medium text-foreground"
-        >
-          Academic structure
-        </Link>
+
+      {isAdmin ? (
+        <AdminDashboard />
+      ) : role === "TEACHER" ? (
+        <TeacherDashboard />
+      ) : role === "PARENT" ? (
+        <ParentDashboard />
       ) : null}
-      {can(me.data.role, PERMISSIONS.STUDENT_READ) ? (
-        <Link
-          href="/people/students"
-          className="min-h-11 self-start rounded-md border border-border px-4 py-2 font-medium text-foreground"
-        >
-          People
-        </Link>
-      ) : null}
-      {can(me.data.role, PERMISSIONS.ATTENDANCE_READ) ? (
-        <Link
-          href="/attendance/mark"
-          className="min-h-11 self-start rounded-md border border-border px-4 py-2 font-medium text-foreground"
-        >
-          Attendance
-        </Link>
-      ) : null}
-      {can(me.data.role, PERMISSIONS.EXAM_MANAGE) ? (
-        <Link
-          href="/exams"
-          className="min-h-11 self-start rounded-md border border-border px-4 py-2 font-medium text-foreground"
-        >
-          Examinations
-        </Link>
-      ) : null}
-      {can(me.data.role, PERMISSIONS.HOMEWORK_READ) ? (
-        <Link
-          href="/homework"
-          className="min-h-11 self-start rounded-md border border-border px-4 py-2 font-medium text-foreground"
-        >
-          Homework
-        </Link>
-      ) : null}
-      {can(me.data.role, PERMISSIONS.TIMETABLE_MANAGE) ? (
-        <Link
-          href="/timetable"
-          className="min-h-11 self-start rounded-md border border-border px-4 py-2 font-medium text-foreground"
-        >
-          Timetable
-        </Link>
-      ) : null}
-      {can(me.data.role, PERMISSIONS.ANNOUNCEMENT_READ) ? (
-        <Link
-          href="/announcements"
-          className="min-h-11 self-start rounded-md border border-border px-4 py-2 font-medium text-foreground"
-        >
-          Announcements
-        </Link>
-      ) : null}
-      {can(me.data.role, PERMISSIONS.CALENDAR_READ) ? (
-        <Link
-          href="/calendar"
-          className="min-h-11 self-start rounded-md border border-border px-4 py-2 font-medium text-foreground"
-        >
-          School calendar
-        </Link>
-      ) : null}
-      {can(me.data.role, PERMISSIONS.BEHAVIOUR_MANAGE) ? (
-        <Link
-          href="/behaviour"
-          className="min-h-11 self-start rounded-md border border-border px-4 py-2 font-medium text-foreground"
-        >
-          Behaviour & discipline
-        </Link>
-      ) : null}
-      {can(me.data.role, PERMISSIONS.FEE_MANAGE) ? (
-        <Link
-          href="/fees"
-          className="min-h-11 self-start rounded-md border border-border px-4 py-2 font-medium text-foreground"
-        >
-          Fees & payments
-        </Link>
-      ) : null}
+
+      <section className="flex flex-col gap-3 rounded-lg border border-border bg-card p-4">
+        <h2 className="text-sm font-medium text-muted-foreground">Quick links</h2>
+        <div className="flex flex-wrap gap-2">
+          {links
+            .filter((l) => l.show)
+            .map((l) => (
+              <Link
+                key={l.href}
+                href={l.href}
+                className="min-h-11 rounded-md border border-border px-4 py-2 font-medium text-foreground hover:bg-background"
+              >
+                {l.label}
+              </Link>
+            ))}
+        </div>
+      </section>
+
       <button
         type="button"
         onClick={() => void handleLogout()}

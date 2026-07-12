@@ -924,3 +924,16 @@ export const listPaymentsInput = z.object({
   limit: z.number().int().min(1).max(100).optional(),
   before: z.string().datetime().optional(),
 });
+
+/* ---------- analytics & reporting (M14, ADR-022) — read-only inputs ---------- */
+
+export const sectionIdInput = z.object({ sectionId: idSchema });
+export type SectionIdInput = z.infer<typeof sectionIdInput>;
+
+export const feeCollectionInput = z.object({ academicYearId: idSchema.optional() });
+export type FeeCollectionInput = z.infer<typeof feeCollectionInput>;
+
+export const topPerformersInput = z.object({
+  limit: z.number().int().min(1).max(100).optional(),
+});
+export type TopPerformersInput = z.infer<typeof topPerformersInput>;
