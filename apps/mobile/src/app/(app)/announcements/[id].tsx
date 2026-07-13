@@ -1,5 +1,6 @@
 import { PERMISSIONS } from "@repo/constants";
 import { can } from "@repo/core";
+import { useTranslation } from "@repo/i18n";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import { Alert, Pressable, ScrollView, Text, View } from "react-native";
 
@@ -18,6 +19,8 @@ import { trpc } from "../../../lib/trpc";
  * edit/delete apply to a DRAFT the author owns (the service is the real gate).
  */
 export default function AnnouncementDetailScreen() {
+  const { dict } = useTranslation();
+  const t = dict.announcements;
   const { id } = useLocalSearchParams<{ id: string }>();
   const router = useRouter();
   const utils = trpc.useUtils();
@@ -56,9 +59,9 @@ export default function AnnouncementDetailScreen() {
   const canEdit = isDraft && (canManage || canDraft);
 
   const confirmDelete = () =>
-    Alert.alert("Delete draft?", "This cannot be undone.", [
-      { text: "Cancel", style: "cancel" },
-      { text: "Delete", style: "destructive", onPress: () => remove.mutate({ id }) },
+    Alert.alert(t.deleteDraftConfirmTitle, t.cannotBeUndone, [
+      { text: t.cancel, style: "cancel" },
+      { text: t.delete, style: "destructive", onPress: () => remove.mutate({ id }) },
     ]);
 
   return (
@@ -82,15 +85,18 @@ export default function AnnouncementDetailScreen() {
 
         <View className="gap-2 pt-2">
           {canEdit ? (
-            <Action label="Edit draft" onPress={() => router.push(`/announcements/new?id=${id}`)} />
+            <Action
+              label={t.editDraft}
+              onPress={() => router.push(`/announcements/new?id=${id}`)}
+            />
           ) : null}
           {isDraft && canManage ? (
-            <Action label="Publish" primary onPress={() => publish.mutate({ id })} />
+            <Action label={t.publish} primary onPress={() => publish.mutate({ id })} />
           ) : null}
           {isPublished && canManage ? (
-            <Action label="Archive" onPress={() => archive.mutate({ id })} />
+            <Action label={t.archive} onPress={() => archive.mutate({ id })} />
           ) : null}
-          {canEdit ? <Action label="Delete draft" destructive onPress={confirmDelete} /> : null}
+          {canEdit ? <Action label={t.deleteDraft} destructive onPress={confirmDelete} /> : null}
         </View>
       </ScrollView>
     </View>
@@ -98,17 +104,20 @@ export default function AnnouncementDetailScreen() {
 }
 
 function Header({ onBack }: { onBack: () => void }) {
+  const { dict } = useTranslation();
   return (
     <View className="flex-row items-center gap-3 border-b border-border px-4 py-3">
       <Pressable
         accessibilityRole="button"
-        accessibilityLabel="Go back"
+        accessibilityLabel={dict.announcements.goBack}
         onPress={onBack}
         className="min-h-11 min-w-11 items-center justify-center rounded-md"
       >
         <Text className="text-lg text-foreground">←</Text>
       </Pressable>
-      <Text className="flex-1 text-xl font-semibold text-foreground">Announcement</Text>
+      <Text className="flex-1 text-xl font-semibold text-foreground">
+        {dict.announcements.detailTitle}
+      </Text>
     </View>
   );
 }

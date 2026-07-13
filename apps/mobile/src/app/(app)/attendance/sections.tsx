@@ -1,3 +1,4 @@
+import { useTranslation } from "@repo/i18n";
 import { Link } from "expo-router";
 import { Pressable, Text } from "react-native";
 
@@ -10,10 +11,14 @@ import { trpc } from "../../../lib/trpc";
  * section, so subjects are collapsed. Tap a section → today's register.
  */
 export default function AttendanceSectionsScreen() {
+  const { dict } = useTranslation();
+  const t = dict.attendance;
   const assignments = trpc.teacherAssignment.list.useQuery({});
   const classes = trpc.class.list.useQuery();
   const classIds = [...new Set((classes.data ?? []).map((c) => c.id))];
-  const sectionLists = trpc.useQueries((t) => classIds.map((classId) => t.section.list({ classId })));
+  const sectionLists = trpc.useQueries((t) =>
+    classIds.map((classId) => t.section.list({ classId })),
+  );
 
   const className = new Map((classes.data ?? []).map((c) => [c.id, c.name]));
   const sectionInfo = new Map(
@@ -26,26 +31,23 @@ export default function AttendanceSectionsScreen() {
 
   return (
     <AcademicListScreen
-      title="Mark attendance"
+      title={t.markAttendance}
       isLoading={assignments.isLoading}
       isError={assignments.isError}
       items={sectionIds}
       keyExtractor={(id) => id}
-      emptyText="You aren't assigned to any sections."
+      emptyText={t.notAssignedSections}
       renderItem={(sectionId) => {
         const info = sectionInfo.get(sectionId);
         const label = info
-          ? `${className.get(info.classId) ?? info.classId} · Section ${info.name}`
+          ? t.sectionLabel(className.get(info.classId) ?? info.classId, info.name)
           : sectionId;
         return (
-          <Link
-            href={{ pathname: "/attendance/mark/[sectionId]", params: { sectionId } }}
-            asChild
-          >
+          <Link href={{ pathname: "/attendance/mark/[sectionId]", params: { sectionId } }} asChild>
             <Pressable accessibilityRole="button">
               <ListRow>
                 <Text className="font-medium text-foreground">{label}</Text>
-                <Text className="text-sm text-muted-foreground">Today’s daily register</Text>
+                <Text className="text-sm text-muted-foreground">{t.todaysDailyRegister}</Text>
               </ListRow>
             </Pressable>
           </Link>

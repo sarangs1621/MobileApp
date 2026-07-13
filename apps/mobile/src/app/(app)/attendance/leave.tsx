@@ -1,3 +1,4 @@
+import { useTranslation } from "@repo/i18n";
 import { useState } from "react";
 import { ActivityIndicator, Pressable, Text, TextInput, View } from "react-native";
 
@@ -11,16 +12,18 @@ import { trpc } from "../../../lib/trpc";
  * their own PENDING requests). Dates are plain YYYY-MM-DD, validated server-side.
  */
 export default function LeaveScreen() {
+  const { dict } = useTranslation();
+  const t = dict.attendance;
   const children = trpc.student.list.useQuery();
   const [studentId, setStudentId] = useState<string | null>(null);
 
   return (
-    <ScreenScaffold title="Leave requests">
-      <Text className="text-sm font-medium text-muted-foreground">Child</Text>
+    <ScreenScaffold title={t.leaveRequests}>
+      <Text className="text-sm font-medium text-muted-foreground">{t.child}</Text>
       {children.isLoading ? (
         <ActivityIndicator />
       ) : (children.data ?? []).length === 0 ? (
-        <Text className="text-sm text-muted-foreground">No children linked to you.</Text>
+        <Text className="text-sm text-muted-foreground">{t.noChildrenLinked}</Text>
       ) : (
         (children.data ?? []).map((child) => {
           const selected = child.id === studentId;
@@ -51,6 +54,8 @@ export default function LeaveScreen() {
 
 /** Leave list + apply form for the selected child's ACTIVE enrollment. */
 function ChildLeave({ studentId }: { studentId: string }) {
+  const { dict } = useTranslation();
+  const t = dict.attendance;
   const utils = trpc.useUtils();
   const enrollments = trpc.enrollment.listByStudent.useQuery({ studentId });
   const enrollmentId = (enrollments.data ?? []).find((e) => e.status === "ACTIVE")?.id;
@@ -81,18 +86,18 @@ function ChildLeave({ studentId }: { studentId: string }) {
     return <ActivityIndicator />;
   }
   if (enrollmentId === undefined) {
-    return <Text className="text-sm text-muted-foreground">This child has no active enrollment.</Text>;
+    return <Text className="text-sm text-muted-foreground">{t.noActiveEnrollment}</Text>;
   }
 
   return (
     <View className="gap-3">
-      <Text className="text-sm font-medium text-muted-foreground">Apply for leave</Text>
-      <DateField label="From" value={fromDate} onChange={setFromDate} />
-      <DateField label="To" value={toDate} onChange={setToDate} />
+      <Text className="text-sm font-medium text-muted-foreground">{t.applyForLeave}</Text>
+      <DateField label={t.from} value={fromDate} onChange={setFromDate} />
+      <DateField label={t.to} value={toDate} onChange={setToDate} />
       <TextInput
         value={reason}
         onChangeText={setReason}
-        placeholder="Reason"
+        placeholder={t.reason}
         multiline
         className="min-h-11 rounded-md border border-border bg-card px-3 py-2 text-foreground"
       />
@@ -104,17 +109,17 @@ function ChildLeave({ studentId }: { studentId: string }) {
         }}
         className="min-h-11 items-center justify-center rounded-md bg-primary px-4 py-3"
       >
-        <Text className="font-medium text-primary-foreground">Submit request</Text>
+        <Text className="font-medium text-primary-foreground">{t.submitRequest}</Text>
       </Pressable>
       {create.isError ? (
         <Text className="text-sm text-destructive">{create.error.message}</Text>
       ) : null}
 
-      <Text className="text-sm font-medium text-muted-foreground">Requests</Text>
+      <Text className="text-sm font-medium text-muted-foreground">{t.requests}</Text>
       {leaves.isLoading ? (
         <ActivityIndicator />
       ) : (leaves.data ?? []).length === 0 ? (
-        <Text className="text-sm text-muted-foreground">No leave requests yet.</Text>
+        <Text className="text-sm text-muted-foreground">{t.noLeaveRequests}</Text>
       ) : (
         (leaves.data ?? []).map((leave) => (
           <ListRow key={leave.id}>
@@ -133,7 +138,7 @@ function ChildLeave({ studentId }: { studentId: string }) {
                   cancel.mutate({ leaveId: leave.id });
                 }}
               >
-                <Text className="text-sm text-destructive">Cancel</Text>
+                <Text className="text-sm text-destructive">{t.cancel}</Text>
               </Pressable>
             ) : null}
           </ListRow>

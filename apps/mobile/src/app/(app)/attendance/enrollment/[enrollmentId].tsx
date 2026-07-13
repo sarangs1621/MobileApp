@@ -1,5 +1,6 @@
 import { PERMISSIONS } from "@repo/constants";
 import { can } from "@repo/core";
+import { useTranslation } from "@repo/i18n";
 import { Link, useLocalSearchParams } from "expo-router";
 import { ActivityIndicator, Pressable, Text } from "react-native";
 
@@ -20,6 +21,8 @@ import { trpc } from "../../../../lib/trpc";
  * submit corrections get a per-record link to request one (ADR-011 §8).
  */
 export default function EnrollmentAttendanceScreen() {
+  const { dict } = useTranslation();
+  const t = dict.attendance;
   const { enrollmentId, academicYearId } = useLocalSearchParams<{
     enrollmentId: string;
     academicYearId?: string;
@@ -45,14 +48,17 @@ export default function EnrollmentAttendanceScreen() {
     | { kind: "record"; date: string; recordId: string; status: string }
     | { kind: "holiday"; date: string; name: string };
   const rows: Row[] = [
-    ...(history.data ?? []).map(
-      (r): Row => ({ kind: "record", date: r.date, recordId: r.id, status: r.status }),
-    ),
+    ...(history.data ?? []).map((r): Row => ({
+      kind: "record",
+      date: r.date,
+      recordId: r.id,
+      status: r.status,
+    })),
     ...holidaysInRange.map((h): Row => ({ kind: "holiday", date: h.date, name: h.name })),
   ].sort((a, b) => b.date.localeCompare(a.date));
 
   return (
-    <ScreenScaffold title="Attendance">
+    <ScreenScaffold title={t.attendance}>
       <Text className="text-sm text-muted-foreground">
         {from} → {to}
       </Text>
@@ -60,28 +66,34 @@ export default function EnrollmentAttendanceScreen() {
       {summary.data ? (
         <ListRow>
           <Text className="font-medium text-foreground">
-            {summary.data.percentage == null ? "—" : `${summary.data.percentage}%`} present
+            {summary.data.percentage == null ? "—" : `${summary.data.percentage}%`}{" "}
+            {t.presentSuffix}
           </Text>
           <Text className="text-sm text-muted-foreground">
-            {summary.data.present} present · {summary.data.absent} absent · {summary.data.late} late ·{" "}
-            {summary.data.halfDay} half · {summary.data.leave} leave
+            {t.summaryBreakdown(
+              summary.data.present,
+              summary.data.absent,
+              summary.data.late,
+              summary.data.halfDay,
+              summary.data.leave,
+            )}
           </Text>
         </ListRow>
       ) : (
         <ActivityIndicator />
       )}
 
-      <Text className="text-sm font-medium text-muted-foreground">Calendar</Text>
+      <Text className="text-sm font-medium text-muted-foreground">{t.calendar}</Text>
       {history.isLoading ? (
         <ActivityIndicator />
       ) : rows.length === 0 ? (
-        <Text className="text-sm text-muted-foreground">No records this month.</Text>
+        <Text className="text-sm text-muted-foreground">{t.noRecords}</Text>
       ) : (
         rows.map((row) =>
           row.kind === "holiday" ? (
             <ListRow key={`h:${row.date}`}>
               <Text className="font-medium text-foreground">{row.date}</Text>
-              <Text className="text-sm text-info">Holiday · {row.name}</Text>
+              <Text className="text-sm text-info">{t.holiday(row.name)}</Text>
             </ListRow>
           ) : (
             <ListRow key={row.recordId}>
@@ -93,11 +105,14 @@ export default function EnrollmentAttendanceScreen() {
               </Text>
               {canCorrect ? (
                 <Link
-                  href={{ pathname: "/attendance/correct/[recordId]", params: { recordId: row.recordId } }}
+                  href={{
+                    pathname: "/attendance/correct/[recordId]",
+                    params: { recordId: row.recordId },
+                  }}
                   asChild
                 >
                   <Pressable accessibilityRole="button">
-                    <Text className="text-sm text-primary">Request correction</Text>
+                    <Text className="text-sm text-primary">{t.requestCorrection}</Text>
                   </Pressable>
                 </Link>
               ) : null}

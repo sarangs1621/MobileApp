@@ -1,3 +1,4 @@
+import { useTranslation } from "@repo/i18n";
 import { useRouter } from "expo-router";
 import { useState } from "react";
 import { ActivityIndicator, Pressable, Text, TextInput, View } from "react-native";
@@ -12,6 +13,8 @@ import { trpc } from "../../../lib/trpc";
  * from the detail screen. Files are added on web (mobile has no picker).
  */
 export default function NewHomeworkScreen() {
+  const { dict } = useTranslation();
+  const tr = dict.homework;
   const router = useRouter();
   const utils = trpc.useUtils();
   const targets = trpc.homework.targets.useQuery();
@@ -34,21 +37,19 @@ export default function NewHomeworkScreen() {
 
   if (targets.isLoading) {
     return (
-      <ScreenScaffold title="New homework">
+      <ScreenScaffold title={tr.newHomework}>
         <ActivityIndicator />
       </ScreenScaffold>
     );
   }
 
   return (
-    <ScreenScaffold title="New homework">
+    <ScreenScaffold title={tr.newHomework}>
       {rows.length === 0 ? (
-        <Text className="text-muted-foreground">
-          You have no subject/section assignments to create homework for.
-        </Text>
+        <Text className="text-muted-foreground">{tr.noAssignments}</Text>
       ) : (
         <>
-          <Text className="text-sm font-medium text-muted-foreground">Subject &amp; section</Text>
+          <Text className="text-sm font-medium text-muted-foreground">{tr.subjectAndSection}</Text>
           <View className="flex-row flex-wrap gap-2">
             {rows.map((t) => {
               const key = `${t.subjectId}:${t.sectionId}`;
@@ -76,17 +77,17 @@ export default function NewHomeworkScreen() {
           <TextInput
             value={title}
             onChangeText={setTitle}
-            placeholder="Title"
+            placeholder={tr.titlePlaceholder}
             className="min-h-11 rounded-md border border-border px-3 text-foreground"
           />
           <TextInput
             value={description}
             onChangeText={setDescription}
-            placeholder="Description (optional)"
+            placeholder={tr.descriptionPlaceholder}
             multiline
             className="min-h-24 rounded-md border border-border px-3 py-2 text-foreground"
           />
-          <Text className="text-sm font-medium text-muted-foreground">Due date (YYYY-MM-DD)</Text>
+          <Text className="text-sm font-medium text-muted-foreground">{tr.dueDateLabel}</Text>
           <TextInput
             value={dueDate}
             onChangeText={setDueDate}
@@ -112,7 +113,7 @@ export default function NewHomeworkScreen() {
               canSubmit ? "bg-primary" : "bg-primary/40"
             }`}
           >
-            <Text className="font-medium text-primary-foreground">Create draft</Text>
+            <Text className="font-medium text-primary-foreground">{tr.createDraft}</Text>
           </Pressable>
           {create.isError ? (
             <Text className="text-sm text-destructive">{create.error.message}</Text>

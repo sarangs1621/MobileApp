@@ -1,3 +1,4 @@
+import { useTranslation } from "@repo/i18n";
 import type { AttendanceStatusKey } from "@repo/types";
 import { useLocalSearchParams } from "expo-router";
 import { useState } from "react";
@@ -25,6 +26,8 @@ import { useOfflineQueueStore } from "../../../../stores/offline-queue-store";
  * machine. SUBMITTED/LOCKED registers are read-only (change via correction on web).
  */
 export default function MarkAttendanceScreen() {
+  const { dict } = useTranslation();
+  const t = dict.attendance;
   const { sectionId } = useLocalSearchParams<{ sectionId: string }>();
   const utils = trpc.useUtils();
   const date = todayIst();
@@ -76,7 +79,7 @@ export default function MarkAttendanceScreen() {
 
   if (years.isLoading || (activeYearId !== undefined && sessionQuery.isLoading)) {
     return (
-      <ScreenScaffold title="Mark attendance">
+      <ScreenScaffold title={t.markAttendance}>
         <ActivityIndicator />
       </ScreenScaffold>
     );
@@ -84,16 +87,16 @@ export default function MarkAttendanceScreen() {
 
   if (activeYearId === undefined) {
     return (
-      <ScreenScaffold title="Mark attendance">
-        <Text className="text-muted-foreground">No active academic year.</Text>
+      <ScreenScaffold title={t.markAttendance}>
+        <Text className="text-muted-foreground">{t.noActiveYear}</Text>
       </ScreenScaffold>
     );
   }
 
   if (session === null) {
     return (
-      <ScreenScaffold title="Mark attendance">
-        <Text className="text-foreground">No register for today yet.</Text>
+      <ScreenScaffold title={t.markAttendance}>
+        <Text className="text-foreground">{t.noRegisterToday}</Text>
         <Text className="text-sm text-muted-foreground">{date}</Text>
         <Pressable
           accessibilityRole="button"
@@ -111,7 +114,7 @@ export default function MarkAttendanceScreen() {
           }}
           className="min-h-11 items-center justify-center rounded-md bg-primary px-4 py-3"
         >
-          <Text className="font-medium text-primary-foreground">Open today’s register</Text>
+          <Text className="font-medium text-primary-foreground">{t.openTodaysRegister}</Text>
         </Pressable>
         {openSession.isError ? (
           <Text className="text-sm text-destructive">{openSession.error.message}</Text>
@@ -124,17 +127,17 @@ export default function MarkAttendanceScreen() {
   const rows = roster.data ?? [];
 
   return (
-    <ScreenScaffold title="Mark attendance">
+    <ScreenScaffold title={t.markAttendance}>
       <Text className="text-sm text-muted-foreground">
         {date} · {session.status}
       </Text>
-      <OfflineBanner message="Offline — marks are saved on this device and will sync when you reconnect." />
+      <OfflineBanner message={t.offlineMarks} />
       <SyncQueueIndicator />
 
       {roster.isLoading ? (
         <ActivityIndicator />
       ) : rows.length === 0 ? (
-        <Text className="text-muted-foreground">No active students in this section.</Text>
+        <Text className="text-muted-foreground">{t.noActiveStudents}</Text>
       ) : (
         rows.map((row) => {
           const status = edits[row.enrollmentId] ?? row.currentStatus ?? row.suggestedStatus;
@@ -142,7 +145,7 @@ export default function MarkAttendanceScreen() {
             <ListRow key={row.enrollmentId}>
               <Text className="font-medium text-foreground">
                 {studentName.get(row.studentId) ?? row.studentId}
-                {row.rollNo != null ? ` · Roll ${row.rollNo}` : ""}
+                {row.rollNo != null ? t.roll(row.rollNo) : ""}
               </Text>
               {isDraft ? (
                 <StatusPicker
@@ -188,7 +191,7 @@ export default function MarkAttendanceScreen() {
             className="min-h-11 items-center justify-center rounded-md bg-primary px-4 py-3"
           >
             <Text className="font-medium text-primary-foreground">
-              {online ? "Save marks" : "Save (offline)"}
+              {online ? t.saveMarks : t.saveOffline}
             </Text>
           </Pressable>
           <Pressable
@@ -199,7 +202,7 @@ export default function MarkAttendanceScreen() {
             }}
             className="min-h-11 items-center justify-center rounded-md border border-border px-4 py-3"
           >
-            <Text className="font-medium text-foreground">Submit register</Text>
+            <Text className="font-medium text-foreground">{t.submitRegister}</Text>
           </Pressable>
         </>
       ) : null}
@@ -213,7 +216,7 @@ export default function MarkAttendanceScreen() {
           }}
           className="min-h-11 items-center justify-center rounded-md border border-border px-4 py-3"
         >
-          <Text className="font-medium text-foreground">Lock register</Text>
+          <Text className="font-medium text-foreground">{t.lockRegister}</Text>
         </Pressable>
       ) : null}
 

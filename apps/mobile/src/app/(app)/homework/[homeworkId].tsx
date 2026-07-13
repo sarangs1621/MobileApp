@@ -1,3 +1,4 @@
+import { useTranslation } from "@repo/i18n";
 import type { HomeworkChildContextDto } from "@repo/types";
 import { Link, useLocalSearchParams } from "expo-router";
 import { useState } from "react";
@@ -21,6 +22,8 @@ import { trpc } from "../../../lib/trpc";
  * each submission's feedback. Attachments open via a signed URL.
  */
 export default function HomeworkDetailScreen() {
+  const { dict } = useTranslation();
+  const tr = dict.homework;
   const { homeworkId } = useLocalSearchParams<{ homeworkId: string }>();
   const id = homeworkId ?? "";
   const me = trpc.auth.me.useQuery();
@@ -35,35 +38,35 @@ export default function HomeworkDetailScreen() {
 
   if (hw.isLoading) {
     return (
-      <ScreenScaffold title="Homework">
+      <ScreenScaffold title={tr.title}>
         <ActivityIndicator />
       </ScreenScaffold>
     );
   }
   if (hw.data === undefined) {
     return (
-      <ScreenScaffold title="Homework">
-        <Text className="text-muted-foreground">Homework not found.</Text>
+      <ScreenScaffold title={tr.title}>
+        <Text className="text-muted-foreground">{tr.notFound}</Text>
       </ScreenScaffold>
     );
   }
   const h = hw.data;
 
   return (
-    <ScreenScaffold title="Homework">
+    <ScreenScaffold title={tr.title}>
       <View className="gap-1 rounded-md border border-border bg-card p-4">
         <Text className="text-lg font-semibold text-foreground">{h.title}</Text>
         <Text className="text-sm text-muted-foreground">
-          Due {h.dueDate} · {HW_STATUS_LABEL[h.status]}
+          {tr.due} {h.dueDate} · {HW_STATUS_LABEL[h.status]}
         </Text>
         {h.description ? <Text className="mt-2 text-foreground">{h.description}</Text> : null}
       </View>
 
-      <Text className="text-sm font-medium text-muted-foreground">Teacher files</Text>
+      <Text className="text-sm font-medium text-muted-foreground">{tr.teacherFiles}</Text>
       <AttachmentList
         attachments={attachments.data ?? []}
         onMint={(attachmentId) => dl.mutateAsync({ attachmentId })}
-        emptyHint="No files attached."
+        emptyHint={tr.noFilesAttached}
       />
 
       {isParent ? (
@@ -76,6 +79,8 @@ export default function HomeworkDetailScreen() {
 }
 
 function TeacherActions({ homeworkId, status }: { homeworkId: string; status: string }) {
+  const { dict } = useTranslation();
+  const tr = dict.homework;
   const utils = trpc.useUtils();
   const [reason, setReason] = useState("");
   const invalidate = () => {
@@ -98,20 +103,20 @@ function TeacherActions({ homeworkId, status }: { homeworkId: string; status: st
           accessibilityRole="button"
           className="min-h-11 items-center justify-center rounded-md border border-border px-4 py-3"
         >
-          <Text className="font-medium text-foreground">Review submissions</Text>
+          <Text className="font-medium text-foreground">{tr.reviewSubmissions}</Text>
         </Pressable>
       </Link>
 
       {status === "DRAFT" ? (
         <>
           <ActionButton
-            label="Publish"
+            label={tr.publish}
             primary
             pending={publish.isPending}
             onPress={() => publish.mutate({ homeworkId })}
           />
           <ActionButton
-            label="Delete draft"
+            label={tr.deleteDraft}
             destructive
             pending={remove.isPending}
             onPress={() => remove.mutate({ homeworkId })}
@@ -120,7 +125,7 @@ function TeacherActions({ homeworkId, status }: { homeworkId: string; status: st
       ) : null}
       {status === "PUBLISHED" ? (
         <ActionButton
-          label="Close"
+          label={tr.close}
           pending={close.isPending}
           onPress={() => close.mutate({ homeworkId })}
         />
@@ -130,11 +135,11 @@ function TeacherActions({ homeworkId, status }: { homeworkId: string; status: st
           <TextInput
             value={reason}
             onChangeText={setReason}
-            placeholder="Reason to reopen"
+            placeholder={tr.reasonToReopen}
             className="min-h-11 rounded-md border border-border px-3 text-foreground"
           />
           <ActionButton
-            label="Reopen"
+            label={tr.reopen}
             pending={reopen.isPending}
             disabled={reason.trim() === ""}
             onPress={() => reopen.mutate({ homeworkId, reason: reason.trim() })}
@@ -147,6 +152,7 @@ function TeacherActions({ homeworkId, status }: { homeworkId: string; status: st
 }
 
 function ParentSubmit({ homeworkId, canSubmit }: { homeworkId: string; canSubmit: boolean }) {
+  const { dict } = useTranslation();
   const ctxQuery = trpc.submission.childContext.useQuery({ homeworkId });
   const rows = ctxQuery.data ?? [];
 
@@ -154,7 +160,7 @@ function ParentSubmit({ homeworkId, canSubmit }: { homeworkId: string; canSubmit
     return <ActivityIndicator />;
   }
   if (rows.length === 0) {
-    return <Text className="text-muted-foreground">This homework isn’t for your children.</Text>;
+    return <Text className="text-muted-foreground">{dict.homework.notForYourChildren}</Text>;
   }
   return (
     <View className="gap-3">
@@ -179,6 +185,8 @@ function ChildSubmitCard({
   row: HomeworkChildContextDto;
   canSubmit: boolean;
 }) {
+  const { dict } = useTranslation();
+  const tr = dict.homework;
   const utils = trpc.useUtils();
   const [note, setNote] = useState("");
   const [files, setFiles] = useState<PickedFile[]>([]);
@@ -211,7 +219,7 @@ function ChildSubmitCard({
         setFiles((prev) => (prev.length >= 10 ? prev : [...prev, file]));
       }
     } catch (e) {
-      setUploadErr(e instanceof Error ? e.message : "Could not add the file");
+      setUploadErr(e instanceof Error ? e.message : tr.couldNotAddFile);
     }
   };
 
@@ -233,7 +241,7 @@ function ChildSubmitCard({
         ),
       );
     } catch (e) {
-      setUploadErr(e instanceof Error ? e.message : "File upload failed");
+      setUploadErr(e instanceof Error ? e.message : tr.fileUploadFailed);
       return;
     } finally {
       setUploading(false);
@@ -256,11 +264,11 @@ function ChildSubmitCard({
       <Text className="font-medium text-foreground">{row.studentName}</Text>
       {sub ? (
         <Text className="text-sm text-muted-foreground">
-          Attempt {sub.attempt} · {SUB_STATUS_LABEL[sub.status]}
-          {sub.isLate ? " · Late" : ""}
+          {tr.attempt(sub.attempt)} · {SUB_STATUS_LABEL[sub.status]}
+          {sub.isLate ? tr.lateSuffix : ""}
         </Text>
       ) : (
-        <Text className="text-sm text-muted-foreground">Not submitted yet.</Text>
+        <Text className="text-sm text-muted-foreground">{tr.notSubmitted}</Text>
       )}
 
       {sub ? (
@@ -272,7 +280,7 @@ function ChildSubmitCard({
           asChild
         >
           <Pressable accessibilityRole="button" className="min-h-9 justify-center">
-            <Text className="text-sm text-primary">View submission &amp; feedback</Text>
+            <Text className="text-sm text-primary">{tr.viewSubmissionFeedback}</Text>
           </Pressable>
         </Link>
       ) : null}
@@ -282,7 +290,7 @@ function ChildSubmitCard({
           <TextInput
             value={note}
             onChangeText={setNote}
-            placeholder={isResubmit ? "Note for resubmission" : "Add a note"}
+            placeholder={isResubmit ? tr.noteResubmission : tr.addNote}
             multiline
             className="min-h-16 rounded-md border border-border px-3 py-2 text-foreground"
           />
@@ -300,7 +308,7 @@ function ChildSubmitCard({
                 disabled={pending}
                 onPress={() => setFiles((prev) => prev.filter((_, idx) => idx !== i))}
               >
-                <Text className="text-sm font-medium text-destructive">Remove</Text>
+                <Text className="text-sm font-medium text-destructive">{tr.remove}</Text>
               </Pressable>
             </View>
           ))}
@@ -312,7 +320,7 @@ function ChildSubmitCard({
               onPress={addFile(pickImage)}
               className="min-h-11 flex-1 items-center justify-center rounded-md border border-border px-3 py-2"
             >
-              <Text className="text-sm font-medium text-foreground">Add photo</Text>
+              <Text className="text-sm font-medium text-foreground">{tr.addPhoto}</Text>
             </Pressable>
             <Pressable
               accessibilityRole="button"
@@ -320,7 +328,7 @@ function ChildSubmitCard({
               onPress={addFile(pickDocument)}
               className="min-h-11 flex-1 items-center justify-center rounded-md border border-border px-3 py-2"
             >
-              <Text className="text-sm font-medium text-foreground">Add file</Text>
+              <Text className="text-sm font-medium text-foreground">{tr.addFile}</Text>
             </Pressable>
           </View>
 
@@ -335,16 +343,14 @@ function ChildSubmitCard({
             }`}
           >
             <Text className="font-medium text-primary-foreground">
-              {uploading ? "Uploading…" : isResubmit ? "Resubmit" : "Submit"}
+              {uploading ? tr.uploading : isResubmit ? tr.resubmit : tr.submit}
             </Text>
           </Pressable>
-          <Text className="text-xs text-muted-foreground">
-            Add a note or attach up to 10 photos/files.
-          </Text>
+          <Text className="text-xs text-muted-foreground">{tr.addNoteHint}</Text>
           {uploadErr ? <Text className="text-sm text-destructive">{uploadErr}</Text> : null}
         </>
       ) : reviewed ? (
-        <Text className="text-sm text-success">Reviewed — no further changes.</Text>
+        <Text className="text-sm text-success">{tr.reviewedNoChanges}</Text>
       ) : null}
       {err ? <Text className="text-sm text-destructive">{err.message}</Text> : null}
     </View>

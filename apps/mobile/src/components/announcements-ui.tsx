@@ -1,3 +1,4 @@
+import { useTranslation } from "@repo/i18n";
 import type {
   AnnouncementAttachmentDto,
   AnnouncementScopeKey,
@@ -48,15 +49,18 @@ export function AttachmentList({
   attachments: AnnouncementAttachmentDto[];
   onMint: (attachmentId: string) => Promise<{ url: string }>;
 }) {
+  const { dict } = useTranslation();
   if (attachments.length === 0) return null;
   return (
     <View className="gap-2">
-      <Text className="text-sm font-medium text-muted-foreground">Attachments</Text>
+      <Text className="text-sm font-medium text-muted-foreground">
+        {dict.announcements.attachments}
+      </Text>
       {attachments.map((a) => (
         <Pressable
           key={a.id}
           accessibilityRole="button"
-          accessibilityLabel={`Download ${a.fileName}`}
+          accessibilityLabel={dict.announcements.download(a.fileName)}
           onPress={() => {
             void onMint(a.id).then(({ url }) => Linking.openURL(url));
           }}

@@ -1,5 +1,6 @@
 import { PERMISSIONS } from "@repo/constants";
 import { can } from "@repo/core";
+import { useTranslation } from "@repo/i18n";
 import type { PaymentMethodKey } from "@repo/types";
 import { Link, useLocalSearchParams, useRouter } from "expo-router";
 import { useState } from "react";
@@ -21,6 +22,8 @@ import { trpc } from "../../../../lib/trpc";
  * Parents view only (no online gateway in v1 — ADR-021 deviation #3).
  */
 export default function InvoiceDetailScreen() {
+  const { dict } = useTranslation();
+  const t = dict.fees;
   const router = useRouter();
   const { id } = useLocalSearchParams<{ id: string }>();
   const enabled = !!id;
@@ -51,12 +54,12 @@ export default function InvoiceDetailScreen() {
   const submit = () => {
     const rupees = Number(amount);
     if (!Number.isFinite(rupees) || rupees <= 0) {
-      setError("Enter a valid amount");
+      setError(t.enterValidAmount);
       return;
     }
     const paise = Math.round(rupees * 100);
     if (inv && paise > inv.balanceAmount) {
-      setError("Amount exceeds the outstanding balance");
+      setError(t.amountExceedsBalance);
       return;
     }
     record.mutate({ invoiceId: id ?? "", amount: paise, method });
@@ -66,7 +69,7 @@ export default function InvoiceDetailScreen() {
 
   return (
     <View className="flex-1 bg-background">
-      <Header title="Invoice" onBack={() => router.back()} />
+      <Header title={t.invoice} onBack={() => router.back()} />
       {invoiceQ.isLoading || !inv ? (
         <Loading />
       ) : (
@@ -78,17 +81,19 @@ export default function InvoiceDetailScreen() {
               </Text>
               <InvoiceStatusText status={inv.status} />
             </View>
-            <Row label="Total" value={formatPaise(inv.totalAmount)} />
-            <Row label="Paid" value={formatPaise(inv.paidAmount)} />
-            <Row label="Balance" value={formatPaise(inv.balanceAmount)} strong />
-            <Row label="Due date" value={inv.dueDate} />
-            {inv.remarks ? <Row label="Remarks" value={inv.remarks} /> : null}
+            <Row label={t.total} value={formatPaise(inv.totalAmount)} />
+            <Row label={t.paid} value={formatPaise(inv.paidAmount)} />
+            <Row label={t.balance} value={formatPaise(inv.balanceAmount)} strong />
+            <Row label={t.dueDate} value={inv.dueDate} />
+            {inv.remarks ? <Row label={t.remarks} value={inv.remarks} /> : null}
           </View>
 
           {canRecord && canPay ? (
             <View className="gap-3 rounded-md border border-border bg-card p-4">
-              <Text className="text-sm font-medium text-muted-foreground">Record a payment</Text>
-              <Field label="Amount (₹)">
+              <Text className="text-sm font-medium text-muted-foreground">
+                {t.recordPaymentHeading}
+              </Text>
+              <Field label={t.amountLabel}>
                 <TextInput
                   value={amount}
                   onChangeText={setAmount}
@@ -97,7 +102,7 @@ export default function InvoiceDetailScreen() {
                   className="min-h-11 rounded-md border border-border bg-background px-3 py-2 text-foreground"
                 />
               </Field>
-              <Field label="Method">
+              <Field label={t.method}>
                 <View className="flex-row flex-wrap gap-2">
                   {PAYMENT_METHODS.map((m) => (
                     <Chip
@@ -117,15 +122,15 @@ export default function InvoiceDetailScreen() {
                 className="min-h-11 items-center justify-center rounded-md bg-primary px-4 py-3"
               >
                 <Text className="font-medium text-primary-foreground">
-                  {record.isPending ? "Recording…" : "Record payment"}
+                  {record.isPending ? t.recording : t.recordPayment}
                 </Text>
               </Pressable>
             </View>
           ) : null}
 
-          <Field label="Payments">
+          <Field label={t.payments}>
             {(paymentsQ.data ?? []).length === 0 ? (
-              <Text className="text-muted-foreground">No payments recorded yet.</Text>
+              <Text className="text-muted-foreground">{t.noPayments}</Text>
             ) : (
               (paymentsQ.data ?? []).map((p) => (
                 <Link

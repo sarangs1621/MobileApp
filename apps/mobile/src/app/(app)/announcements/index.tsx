@@ -1,5 +1,6 @@
 import { PERMISSIONS } from "@repo/constants";
 import { can } from "@repo/core";
+import { useTranslation } from "@repo/i18n";
 import type { AnnouncementDto, AnnouncementStatusKey } from "@repo/types";
 import { useRouter } from "expo-router";
 import { useState } from "react";
@@ -19,6 +20,8 @@ import { trpc } from "../../../lib/trpc";
  * Drafts tab + a New button. Tapping a row opens its detail. Pull to refresh.
  */
 export default function AnnouncementsScreen() {
+  const { dict } = useTranslation();
+  const t = dict.announcements;
   const router = useRouter();
   const role = trpc.auth.me.useQuery().data?.role;
   const canManage = role !== undefined && can(role, PERMISSIONS.ANNOUNCEMENT_MANAGE);
@@ -34,20 +37,20 @@ export default function AnnouncementsScreen() {
       <View className="flex-row items-center gap-3 border-b border-border px-4 py-3">
         <Pressable
           accessibilityRole="button"
-          accessibilityLabel="Go back"
+          accessibilityLabel={t.goBack}
           onPress={() => router.back()}
           className="min-h-11 min-w-11 items-center justify-center rounded-md"
         >
           <Text className="text-lg text-foreground">←</Text>
         </Pressable>
-        <Text className="flex-1 text-xl font-semibold text-foreground">Announcements</Text>
+        <Text className="flex-1 text-xl font-semibold text-foreground">{t.title}</Text>
         {isAuthor ? (
           <Pressable
             accessibilityRole="button"
             onPress={() => router.push("/announcements/new")}
             className="min-h-11 justify-center rounded-md bg-primary px-3"
           >
-            <Text className="font-medium text-primary-foreground">New</Text>
+            <Text className="font-medium text-primary-foreground">{t.new}</Text>
           </Pressable>
         ) : null}
       </View>
@@ -83,7 +86,7 @@ export default function AnnouncementsScreen() {
           }
           ListEmptyComponent={
             <Text className="text-muted-foreground">
-              {tab === "DRAFT" ? "No drafts." : "No announcements yet."}
+              {tab === "DRAFT" ? t.noDrafts : t.noAnnouncements}
             </Text>
           }
           renderItem={({ item }) => (

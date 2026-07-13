@@ -1,3 +1,4 @@
+import { useTranslation } from "@repo/i18n";
 import { Link, useLocalSearchParams, useRouter } from "expo-router";
 import { FlatList, Pressable, RefreshControl, Text, View } from "react-native";
 
@@ -11,6 +12,8 @@ import { trpc } from "../../../../lib/trpc";
  * invoice for its detail, receipts, and (admin) quick payment entry.
  */
 export default function StudentFeesScreen() {
+  const { dict } = useTranslation();
+  const t = dict.fees;
   const router = useRouter();
   const { studentId } = useLocalSearchParams<{ studentId: string }>();
   const enabled = !!studentId;
@@ -24,7 +27,7 @@ export default function StudentFeesScreen() {
 
   return (
     <View className="flex-1 bg-background">
-      <Header title="Fees" onBack={() => router.back()} />
+      <Header title={t.title} onBack={() => router.back()} />
       {list.isLoading ? (
         <Loading />
       ) : (
@@ -37,13 +40,13 @@ export default function StudentFeesScreen() {
           }
           ListHeaderComponent={
             <View className="mb-1 gap-1 rounded-md border border-border bg-card p-4">
-              <Text className="text-sm text-muted-foreground">Outstanding dues</Text>
+              <Text className="text-sm text-muted-foreground">{t.outstandingDues}</Text>
               <Text className="text-2xl font-semibold text-foreground">
                 {formatPaise(outstanding)}
               </Text>
             </View>
           }
-          ListEmptyComponent={<Text className="text-muted-foreground">No invoices yet.</Text>}
+          ListEmptyComponent={<Text className="text-muted-foreground">{t.noInvoices}</Text>}
           renderItem={({ item }) => (
             <Link href={{ pathname: "/fees/invoices/[id]", params: { id: item.id } }} asChild>
               <Pressable
@@ -55,9 +58,11 @@ export default function StudentFeesScreen() {
                   <InvoiceStatusText status={item.status} />
                 </View>
                 <View className="flex-row items-center justify-between gap-2">
-                  <Text className="text-sm text-muted-foreground">Due {item.dueDate}</Text>
+                  <Text className="text-sm text-muted-foreground">
+                    {t.due} {item.dueDate}
+                  </Text>
                   <Text className="text-sm font-medium text-foreground">
-                    {formatPaise(item.balanceAmount)} due
+                    {formatPaise(item.balanceAmount)} {t.dueSuffix}
                   </Text>
                 </View>
               </Pressable>

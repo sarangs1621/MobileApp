@@ -1,5 +1,6 @@
 import { PERMISSIONS } from "@repo/constants";
 import { can } from "@repo/core";
+import { useTranslation } from "@repo/i18n";
 import type { AnnouncementScopeKey } from "@repo/types";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import { useEffect, useState } from "react";
@@ -17,6 +18,8 @@ const ADMIN_SCOPES: AnnouncementScopeKey[] = ["WHOLE_SCHOOL", "TEACHERS", "PAREN
  * (`?id=`) prefills + updates title/body. Publishing is done from the detail screen.
  */
 export default function AnnouncementFormScreen() {
+  const { dict } = useTranslation();
+  const t = dict.announcements;
   const { id } = useLocalSearchParams<{ id?: string }>();
   const isEdit = !!id;
   const router = useRouter();
@@ -73,7 +76,7 @@ export default function AnnouncementFormScreen() {
   if (isEdit && existing.isLoading) {
     return (
       <View className="flex-1 bg-background">
-        <Header title="Edit draft" onBack={() => router.back()} />
+        <Header title={t.editDraft} onBack={() => router.back()} />
         <Loading />
       </View>
     );
@@ -81,22 +84,22 @@ export default function AnnouncementFormScreen() {
 
   return (
     <View className="flex-1 bg-background">
-      <Header title={isEdit ? "Edit draft" : "New announcement"} onBack={() => router.back()} />
+      <Header title={isEdit ? t.editDraft : t.newAnnouncement} onBack={() => router.back()} />
       <ScrollView contentContainerClassName="p-4 gap-4">
-        <Field label="Title">
+        <Field label={t.titleLabel}>
           <TextInput
             value={title}
             onChangeText={setTitle}
-            placeholder="Announcement title"
+            placeholder={t.titlePlaceholder}
             className="min-h-11 rounded-md border border-border bg-background px-3 py-2 text-foreground"
           />
         </Field>
 
-        <Field label="Message">
+        <Field label={t.message}>
           <TextInput
             value={body}
             onChangeText={setBody}
-            placeholder="Write the announcement…"
+            placeholder={t.messagePlaceholder}
             multiline
             className="min-h-32 rounded-md border border-border bg-background px-3 py-2 text-foreground"
             textAlignVertical="top"
@@ -106,7 +109,7 @@ export default function AnnouncementFormScreen() {
         {/* Scope is fixed once created — only editable while creating. */}
         {!isEdit ? (
           canManage ? (
-            <Field label="Audience">
+            <Field label={t.audience}>
               <View className="flex-row flex-wrap gap-2">
                 {ADMIN_SCOPES.map((s) => (
                   <Chip
@@ -119,13 +122,11 @@ export default function AnnouncementFormScreen() {
               </View>
             </Field>
           ) : (
-            <Field label="Section">
+            <Field label={t.section}>
               {targets.isLoading ? (
                 <Loading />
               ) : sections.length === 0 ? (
-                <Text className="text-sm text-muted-foreground">
-                  You have no assigned sections to announce to.
-                </Text>
+                <Text className="text-sm text-muted-foreground">{t.noAssignedSections}</Text>
               ) : (
                 <View className="flex-row flex-wrap gap-2">
                   {sections.map((s) => (
@@ -154,7 +155,7 @@ export default function AnnouncementFormScreen() {
           }`}
         >
           <Text className="font-medium text-primary-foreground">
-            {saving ? "Saving…" : isEdit ? "Save draft" : "Create draft"}
+            {saving ? t.saving : isEdit ? t.saveDraft : t.createDraft}
           </Text>
         </Pressable>
       </ScrollView>
@@ -163,11 +164,12 @@ export default function AnnouncementFormScreen() {
 }
 
 function Header({ title, onBack }: { title: string; onBack: () => void }) {
+  const { dict } = useTranslation();
   return (
     <View className="flex-row items-center gap-3 border-b border-border px-4 py-3">
       <Pressable
         accessibilityRole="button"
-        accessibilityLabel="Go back"
+        accessibilityLabel={dict.announcements.goBack}
         onPress={onBack}
         className="min-h-11 min-w-11 items-center justify-center rounded-md"
       >

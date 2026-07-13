@@ -1,3 +1,4 @@
+import { useTranslation } from "@repo/i18n";
 import { Link } from "expo-router";
 import { ActivityIndicator, Pressable, Text } from "react-native";
 
@@ -6,15 +7,17 @@ import { trpc } from "../../../lib/trpc";
 
 /** Parent "Report cards": pick a child to view their PUBLISHED report cards (M7). */
 export default function ChildrenReportCardsScreen() {
+  const { dict } = useTranslation();
+  const t = dict.reportCards;
   const children = trpc.student.list.useQuery();
   const rows = children.data ?? [];
 
   return (
-    <ScreenScaffold title="Report cards">
+    <ScreenScaffold title={t.title}>
       {children.isLoading ? (
         <ActivityIndicator />
       ) : rows.length === 0 ? (
-        <Text className="text-muted-foreground">No children are linked to your account.</Text>
+        <Text className="text-muted-foreground">{t.noChildrenLinked}</Text>
       ) : (
         rows.map((s) => (
           <Link
@@ -29,7 +32,9 @@ export default function ChildrenReportCardsScreen() {
               <Text className="font-medium text-foreground">
                 {s.firstName} {s.lastName}
               </Text>
-              <Text className="text-sm text-muted-foreground">Admission {s.admissionNo}</Text>
+              <Text className="text-sm text-muted-foreground">
+                {t.admission} {s.admissionNo}
+              </Text>
             </Pressable>
           </Link>
         ))

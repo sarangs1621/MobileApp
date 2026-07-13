@@ -1,3 +1,4 @@
+import { useTranslation } from "@repo/i18n";
 import type { AttendanceStatusKey } from "@repo/types";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import { useState } from "react";
@@ -13,6 +14,8 @@ import { trpc } from "../../../../lib/trpc";
  * and a reason.
  */
 export default function SubmitCorrectionScreen() {
+  const { dict } = useTranslation();
+  const t = dict.attendance;
   const router = useRouter();
   const { recordId, currentStatus } = useLocalSearchParams<{
     recordId: string;
@@ -30,19 +33,21 @@ export default function SubmitCorrectionScreen() {
   });
 
   return (
-    <ScreenScaffold title="Request correction">
+    <ScreenScaffold title={t.requestCorrection}>
       {currentStatus ? (
-        <Text className="text-sm text-muted-foreground">Current: {currentStatus}</Text>
+        <Text className="text-sm text-muted-foreground">
+          {t.current} {currentStatus}
+        </Text>
       ) : null}
 
-      <Text className="text-sm font-medium text-muted-foreground">Requested status</Text>
+      <Text className="text-sm font-medium text-muted-foreground">{t.requestedStatus}</Text>
       <StatusPicker value={requestedStatus} onChange={setRequestedStatus} />
 
-      <Text className="text-sm font-medium text-muted-foreground">Reason</Text>
+      <Text className="text-sm font-medium text-muted-foreground">{t.reason}</Text>
       <TextInput
         value={reason}
         onChangeText={setReason}
-        placeholder="Why should this change?"
+        placeholder={t.whyChange}
         multiline
         className="min-h-11 rounded-md border border-border bg-card px-3 py-2 text-foreground"
       />
@@ -58,7 +63,7 @@ export default function SubmitCorrectionScreen() {
         }}
         className="min-h-11 items-center justify-center rounded-md bg-primary px-4 py-3"
       >
-        <Text className="font-medium text-primary-foreground">Submit request</Text>
+        <Text className="font-medium text-primary-foreground">{t.submitRequest}</Text>
       </Pressable>
       {submit.isError ? (
         <Text className="text-sm text-destructive">{submit.error.message}</Text>

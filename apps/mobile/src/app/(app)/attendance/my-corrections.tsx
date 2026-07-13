@@ -1,3 +1,4 @@
+import { useTranslation } from "@repo/i18n";
 import type { CorrectionStatusKey } from "@repo/types";
 import { Text } from "react-native";
 
@@ -15,16 +16,18 @@ const STATUS_CLASS: Record<CorrectionStatusKey, string> = {
  * (read-only — approving is an admin action, done on the web). ADR-011 §8.
  */
 export default function MyCorrectionsScreen() {
+  const { dict } = useTranslation();
+  const t = dict.attendance;
   const corrections = trpc.attendanceCorrection.listMine.useQuery();
 
   return (
     <AcademicListScreen
-      title="My corrections"
+      title={t.myCorrections}
       isLoading={corrections.isLoading}
       isError={corrections.isError}
       items={corrections.data}
       keyExtractor={(c) => c.id}
-      emptyText="You haven’t requested any corrections."
+      emptyText={t.noCorrections}
       renderItem={(c) => (
         <ListRow>
           <Text className="font-medium text-foreground">

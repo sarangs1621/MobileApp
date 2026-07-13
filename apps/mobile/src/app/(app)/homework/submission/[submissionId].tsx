@@ -1,3 +1,4 @@
+import { useTranslation } from "@repo/i18n";
 import type { SubmissionStatusKey } from "@repo/types";
 import { useLocalSearchParams } from "expo-router";
 import { useState } from "react";
@@ -18,6 +19,8 @@ import { trpc } from "../../../../lib/trpc";
  * feedback body — one guarded transaction in the service.
  */
 export default function SubmissionDetailScreen() {
+  const { dict } = useTranslation();
+  const tr = dict.homework;
   const { submissionId } = useLocalSearchParams<{ submissionId: string }>();
   const id = submissionId ?? "";
   const me = trpc.auth.me.useQuery();
@@ -42,15 +45,15 @@ export default function SubmissionDetailScreen() {
 
   if (sub.isLoading) {
     return (
-      <ScreenScaffold title="Submission">
+      <ScreenScaffold title={tr.submission}>
         <ActivityIndicator />
       </ScreenScaffold>
     );
   }
   if (sub.data === undefined) {
     return (
-      <ScreenScaffold title="Submission">
-        <Text className="text-muted-foreground">Submission not found.</Text>
+      <ScreenScaffold title={tr.submission}>
+        <Text className="text-muted-foreground">{tr.submissionNotFound}</Text>
       </ScreenScaffold>
     );
   }
@@ -58,31 +61,31 @@ export default function SubmissionDetailScreen() {
   const canReview = !isParent && s.status === "SUBMITTED";
 
   return (
-    <ScreenScaffold title="Submission">
+    <ScreenScaffold title={tr.submission}>
       <View className="gap-1 rounded-md border border-border bg-card p-4">
         <Text className="font-medium text-foreground">
-          Attempt {s.attempt} ·{" "}
+          {tr.attempt(s.attempt)} ·{" "}
           <Text className={SUB_STATUS_CLASS[s.status]}>{SUB_STATUS_LABEL[s.status]}</Text>
-          {s.isLate ? " · Late" : ""}
+          {s.isLate ? tr.lateSuffix : ""}
         </Text>
         {s.note ? <Text className="mt-1 text-foreground">{s.note}</Text> : null}
       </View>
 
-      <Text className="text-sm font-medium text-muted-foreground">Files</Text>
+      <Text className="text-sm font-medium text-muted-foreground">{tr.files}</Text>
       <AttachmentList
         attachments={files.data ?? []}
         onMint={(attachmentId) => dl.mutateAsync({ attachmentId })}
-        emptyHint="No files."
+        emptyHint={tr.noFiles}
       />
 
-      <Text className="text-sm font-medium text-muted-foreground">Feedback</Text>
+      <Text className="text-sm font-medium text-muted-foreground">{tr.feedback}</Text>
       {(feedback.data ?? []).length === 0 ? (
-        <Text className="text-sm text-muted-foreground">No feedback yet.</Text>
+        <Text className="text-sm text-muted-foreground">{tr.noFeedback}</Text>
       ) : (
         (feedback.data ?? []).map((f) => (
           <View key={f.id} className="gap-1 rounded-md border border-border bg-card p-3">
             <Text className="text-xs text-muted-foreground">
-              Attempt {f.attempt} · {SUB_STATUS_LABEL[f.decision]}
+              {tr.attempt(f.attempt)} · {SUB_STATUS_LABEL[f.decision]}
             </Text>
             <Text className="text-foreground">{f.body}</Text>
           </View>
@@ -91,7 +94,7 @@ export default function SubmissionDetailScreen() {
 
       {canReview ? (
         <View className="gap-2">
-          <Text className="text-sm font-medium text-muted-foreground">Review</Text>
+          <Text className="text-sm font-medium text-muted-foreground">{tr.review}</Text>
           <View className="flex-row gap-2">
             {(["RETURNED", "REVIEWED"] as const).map((d) => {
               const on = d === decision;
@@ -108,7 +111,7 @@ export default function SubmissionDetailScreen() {
                   <Text
                     className={`text-sm font-medium ${on ? "text-primary" : "text-foreground"}`}
                   >
-                    {d === "RETURNED" ? "Request changes" : "Accept"}
+                    {d === "RETURNED" ? tr.requestChanges : tr.accept}
                   </Text>
                 </Pressable>
               );
@@ -117,7 +120,7 @@ export default function SubmissionDetailScreen() {
           <TextInput
             value={body}
             onChangeText={setBody}
-            placeholder="Feedback"
+            placeholder={tr.feedback}
             multiline
             className="min-h-20 rounded-md border border-border px-3 py-2 text-foreground"
           />
@@ -129,7 +132,7 @@ export default function SubmissionDetailScreen() {
               review.isPending || body.trim() === "" ? "bg-primary/40" : "bg-primary"
             }`}
           >
-            <Text className="font-medium text-primary-foreground">Submit review</Text>
+            <Text className="font-medium text-primary-foreground">{tr.submitReview}</Text>
           </Pressable>
           {review.isError ? (
             <Text className="text-sm text-destructive">{review.error.message}</Text>

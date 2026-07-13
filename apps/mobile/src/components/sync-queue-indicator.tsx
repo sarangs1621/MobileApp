@@ -1,3 +1,4 @@
+import { useTranslation } from "@repo/i18n";
 import { useState } from "react";
 import { Pressable, Text, View } from "react-native";
 
@@ -10,6 +11,8 @@ import { useOfflineQueueStore } from "../stores/offline-queue-store";
  * transient failure while online is manually re-drainable), never silently dropped.
  */
 export function SyncQueueIndicator(): React.JSX.Element | null {
+  const { dict } = useTranslation();
+  const t = dict.sync;
   const queue = useOfflineQueueStore((s) => s.queue);
   const retry = useOfflineQueueStore((s) => s.retry);
   const discard = useOfflineQueueStore((s) => s.discard);
@@ -31,19 +34,16 @@ export function SyncQueueIndicator(): React.JSX.Element | null {
         className="min-h-11 flex-row items-center justify-between px-3 py-2"
       >
         <Text className={`text-sm font-medium ${tone}`}>
-          {failed > 0
-            ? `${failed} register${failed > 1 ? "s" : ""} need review`
-            : `${pending} register${pending > 1 ? "s" : ""} waiting to sync`}
+          {failed > 0 ? t.needReview(failed) : t.waiting(pending)}
         </Text>
-        <Text className="text-sm text-muted-foreground">{open ? "Hide" : "View"}</Text>
+        <Text className="text-sm text-muted-foreground">{open ? t.hide : t.view}</Text>
       </Pressable>
 
       {open
         ? queue.map((entry) => (
             <View key={entry.id} className="border-t border-border px-3 py-2">
               <Text className="text-sm font-medium text-foreground">
-                {entry.dateIST} · {entry.marks.length} student
-                {entry.marks.length > 1 ? "s" : ""} · {entry.state}
+                {entry.dateIST} · {t.studentCount(entry.marks.length)} · {entry.state}
               </Text>
               {entry.reason ? (
                 <Text className="mt-1 text-xs text-destructive">{entry.reason}</Text>
@@ -51,10 +51,10 @@ export function SyncQueueIndicator(): React.JSX.Element | null {
               {entry.state !== "SYNCING" ? (
                 <View className="mt-2 flex-row gap-3">
                   <Pressable accessibilityRole="button" onPress={() => retry(entry.id)}>
-                    <Text className="text-sm font-medium text-primary">Retry</Text>
+                    <Text className="text-sm font-medium text-primary">{dict.common.retry}</Text>
                   </Pressable>
                   <Pressable accessibilityRole="button" onPress={() => discard(entry.id)}>
-                    <Text className="text-sm font-medium text-destructive">Discard</Text>
+                    <Text className="text-sm font-medium text-destructive">{t.discard}</Text>
                   </Pressable>
                 </View>
               ) : null}

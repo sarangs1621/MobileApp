@@ -1,3 +1,4 @@
+import { useTranslation } from "@repo/i18n";
 import type { AttendanceStatusKey, LeaveStatusKey } from "@repo/types";
 import { useRouter } from "expo-router";
 import type { ReactNode } from "react";
@@ -47,13 +48,14 @@ export function monthStartIst(): string {
 
 /** Header with a back button + title, shared by the custom (non-list) screens. */
 export function ScreenScaffold({ title, children }: { title: string; children: ReactNode }) {
+  const { dict } = useTranslation();
   const router = useRouter();
   return (
     <View className="flex-1 bg-background">
       <View className="flex-row items-center gap-3 border-b border-border px-4 py-3">
         <Pressable
           accessibilityRole="button"
-          accessibilityLabel="Go back"
+          accessibilityLabel={dict.attendance.goBack}
           onPress={() => {
             router.back();
           }}
@@ -92,7 +94,9 @@ export function StatusPicker({
               selected ? "border-primary bg-primary/10" : "border-border bg-card"
             }`}
           >
-            <Text className={`text-sm font-medium ${selected ? "text-primary" : "text-foreground"}`}>
+            <Text
+              className={`text-sm font-medium ${selected ? "text-primary" : "text-foreground"}`}
+            >
               {STATUS_LABEL[status]}
             </Text>
           </Pressable>

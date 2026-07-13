@@ -1,3 +1,4 @@
+import { useTranslation } from "@repo/i18n";
 import type { ReportCardDto, ReportCardKindKey } from "@repo/types";
 import { useLocalSearchParams } from "expo-router";
 import { ActivityIndicator, Text, View } from "react-native";
@@ -20,6 +21,8 @@ const KIND_LABEL: Record<ReportCardKindKey, string> = {
  * endpoint that does not exist yet; add it when the year-over-year view is built.
  */
 export default function StudentReportCardsScreen() {
+  const { dict } = useTranslation();
+  const t = dict.reportCards;
   const { studentId } = useLocalSearchParams<{ studentId: string }>();
   const enabled = studentId !== undefined && studentId !== "";
   const enrollments = trpc.enrollment.listByStudent.useQuery(
@@ -35,26 +38,26 @@ export default function StudentReportCardsScreen() {
 
   if (enrollments.isLoading) {
     return (
-      <ScreenScaffold title="Report cards">
+      <ScreenScaffold title={t.title}>
         <ActivityIndicator />
       </ScreenScaffold>
     );
   }
   if (active == null) {
     return (
-      <ScreenScaffold title="Report cards">
-        <Text className="text-muted-foreground">No current enrollment for this student.</Text>
+      <ScreenScaffold title={t.title}>
+        <Text className="text-muted-foreground">{t.noCurrentEnrollment}</Text>
       </ScreenScaffold>
     );
   }
 
   const rows = cards.data ?? [];
   return (
-    <ScreenScaffold title="Report cards">
+    <ScreenScaffold title={t.title}>
       {cards.isLoading ? (
         <ActivityIndicator />
       ) : rows.length === 0 ? (
-        <Text className="text-muted-foreground">No published report cards yet.</Text>
+        <Text className="text-muted-foreground">{t.noPublished}</Text>
       ) : (
         rows.map((c) => <ReportCardView key={c.id} card={c} />)
       )}
@@ -63,10 +66,12 @@ export default function StudentReportCardsScreen() {
 }
 
 function ReportCardView({ card }: { card: ReportCardDto }) {
+  const { dict } = useTranslation();
+  const t = dict.reportCards;
   const rank =
-    card.rank != null && card.cohortSize != null ? `${card.rank} of ${card.cohortSize}` : "—";
+    card.rank != null && card.cohortSize != null ? t.rankOf(card.rank, card.cohortSize) : "—";
   const attendance = card.attendancePercentage != null ? `${card.attendancePercentage}%` : "—";
-  const gpa = card.gpaSnapshot != null ? card.gpaSnapshot.toFixed(2) : "Not available";
+  const gpa = card.gpaSnapshot != null ? card.gpaSnapshot.toFixed(2) : t.notAvailable;
 
   const scopeName = card.examName ?? card.termName; // null for ANNUAL (no exam/term scope)
 
@@ -77,20 +82,20 @@ function ReportCardView({ card }: { card: ReportCardDto }) {
         {scopeName ? <Text className="text-sm text-muted-foreground">{scopeName}</Text> : null}
       </View>
       <View className="flex-row flex-wrap gap-x-6 gap-y-1">
-        <Stat label="Rank" value={rank} />
-        <Stat label="Attendance" value={attendance} />
-        <Stat label="GPA" value={gpa} />
-        {card.promotionDecision ? <Stat label="Result" value={card.promotionDecision} /> : null}
+        <Stat label={t.rank} value={rank} />
+        <Stat label={t.attendance} value={attendance} />
+        <Stat label={t.gpa} value={gpa} />
+        {card.promotionDecision ? <Stat label={t.result} value={card.promotionDecision} /> : null}
       </View>
       {card.classTeacherRemark ? (
         <Remark
           label={
-            card.classTeacherName ? `Class teacher · ${card.classTeacherName}` : "Class teacher"
+            card.classTeacherName ? t.classTeacherWithName(card.classTeacherName) : t.classTeacher
           }
           body={card.classTeacherRemark}
         />
       ) : null}
-      {card.principalRemark ? <Remark label="Principal" body={card.principalRemark} /> : null}
+      {card.principalRemark ? <Remark label={t.principal} body={card.principalRemark} /> : null}
     </View>
   );
 }
@@ -105,9 +110,12 @@ function Stat({ label, value }: { label: string; value: string }) {
 }
 
 function Remark({ label, body }: { label: string; body: string }) {
+  const { dict } = useTranslation();
   return (
     <View className="gap-0.5">
-      <Text className="text-xs text-muted-foreground">{label} remark</Text>
+      <Text className="text-xs text-muted-foreground">
+        {label} {dict.reportCards.remarkSuffix}
+      </Text>
       <Text className="text-sm text-foreground">{body}</Text>
     </View>
   );

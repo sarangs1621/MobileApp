@@ -1,3 +1,4 @@
+import { useTranslation } from "@repo/i18n";
 import { Link, useLocalSearchParams } from "expo-router";
 import { ActivityIndicator, Pressable, Text } from "react-native";
 
@@ -11,6 +12,8 @@ import { trpc } from "../../../../lib/trpc";
  * detail where the teacher returns/accepts it with feedback.
  */
 export default function SubmissionsQueueScreen() {
+  const { dict } = useTranslation();
+  const tr = dict.homework;
   const { homeworkId } = useLocalSearchParams<{ homeworkId: string }>();
   const id = homeworkId ?? "";
 
@@ -28,17 +31,17 @@ export default function SubmissionsQueueScreen() {
   const enrollmentStudent = new Map((roster.data ?? []).map((e) => [e.id, e.studentId]));
   const nameOf = (enrollmentId: string): string => {
     const sid = enrollmentStudent.get(enrollmentId);
-    return (sid ? studentName.get(sid) : undefined) ?? "Student";
+    return (sid ? studentName.get(sid) : undefined) ?? tr.student;
   };
 
   const rows = subs.data ?? [];
 
   return (
-    <ScreenScaffold title="Submissions">
+    <ScreenScaffold title={tr.submissions}>
       {subs.isLoading || hw.isLoading ? (
         <ActivityIndicator />
       ) : rows.length === 0 ? (
-        <Text className="text-muted-foreground">No submissions yet.</Text>
+        <Text className="text-muted-foreground">{tr.noSubmissions}</Text>
       ) : (
         rows.map((s) => (
           <Link
@@ -55,9 +58,9 @@ export default function SubmissionsQueueScreen() {
             >
               <Text className="font-medium text-foreground">{nameOf(s.enrollmentId)}</Text>
               <Text className="text-sm text-muted-foreground">
-                Attempt {s.attempt} ·{" "}
+                {tr.attempt(s.attempt)} ·{" "}
                 <Text className={SUB_STATUS_CLASS[s.status]}>{SUB_STATUS_LABEL[s.status]}</Text>
-                {s.isLate ? " · Late" : ""}
+                {s.isLate ? tr.lateSuffix : ""}
               </Text>
             </Pressable>
           </Link>

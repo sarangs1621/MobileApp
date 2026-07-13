@@ -1,3 +1,4 @@
+import { useTranslation } from "@repo/i18n";
 import type { NotificationDto } from "@repo/types";
 import { useRouter, type Href } from "expo-router";
 import { ActivityIndicator, FlatList, Pressable, RefreshControl, Text, View } from "react-native";
@@ -12,6 +13,8 @@ import { trpc } from "../../../lib/trpc";
  * read" clears the badge. All mutations invalidate the list + unread count.
  */
 export default function NotificationsScreen() {
+  const { dict } = useTranslation();
+  const t = dict.notifications;
   const router = useRouter();
   const utils = trpc.useUtils();
   const list = trpc.notification.list.useQuery({});
@@ -45,7 +48,7 @@ export default function NotificationsScreen() {
       <View className="flex-row items-center gap-3 border-b border-border px-4 py-3">
         <Pressable
           accessibilityRole="button"
-          accessibilityLabel="Go back"
+          accessibilityLabel={t.goBack}
           onPress={() => {
             router.back();
           }}
@@ -53,14 +56,14 @@ export default function NotificationsScreen() {
         >
           <Text className="text-lg text-foreground">←</Text>
         </Pressable>
-        <Text className="flex-1 text-xl font-semibold text-foreground">Notifications</Text>
+        <Text className="flex-1 text-xl font-semibold text-foreground">{t.title}</Text>
         {hasUnread ? (
           <Pressable
             accessibilityRole="button"
             onPress={() => markAllRead.mutate()}
             className="min-h-11 justify-center rounded-md px-2"
           >
-            <Text className="font-medium text-primary">Mark all read</Text>
+            <Text className="font-medium text-primary">{t.markAllRead}</Text>
           </Pressable>
         ) : null}
       </View>
@@ -77,9 +80,7 @@ export default function NotificationsScreen() {
           refreshControl={
             <RefreshControl refreshing={list.isRefetching} onRefresh={() => list.refetch()} />
           }
-          ListEmptyComponent={
-            <Text className="text-muted-foreground">You have no notifications.</Text>
-          }
+          ListEmptyComponent={<Text className="text-muted-foreground">{t.empty}</Text>}
           renderItem={({ item }) => (
             <NotificationRow
               item={item}
@@ -102,6 +103,7 @@ function NotificationRow({
   onOpen: () => void;
   onArchive: () => void;
 }) {
+  const { dict } = useTranslation();
   return (
     <View className="flex-row items-start gap-3 rounded-md border border-border bg-card p-4">
       <View className="mt-1 w-2">
@@ -116,11 +118,11 @@ function NotificationRow({
       </Pressable>
       <Pressable
         accessibilityRole="button"
-        accessibilityLabel="Archive"
+        accessibilityLabel={dict.notifications.archive}
         onPress={onArchive}
         className="min-h-11 justify-center px-1"
       >
-        <Text className="text-sm text-muted-foreground">Archive</Text>
+        <Text className="text-sm text-muted-foreground">{dict.notifications.archive}</Text>
       </Pressable>
     </View>
   );

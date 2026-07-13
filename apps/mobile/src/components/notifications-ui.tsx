@@ -1,3 +1,4 @@
+import { useTranslation } from "@repo/i18n";
 import type { NotificationTypeKey } from "@repo/types";
 import { Link, type Href } from "expo-router";
 import { Pressable, Text, View } from "react-native";
@@ -44,13 +45,16 @@ export function timeAgo(iso: string): string {
 
 /** Bell + unread badge for the home header; links to the inbox (every role has one). */
 export function NotificationBell() {
+  const { dict } = useTranslation();
   const unread = trpc.notification.unreadCount.useQuery();
   const count = unread.data ?? 0;
   return (
     <Link href="/notifications" asChild>
       <Pressable
         accessibilityRole="button"
-        accessibilityLabel={count > 0 ? `Notifications, ${count} unread` : "Notifications"}
+        accessibilityLabel={
+          count > 0 ? dict.notifications.bellUnread(count) : dict.notifications.title
+        }
         className="min-h-11 min-w-11 items-center justify-center"
       >
         <Text className="text-2xl">🔔</Text>

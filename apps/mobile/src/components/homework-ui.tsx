@@ -1,3 +1,4 @@
+import { useTranslation } from "@repo/i18n";
 import type { HomeworkStatusKey, SubmissionStatusKey } from "@repo/types";
 import { ActivityIndicator, Linking, Pressable, Text, View } from "react-native";
 
@@ -36,6 +37,7 @@ export function AttachmentList({
   onMint: (attachmentId: string) => Promise<{ url: string }>;
   emptyHint?: string;
 }) {
+  const { dict } = useTranslation();
   if (attachments.length === 0) {
     return emptyHint ? <Text className="text-sm text-muted-foreground">{emptyHint}</Text> : null;
   }
@@ -53,7 +55,7 @@ export function AttachmentList({
           <Text className="flex-1 text-foreground" numberOfLines={1}>
             📎 {a.fileName}
           </Text>
-          <Text className="text-sm text-primary">Open</Text>
+          <Text className="text-sm text-primary">{dict.homework.open}</Text>
         </Pressable>
       ))}
     </View>

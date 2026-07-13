@@ -1,3 +1,4 @@
+import { useTranslation } from "@repo/i18n";
 import type { CalendarEventDto, CalendarEventTypeKey } from "@repo/types";
 import { useState } from "react";
 import { FlatList, Pressable, Text, View } from "react-native";
@@ -34,6 +35,8 @@ const TYPE_FILTERS: (CalendarEventTypeKey | "ALL")[] = [
  * and parents (calendar:read). Events are enriched date strings — no id lookups.
  */
 export default function CalendarScreen() {
+  const { dict } = useTranslation();
+  const t = dict.announcements;
   const now = new Date();
   const [mode, setMode] = useState<"UPCOMING" | "MONTH">("UPCOMING");
   const [type, setType] = useState<CalendarEventTypeKey | "ALL">("ALL");
@@ -59,12 +62,12 @@ export default function CalendarScreen() {
   };
 
   return (
-    <ScreenScaffold title="Calendar">
+    <ScreenScaffold title={t.calendarTitle}>
       <View className="flex-row gap-2">
         {(["UPCOMING", "MONTH"] as const).map((m) => (
           <Chip
             key={m}
-            label={m === "UPCOMING" ? "Upcoming" : "Month"}
+            label={m === "UPCOMING" ? t.upcoming : t.month}
             active={mode === m}
             onPress={() => setMode(m)}
           />
@@ -72,12 +75,12 @@ export default function CalendarScreen() {
       </View>
 
       <View className="flex-row flex-wrap gap-2">
-        {TYPE_FILTERS.map((t) => (
+        {TYPE_FILTERS.map((filter) => (
           <Chip
-            key={t}
-            label={t === "ALL" ? "All" : EVENT_TYPE_LABEL[t]}
-            active={type === t}
-            onPress={() => setType(t)}
+            key={filter}
+            label={filter === "ALL" ? t.all : EVENT_TYPE_LABEL[filter]}
+            active={type === filter}
+            onPress={() => setType(filter)}
           />
         ))}
       </View>
@@ -86,7 +89,7 @@ export default function CalendarScreen() {
         <View className="flex-row items-center justify-between">
           <Pressable
             accessibilityRole="button"
-            accessibilityLabel="Previous month"
+            accessibilityLabel={t.previousMonth}
             onPress={() => stepMonth(-1)}
             className="min-h-11 min-w-11 items-center justify-center rounded-md border border-border"
           >
@@ -97,7 +100,7 @@ export default function CalendarScreen() {
           </Text>
           <Pressable
             accessibilityRole="button"
-            accessibilityLabel="Next month"
+            accessibilityLabel={t.nextMonth}
             onPress={() => stepMonth(1)}
             className="min-h-11 min-w-11 items-center justify-center rounded-md border border-border"
           >
@@ -116,7 +119,7 @@ export default function CalendarScreen() {
           contentContainerClassName="gap-3"
           ListEmptyComponent={
             <Text className="text-muted-foreground">
-              {mode === "UPCOMING" ? "No upcoming events." : "No events this month."}
+              {mode === "UPCOMING" ? t.noUpcomingEvents : t.noEventsThisMonth}
             </Text>
           }
           renderItem={({ item }) => <EventRow event={item} />}
