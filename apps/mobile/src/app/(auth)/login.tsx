@@ -1,4 +1,5 @@
 import { Feather } from "@expo/vector-icons";
+import { useTranslation } from "@repo/i18n";
 import { useState } from "react";
 import { Text, View } from "react-native";
 
@@ -11,6 +12,7 @@ import { useAuthStore } from "../../stores/auth-store";
 type Mode = "staff" | "parent";
 
 export default function LoginScreen() {
+  const { dict } = useTranslation();
   const signInWithEmail = useAuthStore((state) => state.signInWithEmail);
   const requestOtp = useAuthStore((state) => state.requestOtp);
   const confirmOtp = useAuthStore((state) => state.confirmOtp);
@@ -32,7 +34,7 @@ export default function LoginScreen() {
     try {
       await action();
     } catch (caught) {
-      setError(caught instanceof Error ? caught.message : "Something went wrong");
+      setError(caught instanceof Error ? caught.message : dict.common.somethingWentWrong);
     } finally {
       setBusy(false);
     }
@@ -47,14 +49,14 @@ export default function LoginScreen() {
         <Text className="text-display font-semibold text-neutral-900">
           Sri Gujarathi Vidhyalaya
         </Text>
-        <Text className="text-sm text-neutral-500">School Portal — sign in to continue</Text>
+        <Text className="text-sm text-neutral-500">{dict.auth.subtitle}</Text>
       </View>
 
       <Card className="gap-4">
         <SegmentedControl
           options={[
-            { key: "staff", label: "Staff" },
-            { key: "parent", label: "Parent" },
+            { key: "staff", label: dict.auth.staff },
+            { key: "parent", label: dict.auth.parent },
           ]}
           value={mode}
           onChange={setMode}
@@ -63,7 +65,7 @@ export default function LoginScreen() {
         {mode === "staff" ? (
           <View className="gap-4">
             <TextField
-              label="Email"
+              label={dict.auth.email}
               value={email}
               onChangeText={setEmail}
               autoCapitalize="none"
@@ -71,14 +73,14 @@ export default function LoginScreen() {
               textContentType="emailAddress"
             />
             <TextField
-              label="Password"
+              label={dict.auth.password}
               value={password}
               onChangeText={setPassword}
               secureTextEntry
               textContentType="password"
             />
             <Button
-              label="Sign in"
+              label={dict.auth.signIn}
               loading={busy}
               onPress={() => run(() => signInWithEmail(email.trim(), password))}
             />
@@ -86,7 +88,7 @@ export default function LoginScreen() {
         ) : (
           <View className="gap-4">
             <TextField
-              label="Phone number"
+              label={dict.auth.phone}
               value={phone}
               onChangeText={setPhone}
               keyboardType="phone-pad"
@@ -96,21 +98,21 @@ export default function LoginScreen() {
             {otpSent ? (
               <>
                 <TextField
-                  label="Verification code"
+                  label={dict.auth.verificationCode}
                   value={code}
                   onChangeText={setCode}
                   keyboardType="number-pad"
                   textContentType="oneTimeCode"
                 />
                 <Button
-                  label="Verify code"
+                  label={dict.auth.verifyCode}
                   loading={busy}
                   onPress={() => run(() => confirmOtp(phone.trim(), code.trim()))}
                 />
               </>
             ) : (
               <Button
-                label="Send code"
+                label={dict.auth.sendCode}
                 loading={busy}
                 onPress={() =>
                   run(async () => {
