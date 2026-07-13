@@ -1,5 +1,6 @@
 import { PERMISSIONS } from "@repo/constants";
 import { can } from "@repo/core";
+import { useTranslation } from "@repo/i18n";
 import { Link, type Href } from "expo-router";
 import { Pressable, ScrollView, Text, View } from "react-native";
 
@@ -17,6 +18,8 @@ import { useAuthStore } from "../../stores/auth-store";
  * from existing queries), and permission-gated nav grouped into cards (F7). No M0 placeholder.
  */
 export default function AppHome() {
+  const { dict } = useTranslation();
+  const t = dict.home;
   const me = trpc.auth.me.useQuery();
   const logout = useAuthStore((state) => state.logout);
   const role = me.data?.role;
@@ -78,9 +81,9 @@ export default function AppHome() {
     <View className="flex-1 bg-background">
       <View className="flex-row items-center border-b border-border px-4 py-4">
         <View className="flex-1">
-          <Text className="text-2xl font-semibold text-foreground">School Portal</Text>
+          <Text className="text-2xl font-semibold text-foreground">{dict.common.appName}</Text>
           <Text className="text-muted-foreground">
-            {role ? `Signed in as ${role.replace("_", " ").toLowerCase()}` : "Signed in"}
+            {role ? t.signedInAs(role.replace("_", " ").toLowerCase()) : t.signedIn}
           </Text>
         </View>
         <NotificationBell />
@@ -90,65 +93,68 @@ export default function AppHome() {
         <OfflineBanner />
         <SyncQueueIndicator />
         {overview.isLoading ? (
-          <ContextCard title="At a glance">
-            <Muted>Loading…</Muted>
+          <ContextCard title={t.atAGlance}>
+            <Muted>{dict.common.loading}</Muted>
           </ContextCard>
         ) : overview.data?.role === "PARENT" ? (
           overview.data.children.map((child) => (
             <ContextCard
               key={child.studentId}
-              title={childName.get(child.studentId) ?? "Your child"}
+              title={childName.get(child.studentId) ?? t.yourChild}
             >
               <StatGrid>
-                <StatTile label="Attendance" value={pct(child.attendancePercentage)} />
-                <StatTile label="GPA" value={child.gpa === null ? "—" : child.gpa.toFixed(1)} />
+                <StatTile label={t.attendance} value={pct(child.attendancePercentage)} />
+                <StatTile label={t.gpa} value={child.gpa === null ? "—" : child.gpa.toFixed(1)} />
                 <StatTile
-                  label="Homework"
+                  label={t.homework}
                   value={
                     child.homeworkCompletionRate === null
                       ? "—"
                       : `${Math.round(child.homeworkCompletionRate * 100)}%`
                   }
                 />
-                <StatTile label="Dues" value={formatPaise(child.dues)} />
+                <StatTile label={t.dues} value={formatPaise(child.dues)} />
                 <StatTile
-                  label="Behaviour"
+                  label={t.behaviour}
                   value={`${child.openBehaviourCount}/${child.behaviourCount}`}
                 />
               </StatGrid>
             </ContextCard>
           ))
         ) : overview.data?.role === "TEACHER" ? (
-          <ContextCard title="At a glance">
+          <ContextCard title={t.atAGlance}>
             <StatGrid>
               <StatTile
-                label="Referrals"
+                label={t.referrals}
                 value={String(overview.data.teacher.behaviourReferralCount)}
               />
             </StatGrid>
             {overview.data.teacher.sections.length === 0 ? (
-              <Muted>No sections assigned.</Muted>
+              <Muted>{t.noSectionsAssigned}</Muted>
             ) : (
               overview.data.teacher.sections.map((s) => (
                 <PercentBar
                   key={s.sectionId}
-                  label={sectionName.get(s.sectionId) ?? "Section"}
+                  label={sectionName.get(s.sectionId) ?? t.section}
                   pct={s.attendancePercentage}
                 />
               ))
             )}
           </ContextCard>
         ) : overview.data?.role === "ADMIN" ? (
-          <ContextCard title="School at a glance">
+          <ContextCard title={t.schoolAtAGlance}>
             <StatGrid>
-              <StatTile label="Students" value={String(overview.data.school.headcount)} />
-              <StatTile label="Attendance" value={pct(overview.data.school.attendancePercentage)} />
+              <StatTile label={t.students} value={String(overview.data.school.headcount)} />
               <StatTile
-                label="Collected today"
+                label={t.attendance}
+                value={pct(overview.data.school.attendancePercentage)}
+              />
+              <StatTile
+                label={t.collectedToday}
                 value={formatPaise(overview.data.school.collectionToday)}
               />
               <StatTile
-                label="Outstanding"
+                label={t.outstanding}
                 value={formatPaise(overview.data.school.fees.totalOutstanding)}
               />
             </StatGrid>
@@ -157,11 +163,13 @@ export default function AppHome() {
 
         {canReadAnnouncements ? (
           <View className="gap-2 rounded-md border border-border bg-card p-4">
-            <Text className="text-sm font-medium text-muted-foreground">Recent announcements</Text>
+            <Text className="text-sm font-medium text-muted-foreground">
+              {t.recentAnnouncements}
+            </Text>
             {recentAnnouncements.isLoading ? (
-              <Muted>Loading…</Muted>
+              <Muted>{dict.common.loading}</Muted>
             ) : (recentAnnouncements.data ?? []).length === 0 ? (
-              <Muted>Nothing new.</Muted>
+              <Muted>{t.nothingNew}</Muted>
             ) : (
               (recentAnnouncements.data ?? []).slice(0, 3).map((a) => (
                 <Link key={a.id} href={`/announcements/${a.id}`} asChild>
@@ -180,11 +188,11 @@ export default function AppHome() {
         ) : null}
 
         {isParent ? (
-          <ContextCard title="Your children">
+          <ContextCard title={t.yourChildren}>
             {children.isLoading ? (
-              <Muted>Loading…</Muted>
+              <Muted>{dict.common.loading}</Muted>
             ) : (children.data ?? []).length === 0 ? (
-              <Muted>No children are linked to your account.</Muted>
+              <Muted>{t.noChildrenLinked}</Muted>
             ) : (
               (children.data ?? []).map((c) => (
                 <Text key={c.id} className="text-foreground">
@@ -197,17 +205,17 @@ export default function AppHome() {
         ) : null}
 
         {role === "TEACHER" && mySections.length > 0 ? (
-          <ContextCard title="Your sections">
+          <ContextCard title={t.yourSections}>
             <Text className="text-foreground">{mySections.join(" · ")}</Text>
           </ContextCard>
         ) : null}
 
         {showTimetable ? (
-          <ContextCard title="Today’s schedule">
+          <ContextCard title={t.todaysSchedule}>
             {today.isLoading ? (
-              <Muted>Loading…</Muted>
+              <Muted>{dict.common.loading}</Muted>
             ) : todayRows.length === 0 ? (
-              <Muted>No classes scheduled today.</Muted>
+              <Muted>{t.noClassesToday}</Muted>
             ) : (
               todayRows.map((e) => (
                 <Text key={e.id} className="text-foreground">
@@ -224,135 +232,129 @@ export default function AppHome() {
         ) : null}
 
         {canReadAcademic ? (
-          <NavCard title="Academic structure">
-            <NavLink href="/academic/years" label="Academic years" />
-            <NavLink href="/academic/classes" label="Classes" />
-            <NavLink href="/academic/subjects" label="Subjects" />
-            <NavLink href="/academic/assignments" label="Teacher assignments" />
-            <NavLink href="/academic/class-teachers" label="Class teachers" />
+          <NavCard title={t.academicStructure}>
+            <NavLink href="/academic/years" label={t.academicYears} />
+            <NavLink href="/academic/classes" label={t.classes} />
+            <NavLink href="/academic/subjects" label={t.subjects} />
+            <NavLink href="/academic/assignments" label={t.teacherAssignments} />
+            <NavLink href="/academic/class-teachers" label={t.classTeachers} />
           </NavCard>
         ) : null}
 
         {canReadStudents || canReadParents || canReadStaff ? (
-          <NavCard title="People">
-            {canReadStudents ? <NavLink href="/people/students" label="Students" /> : null}
-            {canReadParents ? <NavLink href="/people/parents" label="Parents" /> : null}
+          <NavCard title={t.people}>
+            {canReadStudents ? <NavLink href="/people/students" label={t.students} /> : null}
+            {canReadParents ? <NavLink href="/people/parents" label={t.parents} /> : null}
             {canReadStaff ? (
-              <NavLink href="/people/teacher-profiles" label="Teacher profiles" />
+              <NavLink href="/people/teacher-profiles" label={t.teacherProfiles} />
             ) : null}
           </NavCard>
         ) : null}
 
         {canReadAttendance ? (
-          <NavCard title="Attendance">
+          <NavCard title={t.attendance}>
             {canMarkAttendance ? (
-              <NavLink href="/attendance/sections" label="Mark attendance" />
+              <NavLink href="/attendance/sections" label={t.markAttendance} />
             ) : null}
             {canSubmitCorrection ? (
-              <NavLink href="/attendance/my-corrections" label="My corrections" />
+              <NavLink href="/attendance/my-corrections" label={t.myCorrections} />
             ) : null}
-            {canApplyLeave ? <NavLink href="/attendance/leave" label="Leave requests" /> : null}
-            <Text className="px-1 text-xs text-muted-foreground">
-              Open a student to view their attendance & calendar.
-            </Text>
+            {canApplyLeave ? <NavLink href="/attendance/leave" label={t.leaveRequests} /> : null}
+            <Text className="px-1 text-xs text-muted-foreground">{t.attendanceHint}</Text>
           </NavCard>
         ) : null}
 
         {canEnterMarks || (canReadMarks && isParent) ? (
-          <NavCard title="Examinations">
-            {canEnterMarks ? <NavLink href="/exam/markable" label="Enter marks" /> : null}
+          <NavCard title={t.examinations}>
+            {canEnterMarks ? <NavLink href="/exam/markable" label={t.enterMarks} /> : null}
             {canReadMarks && isParent ? (
-              <NavLink href="/exam/children" label="Marks & grades" />
+              <NavLink href="/exam/children" label={t.marksAndGrades} />
             ) : null}
           </NavCard>
         ) : null}
 
         {canManageHomework || (canReadHomework && isParent) ? (
-          <NavCard title="Homework">
+          <NavCard title={t.homework}>
             <NavLink
               href="/homework"
-              label={canManageHomework ? "Homework" : "My children’s homework"}
+              label={canManageHomework ? t.homework : t.myChildrensHomework}
             />
           </NavCard>
         ) : null}
 
         {canReadReportCards && isParent ? (
-          <NavCard title="Report cards">
-            <NavLink href="/report-cards/children" label="My children’s report cards" />
+          <NavCard title={t.reportCards}>
+            <NavLink href="/report-cards/children" label={t.myChildrensReportCards} />
           </NavCard>
         ) : null}
 
         {showTimetable ? (
-          <NavCard title="Timetable">
+          <NavCard title={t.timetable}>
             <NavLink
               href="/timetable"
-              label={isParent ? "My children’s timetable" : "My weekly timetable"}
+              label={isParent ? t.myChildrensTimetable : t.myWeeklyTimetable}
             />
           </NavCard>
         ) : null}
 
         {canReadBehaviour ? (
-          <NavCard title="Behaviour & discipline">
+          <NavCard title={t.behaviourAndDiscipline}>
             {isParent ? (
-              <NavLink href="/behaviour/children" label="My children’s behaviour" />
+              <NavLink href="/behaviour/children" label={t.myChildrensBehaviour} />
             ) : canRecordBehaviour ? (
-              <NavLink href="/behaviour" label="My behaviour referrals" />
+              <NavLink href="/behaviour" label={t.myBehaviourReferrals} />
             ) : null}
             {!isParent ? (
-              <Text className="px-1 text-xs text-muted-foreground">
-                Open a student’s profile to view or record incidents.
-              </Text>
+              <Text className="px-1 text-xs text-muted-foreground">{t.behaviourHint}</Text>
             ) : null}
           </NavCard>
         ) : null}
 
         {canReadFees ? (
-          <NavCard title="Fees">
+          <NavCard title={t.fees}>
             <NavLink
               href="/fees"
               label={
-                canManageFees ? "Fees & payments" : isParent ? "My children’s fees" : "Student fees"
+                canManageFees ? t.feesAndPayments : isParent ? t.myChildrensFees : t.studentFees
               }
             />
             {isParent ? (
-              <Text className="px-1 text-xs text-muted-foreground">
-                View invoices, dues and receipts. Payments are collected at the school office.
-              </Text>
+              <Text className="px-1 text-xs text-muted-foreground">{t.feesHint}</Text>
             ) : null}
           </NavCard>
         ) : null}
 
         {canReadDocuments ? (
-          <NavCard title="Documents">
+          <NavCard title={t.documents}>
             <NavLink
               href="/documents"
               label={
                 canManageDocuments
-                  ? "Documents & certificates"
+                  ? t.documentsAndCertificates
                   : isParent
-                    ? "My children’s documents"
-                    : "Student documents"
+                    ? t.myChildrensDocuments
+                    : t.studentDocuments
               }
             />
             {isParent ? (
-              <Text className="px-1 text-xs text-muted-foreground">
-                Download approved certificates. New documents are issued by the school office.
-              </Text>
+              <Text className="px-1 text-xs text-muted-foreground">{t.documentsHint}</Text>
             ) : null}
           </NavCard>
         ) : null}
 
         {canReadAnnouncements || canReadCalendar ? (
-          <NavCard title="Communication">
-            {canReadAnnouncements ? <NavLink href="/announcements" label="Announcements" /> : null}
-            {canReadCalendar ? <NavLink href="/calendar" label="School calendar" /> : null}
+          <NavCard title={t.communication}>
+            {canReadAnnouncements ? (
+              <NavLink href="/announcements" label={t.announcements} />
+            ) : null}
+            {canReadCalendar ? <NavLink href="/calendar" label={t.schoolCalendar} /> : null}
           </NavCard>
         ) : null}
 
-        <NavCard title="Settings">
+        <NavCard title={t.settings}>
           <NavLink
             href="/settings"
-            label={canManageSettings ? "School configuration" : "Preferences"}
+            label={canManageSettings ? t.schoolConfiguration : t.preferences}
           />
         </NavCard>
 
@@ -363,7 +365,7 @@ export default function AppHome() {
           }}
           className="min-h-11 items-center justify-center rounded-md border border-border px-4 py-3"
         >
-          <Text className="font-medium text-foreground">Log out</Text>
+          <Text className="font-medium text-foreground">{t.logOut}</Text>
         </Pressable>
       </ScrollView>
     </View>
