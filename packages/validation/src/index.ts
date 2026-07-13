@@ -687,6 +687,19 @@ export const createAnnouncementInput = z
     path: ["sectionId"],
   });
 
+/** Register a device for push (self-scoped; upsert on the Expo token). Phase 1, B13. */
+export const registerDeviceInput = z.object({
+  expoPushToken: z.string().min(1).max(200),
+  platform: z.enum(["ios", "android"]),
+});
+export type RegisterDeviceInput = z.infer<typeof registerDeviceInput>;
+
+/** Deregister a device (logout cleanup). */
+export const deregisterDeviceInput = z.object({
+  expoPushToken: z.string().min(1).max(200),
+});
+export type DeregisterDeviceInput = z.infer<typeof deregisterDeviceInput>;
+
 /* ---- announcements, circulars & calendar (M11, ADR-019) ---- */
 const announcementScopeSchema = z.enum(["WHOLE_SCHOOL", "CLASS", "SECTION", "TEACHERS", "PARENTS"]);
 const announcementStatusSchema = z.enum(["DRAFT", "PUBLISHED", "ARCHIVED"]);

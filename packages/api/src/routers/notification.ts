@@ -3,13 +3,21 @@ import {
   createAnnouncement,
   createServiceContext,
   deleteNotification,
+  deregisterDevice,
   listNotifications,
   markAllNotificationsRead,
   markNotificationRead,
+  registerDevice,
   unarchiveNotification,
   unreadNotificationCount,
 } from "@repo/business";
-import { createAnnouncementInput, idInput, listNotificationsInput } from "@repo/validation";
+import {
+  createAnnouncementInput,
+  deregisterDeviceInput,
+  idInput,
+  listNotificationsInput,
+  registerDeviceInput,
+} from "@repo/validation";
 
 import { protectedProcedure, router } from "../trpc";
 
@@ -49,4 +57,12 @@ export const notificationRouter = router({
   createAnnouncement: protectedProcedure
     .input(createAnnouncementInput)
     .mutation(({ ctx, input }) => createAnnouncement(createServiceContext(ctx.user), input)),
+  /** Register this device for push (self-scoped upsert on the Expo token). Phase 1. */
+  registerDevice: protectedProcedure
+    .input(registerDeviceInput)
+    .mutation(({ ctx, input }) => registerDevice(createServiceContext(ctx.user), input)),
+  /** Deregister this device (logout cleanup). */
+  deregisterDevice: protectedProcedure
+    .input(deregisterDeviceInput)
+    .mutation(({ ctx, input }) => deregisterDevice(createServiceContext(ctx.user), input)),
 });

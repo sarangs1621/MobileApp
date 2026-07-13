@@ -1,5 +1,5 @@
 import type { AppRouter } from "@repo/api";
-import { httpBatchLink } from "@trpc/client";
+import { createTRPCClient, httpBatchLink } from "@trpc/client";
 import { createTRPCReact } from "@trpc/react-query";
 import superjson from "superjson";
 
@@ -14,19 +14,27 @@ import { supabase } from "./supabase";
  */
 export const trpc = createTRPCReact<AppRouter>();
 
-export function createTrpcClient() {
-  return trpc.createClient({
-    links: [
-      httpBatchLink({
-        url: `${env.EXPO_PUBLIC_API_URL}/api/trpc`,
-        transformer: superjson,
-        // Read the CURRENT session per request so a refreshed token is always used.
-        async headers() {
-          const { data } = await supabase.auth.getSession();
-          const token = data.session?.access_token;
-          return token ? { authorization: `Bearer ${token}` } : {};
-        },
-      }),
-    ],
-  });
+function links() {
+  return [
+    httpBatchLink({
+      url: `${env.EXPO_PUBLIC_API_URL}/api/trpc`,
+      transformer: superjson,
+      // Read the CURRENT session per request so a refreshed token is always used.
+      async headers() {
+        const { data } = await supabase.auth.getSession();
+        const token = data.session?.access_token;
+        return token ? { authorization: `Bearer ${token}` } : {};
+      },
+    }),
+  ];
 }
+
+export function createTrpcClient() {
+  return trpc.createClient({ links: links() });
+}
+
+/**
+ * Vanilla (non-React) client for imperative calls outside components — e.g. logout,
+ * which must deregister the device push token while still authenticated.
+ */
+export const trpcClient = createTRPCClient<AppRouter>({ links: links() });

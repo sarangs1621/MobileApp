@@ -2,6 +2,7 @@ import { Redirect, Stack } from "expo-router";
 import { useEffect } from "react";
 import { ActivityIndicator, Text, View } from "react-native";
 
+import { usePushRegistration } from "../../lib/push";
 import { trpc } from "../../lib/trpc";
 import { useAuthStore } from "../../stores/auth-store";
 
@@ -53,5 +54,16 @@ function ActivationGate() {
     );
   }
 
-  return <Stack screenOptions={{ headerShown: false }} />;
+  return (
+    <>
+      <PushRegistrar />
+      <Stack screenOptions={{ headerShown: false }} />
+    </>
+  );
+}
+
+/** Registers this device for push once the session is signed-in and ACTIVE. */
+function PushRegistrar(): null {
+  usePushRegistration();
+  return null;
 }

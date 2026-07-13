@@ -13,6 +13,7 @@
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
-    "@repo/constants": "workspace:*"
+    "@repo/constants": "workspace:*",
+    "expo-server-sdk": "^6.1.0"
   }
 }

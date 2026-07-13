@@ -1,5 +1,10 @@
 import { withTransaction, type Repositories } from "@repo/db";
-import { createNotificationService, type NotificationService } from "@repo/notifications";
+import {
+  createExpoPushAdapter,
+  createNotificationService,
+  type NotificationAdapter,
+  type NotificationService,
+} from "@repo/notifications";
 
 import type { Principal } from "./authorization";
 import { repositories } from "./repositories";
@@ -17,9 +22,14 @@ export interface ServiceContext {
   withTransaction: typeof withTransaction;
 }
 
-// No notification adapters are wired in M1 (auth sends nothing); the Notifications
-// milestone registers real adapters. An empty service is a safe no-op here.
-const notifications = createNotificationService([]);
+// Adapters are selected by env config (ADR-005). The Expo PUSH adapter is wired
+// only when PUSH_NOTIFICATIONS_ENABLED=true, so CI/dev/tests stay a no-op; other
+// channels (SMS/WhatsApp) remain unwired pending their providers.
+const adapters: NotificationAdapter[] = [];
+if (process.env.PUSH_NOTIFICATIONS_ENABLED === "true") {
+  adapters.push(createExpoPushAdapter({ accessToken: process.env.EXPO_ACCESS_TOKEN }));
+}
+const notifications = createNotificationService(adapters);
 
 /** Assemble a per-request {@link ServiceContext} for a resolved principal. */
 export function createServiceContext(user: Principal): ServiceContext {

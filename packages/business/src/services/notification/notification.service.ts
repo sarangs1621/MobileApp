@@ -7,6 +7,7 @@ import type { ServiceContext } from "../../context";
 import { recordAudit } from "../people/scope";
 
 import { mapNotification } from "./mappers";
+import { dispatchPush } from "./push";
 
 const DEFAULT_LIMIT = 50;
 const MAX_LIMIT = 100;
@@ -46,7 +47,7 @@ export async function createBulkNotification(
     return { notificationId: null, recipientCount: 0 };
   }
   const priority = input.priority ?? "NORMAL";
-  return ctx.withTransaction(async (repos) => {
+  const result = await ctx.withTransaction(async (repos) => {
     const notification = await repos.notifications.create({
       schoolId: ctx.user.schoolId,
       type: input.type,
@@ -64,6 +65,10 @@ export async function createBulkNotification(
     });
     return { notificationId: notification.id, recipientCount };
   });
+  // Fan the same event out to push, AFTER the in-app rows commit. Fire-and-forget
+  // (not awaited) — delivery must never fail or delay this mutation (Phase 1).
+  dispatchPush(ctx, userIds, { title: input.title, body: input.body, actionUrl: input.actionUrl });
+  return result;
 }
 
 /** Single-recipient convenience over {@link createBulkNotification}. */

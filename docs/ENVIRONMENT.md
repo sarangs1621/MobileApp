@@ -15,6 +15,8 @@ Every variable, its purpose, and where it's validated. Template: **`.env.example
 | `SUPABASE_SERVICE_ROLE` | ✓ | **server-only** | Service-role key — signed-URL minting, readiness storage check. **Never** `NEXT_PUBLIC_`; importing it client-side is a build error. |
 | `NEXT_PUBLIC_SUPABASE_URL` | ✓ | client | Supabase project URL (browser + CSP `connect-src`). |
 | `NEXT_PUBLIC_SUPABASE_ANON_KEY` | ✓ | client | Supabase anon key (browser auth). |
+| `PUSH_NOTIFICATIONS_ENABLED` | – | server | `"true"` wires the Expo push adapter + fan-out (Phase 1). Unset ⇒ in-app only, no delivery. |
+| `EXPO_ACCESS_TOKEN` | – | **server-only** | Optional — Expo's enhanced push security token. Push works without it. |
 
 ## Mobile (Expo — only `EXPO_PUBLIC_*` is bundled)
 

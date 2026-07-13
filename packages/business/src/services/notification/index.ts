@@ -30,3 +30,4 @@ export {
   type AnnouncementScope,
   type CreateAnnouncementInput,
 } from "./announcement.service";
+export { registerDevice, deregisterDevice } from "./device.service";

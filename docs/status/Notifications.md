@@ -1,7 +1,10 @@
 # Status — Notifications & Communication
 
-- **Status:** Implemented (M10 Steps 1–10 complete) — awaiting milestone approval. In-app notifications are
-  built; external **delivery** (push/SMS/WhatsApp) remains the future ADR-005 seam (see "Future seam" below).
+- **Status:** Implemented (M10 Steps 1–10 complete) — awaiting milestone approval. In-app notifications built;
+  **push delivery wired in Phase 1** (Expo adapter + `DeviceToken` registration + fan-out from
+  `createBulkNotification`, env-gated `PUSH_NOTIFICATIONS_ENABLED`). SMS/WhatsApp remain the future ADR-005 seam.
+  Operator blockers before push reaches a device: set an EAS `projectId` in `apps/mobile/app.json`
+  (`getExpoPushTokenAsync` returns null without it) and enable `PUSH_NOTIFICATIONS_ENABLED` server-side.
 - **Current milestone:** M10 (Notifications & Communication) — in-app notifications over frozen M1–M9.
 - **Completion:** 100% of M10 (in-app) scope
 - **Spec / decision:** `docs/architecture/ADR-018-notification-architecture.md` · `docs/milestones/M10.md` ·

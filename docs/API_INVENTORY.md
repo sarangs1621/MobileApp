@@ -308,8 +308,8 @@ provisioned for it), report-card notifications, CGPA-across-years snapshot, bili
 | Procedure | T | Permission | Notes |
 |---|---|---|---|
 | `notifications.list` / `markRead` | Q/M | `notification:manage_own` | cursor; unread badge from `[userId, readAt]` |
-| `notifications.registerDevice` | M | self | upsert on expoPushToken |
-| `notifications.deregisterDevice` | M | self | logout cleanup — **adopted v1.3** (Dev PRD §7, B13) |
+| `notification.registerDevice` | M | self (`notification:manage_own`) | ✓ Phase 1 — upsert on expoPushToken (router key is `notification.*`, not `notifications.*`) |
+| `notification.deregisterDevice` | M | self (`notification:manage_own`) | ✓ Phase 1 — logout cleanup (Dev PRD §7, B13); push receipts prune `DeviceNotRegistered` |
 | `profile.getStudent` / `getStaff` / `update` | Q/M | matrix scopes | child profile for parents |
 | `audit.list` | Q | `audit:read` | cursor; filters entityType/actor/date |
 | `flags.list` | Q | authenticated | clients need flags to render nav |

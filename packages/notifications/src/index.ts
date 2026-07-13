@@ -30,12 +30,16 @@ export interface DeliveryResult {
   ok: boolean;
   providerMessageId?: string;
   error?: string;
+  /** The recipient address this result is for (so callers can prune a dead token). */
+  address?: string;
 }
 
 /** One channel implementation (Push/SMS/WhatsApp/InApp). Provider lives behind this. */
 export interface NotificationAdapter {
   readonly channel: NotificationChannelKey;
   send(message: OutboundMessage): Promise<DeliveryResult>;
+  /** Optional batch path — providers that chunk (Expo) implement this for fan-out. */
+  sendMany?(messages: OutboundMessage[]): Promise<DeliveryResult[]>;
 }
 
 /** A channel-agnostic event raised by a business service. */
@@ -48,6 +52,8 @@ export interface NotificationEvent {
 /** Resolves channels per event and dispatches to the matching adapters. */
 export interface NotificationService {
   send(event: NotificationEvent): Promise<DeliveryResult[]>;
+  /** Batch fan-out on one channel. No adapter for the channel ⇒ empty result. */
+  sendMany(channel: NotificationChannelKey, messages: OutboundMessage[]): Promise<DeliveryResult[]>;
 }
 
 /**
@@ -72,5 +78,17 @@ export function createNotificationService(adapters: NotificationAdapter[]): Noti
         }),
       );
     },
+    async sendMany(channel, messages) {
+      const adapter = byChannel.get(channel);
+      if (!adapter || messages.length === 0) {
+        return [];
+      }
+      if (adapter.sendMany) {
+        return adapter.sendMany(messages);
+      }
+      return Promise.all(messages.map((m) => adapter.send(m)));
+    },
   };
 }
+
+export { createExpoPushAdapter } from "./expo-push.adapter";

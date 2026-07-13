@@ -55,6 +55,10 @@ import {
 } from "./repositories/class-teacher-assignment.repository";
 import { createClassRepository, type ClassRepository } from "./repositories/class.repository";
 import {
+  createDeviceTokenRepository,
+  type DeviceTokenRepository,
+} from "./repositories/device-token.repository";
+import {
   createDocumentTemplateRepository,
   type DocumentTemplateRepository,
 } from "./repositories/document-template.repository";
@@ -196,6 +200,7 @@ export * from "./repositories/period.repository";
 export * from "./repositories/timetable-entry.repository";
 export * from "./repositories/notification.repository";
 export * from "./repositories/notification-recipient.repository";
+export * from "./repositories/device-token.repository";
 export * from "./repositories/announcement.repository";
 export * from "./repositories/announcement-attachment.repository";
 export * from "./repositories/calendar-event.repository";
@@ -246,6 +251,7 @@ export interface Repositories {
   timetableEntries: TimetableEntryRepository;
   notifications: NotificationRepository;
   notificationRecipients: NotificationRecipientRepository;
+  deviceTokens: DeviceTokenRepository;
   announcements: AnnouncementRepository;
   announcementAttachments: AnnouncementAttachmentRepository;
   calendarEvents: CalendarEventRepository;
@@ -298,6 +304,7 @@ export function createRepositories(client: DbClient): Repositories {
     timetableEntries: createTimetableEntryRepository(client),
     notifications: createNotificationRepository(client),
     notificationRecipients: createNotificationRecipientRepository(client),
+    deviceTokens: createDeviceTokenRepository(client),
     announcements: createAnnouncementRepository(client),
     announcementAttachments: createAnnouncementAttachmentRepository(client),
     calendarEvents: createCalendarEventRepository(client),
