@@ -10,6 +10,7 @@ import {
   GraduationCap,
   LayoutDashboard,
   Megaphone,
+  MessageSquare,
   Settings,
   ShieldAlert,
   Users,
@@ -113,6 +114,12 @@ const GROUPS: NavGroup[] = [
   {
     label: "Communication",
     items: [
+      {
+        href: "/messages",
+        label: "Messages",
+        icon: MessageSquare,
+        permission: PERMISSIONS.MESSAGE_READ,
+      },
       {
         href: "/announcements",
         label: "Announcements",

@@ -1,6 +1,7 @@
 import {
   createServiceContext,
   createThread,
+  listCounterparties,
   listThreadMessages,
   listThreads,
   markThreadRead,
@@ -11,6 +12,7 @@ import {
   listThreadsInput,
   markThreadReadInput,
   sendMessageInput,
+  studentIdInput,
   threadMessagesInput,
 } from "@repo/validation";
 
@@ -43,4 +45,8 @@ export const messageRouter = router({
   markRead: protectedProcedure
     .input(markThreadReadInput)
     .mutation(({ ctx, input }) => markThreadRead(createServiceContext(ctx.user), input)),
+  /** The valid counterparties the caller may open a thread with about a student. */
+  counterparties: protectedProcedure
+    .input(studentIdInput)
+    .query(({ ctx, input }) => listCounterparties(createServiceContext(ctx.user), input)),
 });

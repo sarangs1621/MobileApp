@@ -85,6 +85,7 @@ export const ml: Dictionary = {
     studentDocuments: "വിദ്യാർത്ഥി രേഖകൾ", // TODO(verify-ml)
     documentsHint: "അംഗീകൃത സർട്ടിഫിക്കറ്റുകൾ ഡൗൺലോഡ് ചെയ്യുക. പുതിയ രേഖകൾ സ്കൂൾ ഓഫീസ് നൽകുന്നു.", // TODO(verify-ml)
     communication: "ആശയവിനിമയം", // TODO(verify-ml)
+    messages: "സന്ദേശങ്ങൾ", // TODO(verify-ml)
     announcements: "അറിയിപ്പുകൾ", // TODO(verify-ml)
     schoolCalendar: "സ്കൂൾ കലണ്ടർ", // TODO(verify-ml)
     settings: "ക്രമീകരണങ്ങൾ", // TODO(verify-ml)
@@ -140,6 +141,25 @@ export const ml: Dictionary = {
     noInvoices: "ഇതുവരെ ഇൻവോയ്‌സുകളൊന്നുമില്ല.", // TODO(verify-ml)
     due: "അവസാന തീയതി", // TODO(verify-ml)
     dueSuffix: "കുടിശ്ശിക", // TODO(verify-ml)
+  },
+  messages: {
+    title: "സന്ദേശങ്ങൾ", // TODO(verify-ml)
+    goBack: "തിരികെ പോകുക", // TODO(verify-ml)
+    newMessage: "പുതിയ സന്ദേശം", // TODO(verify-ml)
+    noConversations: "ഇതുവരെ സംഭാഷണങ്ങളൊന്നുമില്ല.", // TODO(verify-ml)
+    noMessages: "ഇതുവരെ സന്ദേശങ്ങളൊന്നുമില്ല. ഹലോ പറയൂ.", // TODO(verify-ml)
+    conversation: "സംഭാഷണം", // TODO(verify-ml)
+    about: (name: string) => `${name} നെക്കുറിച്ച്`, // TODO(verify-ml)
+    student: "വിദ്യാർത്ഥി", // TODO(verify-ml)
+    recipient: "സ്വീകർത്താവ്", // TODO(verify-ml)
+    selectStudent: "ഒരു വിദ്യാർത്ഥിയെ തിരഞ്ഞെടുക്കുക…", // TODO(verify-ml)
+    selectRecipient: "ഒരു സ്വീകർത്താവിനെ തിരഞ്ഞെടുക്കുക…", // TODO(verify-ml)
+    noRecipients: "ഈ വിദ്യാർത്ഥിയെക്കുറിച്ച് സന്ദേശം അയയ്ക്കാൻ ആരുമില്ല.", // TODO(verify-ml)
+    startConversation: "സംഭാഷണം ആരംഭിക്കുക", // TODO(verify-ml)
+    writeMessage: "ഒരു സന്ദേശം എഴുതുക…", // TODO(verify-ml)
+    send: "അയയ്ക്കുക", // TODO(verify-ml)
+    parentFallback: "രക്ഷിതാവ്", // TODO(verify-ml)
+    teacherFallback: "അധ്യാപകൻ", // TODO(verify-ml)
   },
   announcements: {
     attachments: "അറ്റാച്ച്‌മെന്റുകൾ", // TODO(verify-ml)

@@ -1,6 +1,11 @@
 import { PERMISSIONS } from "@repo/constants";
 import { errorFields, ForbiddenError, logger } from "@repo/core";
-import type { MessageDto, MessagePage, MessageThreadDto } from "@repo/types";
+import type {
+  MessageCounterpartyDto,
+  MessageDto,
+  MessagePage,
+  MessageThreadDto,
+} from "@repo/types";
 
 import { assertCan } from "../../authorization";
 import type { ServiceContext } from "../../context";
@@ -204,4 +209,46 @@ export async function markThreadRead(
   await loadThreadAsParty(ctx, input.threadId);
   const readCount = await ctx.repositories.messages.markThreadRead(input.threadId, ctx.user.userId);
   return { readCount };
+}
+
+export interface ListCounterpartiesInput {
+  studentId: string;
+}
+
+/**
+ * The users the acting party may open (or continue) a 1:1 thread with ABOUT a student
+ * (M18) — scoped EXACTLY like {@link createThread}. A TEACHER gets the student's
+ * guardians that have a login account; a PARENT gets the student's section teachers.
+ * The counterparty's `userId` is not resolvable client-side, so this is the only way
+ * the compose UI can pick a valid recipient. Any other role gets `[]`.
+ */
+export async function listCounterparties(
+  ctx: ServiceContext,
+  input: ListCounterpartiesInput,
+): Promise<MessageCounterpartyDto[]> {
+  assertCan(ctx.user, PERMISSIONS.MESSAGE_READ);
+  const student = await loadStudentInSchool(ctx, input.studentId);
+  await assertStudentInScope(ctx, student); // teacher own-section / parent own-child
+
+  if (ctx.user.role === "TEACHER") {
+    const links = await ctx.repositories.studentParents.listByStudent(student.id);
+    const parentIds = [...new Set(links.map((l) => l.parentId))];
+    const parents = await Promise.all(parentIds.map((id) => ctx.repositories.parents.findById(id)));
+    // A guardian without a login `userId` (not onboarded) can't be messaged — skip.
+    return parents.flatMap((p) =>
+      p?.userId ? [{ userId: p.userId, name: p.name, role: "PARENT" as const }] : [],
+    );
+  }
+
+  if (ctx.user.role === "PARENT") {
+    const teacherUserIds = await sectionTeacherUserIds(ctx, student.id);
+    const staff = await Promise.all(
+      teacherUserIds.map((id) => ctx.repositories.staff.findByUserId(id)),
+    );
+    return staff.flatMap((s) =>
+      s ? [{ userId: s.userId, name: s.name, role: "TEACHER" as const }] : [],
+    );
+  }
+
+  return [];
 }

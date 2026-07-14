@@ -45,6 +45,7 @@ export default function AppHome() {
   const showTimetable = canReadTimetable && (role === "TEACHER" || isParent);
   const canReadAnnouncements = has(PERMISSIONS.ANNOUNCEMENT_READ);
   const canReadCalendar = has(PERMISSIONS.CALENDAR_READ);
+  const canReadMessages = has(PERMISSIONS.MESSAGE_READ);
   const canReadBehaviour = has(PERMISSIONS.BEHAVIOUR_READ);
   const canRecordBehaviour = has(PERMISSIONS.BEHAVIOUR_RECORD) || has(PERMISSIONS.BEHAVIOUR_MANAGE);
   const canReadFees = has(PERMISSIONS.FEE_READ);
@@ -342,8 +343,9 @@ export default function AppHome() {
           </NavCard>
         ) : null}
 
-        {canReadAnnouncements || canReadCalendar ? (
+        {canReadAnnouncements || canReadCalendar || canReadMessages ? (
           <NavCard title={t.communication}>
+            {canReadMessages ? <NavLink href="/messages" label={t.messages} /> : null}
             {canReadAnnouncements ? (
               <NavLink href="/announcements" label={t.announcements} />
             ) : null}

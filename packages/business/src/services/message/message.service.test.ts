@@ -7,6 +7,7 @@ import type {
   Notification,
   Parent,
   Repositories,
+  Staff,
   Student,
   StudentParent,
   TeacherAssignment,
@@ -17,7 +18,13 @@ import { describe, expect, it, vi } from "vitest";
 import type { Principal } from "../../authorization";
 import type { ServiceContext } from "../../context";
 
-import { createThread, listThreads, markThreadRead, sendMessage } from "./message.service";
+import {
+  createThread,
+  listCounterparties,
+  listThreads,
+  markThreadRead,
+  sendMessage,
+} from "./message.service";
 
 /* ---- principals ---- */
 const teacher: Principal = {
@@ -81,6 +88,11 @@ const parentRow: Parent = {
   preferredContact: "PHONE",
   ...stamps,
 };
+const staffRow = {
+  id: "stf-1",
+  userId: "u-teacher",
+  name: "Teacher One",
+} as Staff;
 const thread = (over: Partial<MessageThread> = {}): MessageThread => ({
   id: "th-1",
   schoolId: "s-1",
@@ -124,6 +136,7 @@ function makeRepos(opts: { studentInScope?: boolean; current?: MessageThread } =
       studentIdsInSections: vi.fn(async (): Promise<string[]> => (studentInScope ? ["st-1"] : [])),
     },
     teacherAssignments: { list: vi.fn(async (): Promise<TeacherAssignment[]> => [assignment]) },
+    staff: { findByUserId: vi.fn(async (): Promise<Staff | null> => staffRow) },
     classTeacherAssignments: {
       findBySectionYear: vi.fn(async (): Promise<ClassTeacherAssignment | null> => null),
     },
@@ -238,6 +251,27 @@ describe("sendMessage — party gate + notification", () => {
     const { ctx, repos } = makeCtx(parent);
     await sendMessage(ctx, { threadId: "th-1", body: "hi back" });
     expect(repos.notificationRecipients.createMany).toHaveBeenCalledWith("n-1", ["u-teacher"]);
+  });
+});
+
+describe("listCounterparties — scoped like createThread", () => {
+  it("teacher sees the student's guardians (with a login) as PARENT counterparties", async () => {
+    const { ctx } = makeCtx(teacher);
+    const rows = await listCounterparties(ctx, { studentId: "st-1" });
+    expect(rows).toEqual([{ userId: "u-parent", name: "Mom", role: "PARENT" }]);
+  });
+
+  it("parent sees the child's section teachers as TEACHER counterparties", async () => {
+    const { ctx } = makeCtx(parent);
+    const rows = await listCounterparties(ctx, { studentId: "st-1" });
+    expect(rows).toEqual([{ userId: "u-teacher", name: "Teacher One", role: "TEACHER" }]);
+  });
+
+  it("an out-of-scope student is refused (ForbiddenError)", async () => {
+    const { ctx } = makeCtx(teacher, makeRepos({ studentInScope: false }));
+    await expect(listCounterparties(ctx, { studentId: "st-1" })).rejects.toBeInstanceOf(
+      ForbiddenError,
+    );
   });
 });
 

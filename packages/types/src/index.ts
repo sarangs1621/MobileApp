@@ -827,6 +827,14 @@ export interface MessagePage<T> {
   nextCursor: IsoUtcString | null;
 }
 
+/** A user the acting party may open a message thread with about a student (M18): a
+ *  guardian (teacher caller) or a section teacher (parent caller). */
+export interface MessageCounterpartyDto {
+  userId: string;
+  name: string;
+  role: "TEACHER" | "PARENT";
+}
+
 // ---------------------------------------------------------------------------
 // Fees & Payments (M13, ADR-021)
 // ---------------------------------------------------------------------------
