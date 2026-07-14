@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useEffect, useState } from "react";
+import { use, useEffect, useState } from "react";
 
 import { Button, Card, PageHeader, SkeletonText } from "@/src/components/ui";
 import { trpc } from "@/src/trpc/react";
@@ -19,10 +19,11 @@ export default function ConversationPage({
   params,
   searchParams,
 }: {
-  params: { threadId: string };
-  searchParams: { name?: string; student?: string };
+  params: Promise<{ threadId: string }>;
+  searchParams: Promise<{ name?: string; student?: string }>;
 }) {
-  const { threadId } = params;
+  const { threadId } = use(params);
+  const { name, student } = use(searchParams);
   const me = trpc.auth.me.useQuery();
   const myUserId = me.data?.userId;
   const utils = trpc.useUtils();
@@ -51,8 +52,8 @@ export default function ConversationPage({
     send.mutate({ threadId, body: trimmed });
   };
 
-  const title = searchParams.name || "Conversation";
-  const subtitle = searchParams.student;
+  const title = name || "Conversation";
+  const subtitle = student;
 
   return (
     <main className="mx-auto flex h-[calc(100vh-4rem)] max-w-3xl flex-col gap-4 p-6">
