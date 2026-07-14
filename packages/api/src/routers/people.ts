@@ -12,6 +12,7 @@ import {
   getParent,
   getStaff,
   getStudent,
+  importPeopleCsv,
   linkParent,
   listDocuments,
   mintDocumentDownloadUrl,
@@ -39,6 +40,7 @@ import {
   createStudentInput,
   enrollInput,
   idInput,
+  importPeopleCsvInput,
   linkParentInput,
   listStudentsInput,
   mintDocumentUploadUrlInput,
@@ -82,6 +84,10 @@ export const studentRouter = router({
   archive: protectedProcedure
     .input(idInput)
     .mutation(({ ctx, input }) => archiveStudent(createServiceContext(ctx.user), input.id)),
+  /** Bulk CSV import of students + guardians (ADR-027); returns a per-row error report. */
+  importCsv: protectedProcedure
+    .input(importPeopleCsvInput)
+    .mutation(({ ctx, input }) => importPeopleCsv(createServiceContext(ctx.user), input)),
 });
 
 export const parentRouter = router({

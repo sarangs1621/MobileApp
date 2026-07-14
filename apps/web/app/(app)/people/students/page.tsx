@@ -8,6 +8,7 @@ import Link from "next/link";
 import { useCallback, useState } from "react";
 
 import { Paginator, usePagedSearch } from "@/src/components/academic/ui";
+import { ImportCsvButton } from "@/src/components/people/import-csv";
 import { StudentFormModal, type StudentFormValues } from "@/src/components/people/student-form";
 import {
   Avatar,
@@ -140,16 +141,19 @@ export default function StudentsPage() {
         title="Students"
         action={
           canManage ? (
-            <Button
-              icon={Users}
-              onClick={() => {
-                create.reset();
-                update.reset();
-                setEditing("new");
-              }}
-            >
-              New student
-            </Button>
+            <div className="flex gap-2">
+              <ImportCsvButton />
+              <Button
+                icon={Users}
+                onClick={() => {
+                  create.reset();
+                  update.reset();
+                  setEditing("new");
+                }}
+              >
+                New student
+              </Button>
+            </div>
           ) : undefined
         }
       />

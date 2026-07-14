@@ -260,6 +260,12 @@ export const linkParentInput = z.object({
   relationship: relationshipSchema,
   isPrimary: z.boolean().optional(),
 });
+
+/* Bulk people import (ADR-027). ~2 MB caps the roster CSV; row-level validation
+   happens in the service so failures come back as a per-row error report. */
+export const importPeopleCsvInput = z.object({
+  csv: z.string().min(1).max(2_000_000),
+});
 export const unlinkParentInput = z.object({
   studentId: idSchema,
   parentId: idSchema,

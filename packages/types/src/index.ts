@@ -186,6 +186,16 @@ export interface StudentParentDto {
   isPrimary: boolean;
 }
 
+/** Outcome of a bulk people CSV import (PRD §8.2, ADR-027). Partial success by
+ *  design: failed rows land in `errors` with their 1-based CSV line number. */
+export interface ImportReportDto {
+  totalRows: number;
+  studentsCreated: number;
+  guardiansCreated: number;
+  guardiansLinked: number;
+  errors: { row: number; message: string }[];
+}
+
 export interface StaffDto {
   id: string;
   schoolId: string;

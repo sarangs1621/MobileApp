@@ -40,6 +40,12 @@ export {
   type UnlinkParentInput,
 } from "./parent.service";
 export {
+  importPeopleCsv,
+  parseCsv,
+  IMPORT_COLUMNS,
+  type ImportPeopleCsvInput,
+} from "./import.service";
+export {
   listStaff,
   getStaff,
   createStaff,
