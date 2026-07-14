@@ -465,7 +465,7 @@ describe("reads — parent visibility + GPA", () => {
     const repos = makeRepos();
     const { ctx } = makeCtx(parent, repos);
     await marksForEnrollment(ctx, "e-1");
-    expect(repos.marks.listPublishedByEnrollment).toHaveBeenCalledWith("e-1");
+    expect(repos.marks.listPublishedByEnrollment).toHaveBeenCalledWith("s-1", "e-1");
     expect(repos.marks.listByEnrollment).not.toHaveBeenCalled();
   });
 

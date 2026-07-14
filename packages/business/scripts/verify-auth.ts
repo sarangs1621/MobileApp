@@ -70,7 +70,8 @@ async function main(): Promise<void> {
       headers: { apikey: anonKey, "Content-Type": "application/json" },
       body: JSON.stringify({
         email: `signup.probe.${Date.now()}@gmail.com`,
-        password: "Probe-123456!x",
+        // Throwaway probe credential (SECURITY_AUDIT WARN 7): env-overridable, random default.
+        password: process.env.AUTH_PROBE_PASSWORD ?? `Probe-${crypto.randomUUID()}`,
       }),
     });
     if (response.ok) {

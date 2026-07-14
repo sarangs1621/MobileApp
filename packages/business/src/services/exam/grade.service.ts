@@ -46,7 +46,7 @@ export async function gpaForEnrollment(
   const enrollment = await loadEnrollmentInSchool(ctx, enrollmentId);
   await assertEnrollmentReadScope(ctx, enrollment);
   const marks = isParent(ctx)
-    ? await ctx.repositories.marks.listPublishedByEnrollment(enrollmentId)
-    : await ctx.repositories.marks.listByEnrollment(enrollmentId);
+    ? await ctx.repositories.marks.listPublishedByEnrollment(ctx.user.schoolId, enrollmentId)
+    : await ctx.repositories.marks.listByEnrollment(ctx.user.schoolId, enrollmentId);
   return computeGpa(marks.map((m) => m.gradePointSnapshot));
 }

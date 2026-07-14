@@ -41,6 +41,16 @@ export interface AttendanceRecordRepository {
     from: Date;
     to: Date;
   }): Promise<{ status: AttendanceStatus; count: number }[]>;
+  /**
+   * READ-ONLY analytics (PERFORMANCE_REVIEW §follow-ups 1) — per-enrollment per-status
+   * counts over a session-date range in ONE groupBy; replaces the N-query at-risk scan.
+   */
+  statusCountsByEnrollment(params: {
+    schoolId: string;
+    enrollmentIds: readonly string[];
+    from: Date;
+    to: Date;
+  }): Promise<{ enrollmentId: string; status: AttendanceStatus; count: number }[]>;
 }
 
 export function createAttendanceRecordRepository(client: DbClient): AttendanceRecordRepository {
@@ -94,6 +104,18 @@ export function createAttendanceRecordRepository(client: DbClient): AttendanceRe
         _count: true,
       });
       return rows.map((r) => ({ status: r.status, count: r._count }));
+    },
+    statusCountsByEnrollment: async ({ schoolId, enrollmentIds, from, to }) => {
+      const rows = await client.attendanceRecord.groupBy({
+        by: ["enrollmentId", "status"],
+        where: {
+          schoolId,
+          enrollmentId: { in: [...enrollmentIds] },
+          session: { date: { gte: from, lte: to } },
+        },
+        _count: true,
+      });
+      return rows.map((r) => ({ enrollmentId: r.enrollmentId, status: r.status, count: r._count }));
     },
   };
 }

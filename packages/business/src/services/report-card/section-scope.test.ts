@@ -114,7 +114,7 @@ function makeCtx(user: Principal) {
       listByIds: vi.fn(async () => [{ id: "st-1", firstName: "Asha", lastName: "Nair" }]),
     },
     reportCards: {
-      listByEnrollment: vi.fn(async (): Promise<ReportCard[]> => [cardRow]),
+      listByEnrollments: vi.fn(async (): Promise<ReportCard[]> => [cardRow]),
     },
   };
   const repositories = repos as unknown as Repositories;

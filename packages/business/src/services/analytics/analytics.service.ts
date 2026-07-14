@@ -1,5 +1,5 @@
 import { PERMISSIONS } from "@repo/constants";
-import { ForbiddenError } from "@repo/core";
+import { computeGpa, ForbiddenError } from "@repo/core";
 
 import { assertCan } from "../../authorization";
 import type { ServiceContext } from "../../context";
@@ -52,6 +52,27 @@ function attendancePct(c: Record<string, number>): number | null {
 }
 
 const round2 = (n: number): number => Math.round(n * 100) / 100;
+
+/**
+ * Cohort GPAs in ONE marks query (PERFORMANCE_REVIEW §follow-ups 1/3/5) — replaces the
+ * per-enrollment `gpaForEnrollment` loop (and its per-enrollment security load, which the
+ * callers here make redundant: all three gate scope up front). Staff view (all snapshot
+ * marks); identical math — `computeGpa` over `gradePointSnapshot`, drafts excluded by
+ * their null snapshot.
+ */
+async function gpasByEnrollment(
+  ctx: ServiceContext,
+  enrollmentIds: readonly string[],
+): Promise<Map<string, number | null>> {
+  const marks = await ctx.repositories.marks.listByEnrollments(ctx.user.schoolId, enrollmentIds);
+  const points = new Map<string, (number | null)[]>();
+  for (const m of marks) {
+    const list = points.get(m.enrollmentId) ?? [];
+    list.push(m.gradePointSnapshot);
+    points.set(m.enrollmentId, list);
+  }
+  return new Map(enrollmentIds.map((id) => [id, computeGpa(points.get(id) ?? [])]));
+}
 
 /* ───────────────────────────────── return shapes ──────────────────────────────── */
 
@@ -339,13 +360,13 @@ export async function classPerformance(
     ? await ctx.repositories.enrollments.listBySection(yearId, input.sectionId)
     : [];
 
-  const gpas: number[] = [];
-  for (const e of enrollments) {
-    const g = await gpaForEnrollment(ctx, e.id);
-    if (g !== null) {
-      gpas.push(g);
-    }
-  }
+  const gpaMap = await gpasByEnrollment(
+    ctx,
+    enrollments.map((e) => e.id),
+  );
+  const gpas = enrollments
+    .map((e) => gpaMap.get(e.id) ?? null)
+    .filter((g): g is number => g !== null);
   const averageGpa =
     gpas.length === 0 ? null : round2(gpas.reduce((a, b) => a + b, 0) / gpas.length);
 
@@ -439,19 +460,8 @@ export async function feeCollection(
   // year filter narrows the billed/outstanding totals, not the collection series.
   const to = istToday();
   const from = daysAgo(to, 365);
-  const payments = await ctx.repositories.payments.list(ctx.user.schoolId, {
-    from,
-    to,
-    limit: 100000,
-  });
-  const buckets = new Map<string, number>();
-  for (const p of payments) {
-    const key = monthKey(p.paymentDate);
-    buckets.set(key, (buckets.get(key) ?? 0) + p.amount);
-  }
-  const monthly = [...buckets.entries()]
-    .sort(([a], [b]) => a.localeCompare(b))
-    .map(([month, collected]) => ({ month, collected }));
+  // Aggregated in SQL (PERFORMANCE_REVIEW §follow-ups 2) — was a 100k-row load + JS bucketing.
+  const monthly = await ctx.repositories.payments.monthlyTotals(ctx.user.schoolId, from, to);
 
   return {
     totalBilled: agg.totalBilled,
@@ -477,11 +487,16 @@ export async function topPerformers(
     return [];
   }
   const enrollments = await ctx.repositories.enrollments.listByYear(ctx.user.schoolId, yearId);
-  const rows: StudentRankRow[] = [];
-  for (const e of enrollments) {
-    const gpa = await gpaForEnrollment(ctx, e.id);
-    rows.push({ studentId: e.studentId, enrollmentId: e.id, gpa, attendancePercentage: null });
-  }
+  const gpaMap = await gpasByEnrollment(
+    ctx,
+    enrollments.map((e) => e.id),
+  );
+  const rows: StudentRankRow[] = enrollments.map((e) => ({
+    studentId: e.studentId,
+    enrollmentId: e.id,
+    gpa: gpaMap.get(e.id) ?? null,
+    attendancePercentage: null,
+  }));
   return rows
     .filter((r) => r.gpa !== null)
     .sort((a, b) => (b.gpa ?? 0) - (a.gpa ?? 0))
@@ -505,19 +520,26 @@ export async function atRiskStudents(ctx: ServiceContext): Promise<StudentRankRo
   const to = istToday();
   const from = daysAgo(to, 365);
 
+  // Whole-cohort scan in TWO queries (PERFORMANCE_REVIEW §follow-ups 1) — was ~3N+1.
+  const enrollmentIds = enrollments.map((e) => e.id);
+  const counts = await ctx.repositories.attendanceRecords.statusCountsByEnrollment({
+    schoolId: ctx.user.schoolId,
+    enrollmentIds,
+    from,
+    to,
+  });
+  const cmaps = new Map<string, Record<string, number>>();
+  for (const c of counts) {
+    const cmap = cmaps.get(c.enrollmentId) ?? {};
+    cmap[c.status] = (cmap[c.status] ?? 0) + c.count;
+    cmaps.set(c.enrollmentId, cmap);
+  }
+  const gpaMap = await gpasByEnrollment(ctx, enrollmentIds);
+
   const rows: StudentRankRow[] = [];
   for (const e of enrollments) {
-    const attRows = await ctx.repositories.attendanceRecords.listByEnrollmentInRange(
-      e.id,
-      from,
-      to,
-    );
-    const cmap: Record<string, number> = {};
-    for (const r of attRows) {
-      cmap[r.status] = (cmap[r.status] ?? 0) + 1;
-    }
-    const pct = attendancePct(cmap);
-    const gpa = await gpaForEnrollment(ctx, e.id);
+    const pct = attendancePct(cmaps.get(e.id) ?? {});
+    const gpa = gpaMap.get(e.id) ?? null;
     const atRisk =
       (pct !== null && pct < AT_RISK_ATTENDANCE) || (gpa !== null && gpa < AT_RISK_GPA);
     if (atRisk) {

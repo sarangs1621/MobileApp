@@ -7,6 +7,8 @@ plus the empirical RLS/permission proofs each milestone shipped. Verdicts: **PAS
 
 **Result: 0 FAIL. Core controls PASS. 7 WARN — all tracked, none exploitable in the
 current single-tenant, service-role-gated architecture.**
+*Update 2026-07-14 (post-M17 hardening): WARN 1 and WARN 7 remediated in code — see the
+register. 5 WARN remain (CSP enforce phase, dependency advisories, and three ops items).*
 
 The load-bearing fact for every domain: **authorization is decided in the business layer
 against a DB-built `Principal`** (`context.ts:38` → `resolvePrincipal` → `users.findById`
@@ -123,13 +125,13 @@ teachers additionally get a **business read filter** (per-user visibility) on to
 
 | # | Sev | Finding | Why not FAIL / remediation |
 |---|---|---|---|
-| 1 | Low-Med | **`mark.repository.ts:44-45`** `listByExamSection`/`listByEnrollment` carry **no `schoolId` filter**. | Safe today — every caller (`exam/mark.service.ts:161/200/324/341`) runs `loadExamSectionInSchool`/`loadEnrollmentInSchool` first. Latent: a future caller omitting the in-school load could read cross-tenant. Repos are authz-free by design (ADR-003). Fix = a defense-in-depth `schoolId` param — a **frozen-M5 domain change**, out of M17 scope; tracked for a future security-hardening change. |
+| 1 | ~~Low-Med~~ **REMEDIATED (post-M17 hardening, 2026-07-14)** | **`mark.repository.ts`** `listByExamSection`/`listByEnrollment`/`listPublishedByEnrollment` carry **no `schoolId` filter**. | Fixed: all three now take `schoolId` as the first parameter and filter on it (defense-in-depth); all callers thread `ctx.user.schoolId`. Pinned by `mark.service.test.ts` (`toHaveBeenCalledWith("s-1", "e-1")`). |
 | 2 | Med | **CSP is report-only**, not enforcing (`next.config.ts`). | Deliberate phase 1 (ADR-025 §2 dev. 2) — surfaces violations without white-screening Next 15. Enforce phase = drop `'unsafe-inline'` from script-src + per-request nonces. |
 | 3 | Med | **`pnpm audit`: 2 moderate** transitive advisories — `postcss` (via Next, build-time) and `uuid <11.1.1` (via a root dep + Expo CLI). | Toolchain/transitive, no runtime-exploitable path; major bumps risk the frozen build. CI fails on **high/critical** (`--audit-level high`); these are accepted + tracked. |
 | 4 | High (ops) | **Credentials pending rotation** — service-role key, DB password, seed admin password were shared during setup (M1.5). | **Must rotate before real data.** Procedure: `docs/BACKUP.md §5`. Operational, not a code defect. |
 | 5 | Med (ops) | **Real SMS provider pending** — only the Supabase test OTP number works. | Parent go-live blocker; provider + India DLT needed. Tracked since M1.5. |
 | 6 | Low (ops) | **PITR + leaked-password (HIBP) require Supabase Pro** — currently free tier. | Enable on upgrade (`RUNBOOK_SUPABASE_SETUP.md §6`). Backup meanwhile via `pg_dump` (`BACKUP.md §1b`). |
-| 7 | Low | **Static probe password** literal at `packages/business/scripts/verify-auth.ts:73`. | Ops-only verification script; creates a throwaway probe user, never production data. Move to env if it's ever run against real data. |
+| 7 | ~~Low~~ **REMEDIATED (post-M17 hardening, 2026-07-14)** | **Static probe password** literal at `packages/business/scripts/verify-auth.ts:73`. | Fixed: the probe password is now `AUTH_PROBE_PASSWORD` env with a `crypto.randomUUID()` default — no static literal remains. |
 
 ## Sign-off
 

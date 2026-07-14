@@ -545,10 +545,16 @@ export async function listReportCardsForSection(
     ]),
   );
 
-  const perEnrollment = await Promise.all(
-    enrollments.map((e) => ctx.repositories.reportCards.listByEnrollment(e.id)),
+  // One batch query (PERFORMANCE_REVIEW §follow-ups 6). The stable sort restores the
+  // roster's enrollment order while keeping the repo's kind/version order within each —
+  // byte-identical to the old per-enrollment concat.
+  const enrollmentOrder = new Map(enrollments.map((e, i) => [e.id, i]));
+  const cards = (
+    await ctx.repositories.reportCards.listByEnrollments(enrollments.map((e) => e.id))
+  ).sort(
+    (a, b) =>
+      (enrollmentOrder.get(a.enrollmentId) ?? 0) - (enrollmentOrder.get(b.enrollmentId) ?? 0),
   );
-  const cards = perEnrollment.flat();
   const names = await resolveCardNamesBatch(ctx, cards);
   return cards.map((c, i) => ({
     ...mapReportCard(c, names[i]),

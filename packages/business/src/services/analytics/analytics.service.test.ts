@@ -59,8 +59,26 @@ describe("atRiskStudents — attendance weighting + threshold classification (AD
       listByYear: async () => enrollments,
       findById: async (id: string) => enrollments.find((e) => e.id === id) ?? null,
     },
-    attendanceRecords: { listByEnrollmentInRange: async (id: string) => attendance[id] ?? [] },
-    marks: { listByEnrollment: async (id: string) => marks[id] ?? [] },
+    // Same fixtures, batch surface (perf rewrite): counts derived from the identical
+    // attendance rows the old per-enrollment mock served — expectations unchanged.
+    attendanceRecords: {
+      statusCountsByEnrollment: async ({ enrollmentIds }: { enrollmentIds: string[] }) =>
+        enrollmentIds.flatMap((id) => {
+          const byStatus = new Map<string, number>();
+          for (const r of attendance[id] ?? []) {
+            byStatus.set(r.status, (byStatus.get(r.status) ?? 0) + 1);
+          }
+          return [...byStatus.entries()].map(([status, count]) => ({
+            enrollmentId: id,
+            status,
+            count,
+          }));
+        }),
+    },
+    marks: {
+      listByEnrollments: async (_schoolId: string, ids: string[]) =>
+        ids.flatMap((id) => (marks[id] ?? []).map((m) => ({ ...m, enrollmentId: id }))),
+    },
   });
 
   it("flags only the low-attendance and low-GPA students", async () => {
@@ -89,11 +107,16 @@ describe("feeCollection — monthly payment bucketing (ADR-022 §5)", () => {
       }),
     },
     payments: {
-      list: async () => [
-        { amount: 200, paymentDate: new Date("2026-05-10") },
-        { amount: 300, paymentDate: new Date("2026-05-20") },
-        { amount: 200, paymentDate: new Date("2026-06-02") },
-      ],
+      // Bucketing now happens in SQL (perf rewrite) — the repo contract is pinned by the
+      // empirical psql proof in the ADR; here we pin the service passthrough + call shape.
+      monthlyTotals: async (schoolId: string, from: Date, to: Date) => {
+        expect(schoolId).toBe("s-1");
+        expect(from.getTime()).toBeLessThan(to.getTime());
+        return [
+          { month: "2026-05", collected: 500 },
+          { month: "2026-06", collected: 200 },
+        ];
+      },
     },
   });
 

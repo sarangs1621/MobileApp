@@ -204,7 +204,7 @@ export async function lockRegister(
   const assessment = await loadAssessmentInSchool(ctx, register.assessmentId);
   const exam = await loadExamInSchool(ctx, assessment.examId);
   const bands = await resolveBandsForExam(ctx, exam);
-  const marks = await ctx.repositories.marks.listByExamSection(examSectionId);
+  const marks = await ctx.repositories.marks.listByExamSection(ctx.user.schoolId, examSectionId);
 
   // Compute + freeze every result BEFORE writing (clean abort on a scale gap).
   const snapshots = marks.map((m) => {
@@ -324,7 +324,7 @@ export async function listRegisterMarks(
   const register = await loadExamSectionInSchool(ctx, examSectionId);
   const assessment = await loadAssessmentInSchool(ctx, register.assessmentId);
   await assertOwnsAssessmentSection(ctx, assessment.subjectId, register.sectionId);
-  const rows = await ctx.repositories.marks.listByExamSection(examSectionId);
+  const rows = await ctx.repositories.marks.listByExamSection(ctx.user.schoolId, examSectionId);
   return rows.map(mapMark);
 }
 
@@ -341,8 +341,8 @@ export async function marksForEnrollment(
   const enrollment = await loadEnrollmentInSchool(ctx, enrollmentId);
   await assertEnrollmentReadScope(ctx, enrollment);
   const rows = isParent(ctx)
-    ? await ctx.repositories.marks.listPublishedByEnrollment(enrollmentId)
-    : await ctx.repositories.marks.listByEnrollment(enrollmentId);
+    ? await ctx.repositories.marks.listPublishedByEnrollment(ctx.user.schoolId, enrollmentId)
+    : await ctx.repositories.marks.listByEnrollment(ctx.user.schoolId, enrollmentId);
 
   // Enrich with subject + exam names so a client that can't read the admin-gated
   // catalogs (a parent) can label rows. ponytail: batched by distinct id, small N.

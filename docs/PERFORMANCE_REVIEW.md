@@ -44,12 +44,17 @@ The audit proposed `Payment[schoolId, paymentDate]` to enable a *future* SQL-gro
 **speculative** (YAGNI). The **current** payment query sorts and paginates on `createdAt`, so
 `[schoolId, createdAt]` is the index the real query needs. Chosen accordingly.
 
-## Query optimizations — identified, DEFERRED (frozen-module changes, out of Step 6 scope)
+## Query optimizations — RESOLVED (post-M17 hardening, 2026-07-14)
 
-These are real inefficiencies, but every one lives in **frozen M14 analytics business logic**;
-rewriting them (even result-preserving) is a domain-code change M17 forbids (constraints 1–2) and
-carries regression risk with no result-equivalence test. Recorded for a future performance-focused
-change, ranked by leverage:
+All six follow-ups below were implemented in the post-M17 security/perf hardening change,
+result-preserving (the existing analytics/report-card test expectations were kept identical and
+pass unchanged). New batch repo methods: `marks.listByEnrollments`,
+`attendanceRecords.statusCountsByEnrollment`, `payments.monthlyTotals` (parameterized
+`$queryRaw`, empirically verified on seeded local PG), `reportCards.listByEnrollments`. The
+`Payment[schoolId, paymentDate]` index shipped **with** the `feeCollection` rewrite
+(migration `20260714030000_perf_payment_paymentdate_index`), exactly as planned below.
+Item 4 is subsumed: nothing calls `gpaForEnrollment` in a loop anymore — its remaining
+single-call sites need the enrollment load as their security gate. Original findings:
 
 1. **`atRiskStudents`** (`analytics.service.ts:509-520`) — ~3N+1 over the whole active-year cohort
    (per-enrollment attendance + GPA). Fix: one `attendanceRecord.groupBy([enrollmentId,status])` +

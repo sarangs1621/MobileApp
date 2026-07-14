@@ -36,6 +36,17 @@ export interface PaymentRepository {
   list(schoolId: string, filter: ListPaymentsFilter): Promise<Payment[]>;
   /** Count for per-school receipt numbering (a continuous receipt book). */
   countForSchool(schoolId: string): Promise<number>;
+  /**
+   * READ-ONLY analytics (PERFORMANCE_REVIEW §follow-ups 2) — per-month collected totals
+   * (YYYY-MM on the calendar `paymentDate`, ascending) aggregated in SQL; replaces
+   * loading up to 100k Payment rows to bucket in JS. Parameterized template — no
+   * string-built SQL (SECURITY_AUDIT §injection).
+   */
+  monthlyTotals(
+    schoolId: string,
+    from: Date,
+    to: Date,
+  ): Promise<{ month: string; collected: number }[]>;
 }
 
 export function createPaymentRepository(client: DbClient): PaymentRepository {
@@ -82,5 +93,15 @@ export function createPaymentRepository(client: DbClient): PaymentRepository {
     },
 
     countForSchool: (schoolId) => client.payment.count({ where: { schoolId } }),
+
+    monthlyTotals: async (schoolId, from, to) => {
+      // SUM(paise) can exceed int4 — cast to bigint and convert (amounts stay Number-safe).
+      const rows = await client.$queryRaw<{ month: string; collected: bigint }[]>`
+        SELECT to_char("paymentDate", 'YYYY-MM') AS month, SUM("amount")::bigint AS collected
+        FROM "Payment"
+        WHERE "schoolId" = ${schoolId} AND "paymentDate" >= ${from} AND "paymentDate" <= ${to}
+        GROUP BY 1 ORDER BY 1`;
+      return rows.map((r) => ({ month: r.month, collected: Number(r.collected) }));
+    },
   };
 }

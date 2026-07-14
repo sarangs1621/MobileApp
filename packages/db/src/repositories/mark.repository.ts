@@ -28,10 +28,15 @@ export interface MarkSnapshot {
 /** Mark persistence (M5). Persistence only — grade computation lives in @repo/core. */
 export interface MarkRepository {
   findById(id: string): Promise<Mark | null>;
-  listByExamSection(examSectionId: string): Promise<Mark[]>;
-  listByEnrollment(enrollmentId: string): Promise<Mark[]>;
+  /** All list reads take schoolId as defense-in-depth (SECURITY_AUDIT WARN 1) — repos stay
+   *  authz-free (ADR-003), but a future caller that skips the in-school load can no longer
+   *  read cross-tenant. */
+  listByExamSection(schoolId: string, examSectionId: string): Promise<Mark[]>;
+  listByEnrollment(schoolId: string, enrollmentId: string): Promise<Mark[]>;
+  /** Batch read for analytics (PERFORMANCE_REVIEW §follow-ups 1/3/5) — one query per cohort. */
+  listByEnrollments(schoolId: string, enrollmentIds: readonly string[]): Promise<Mark[]>;
   /** Parent-visible marks: register LOCKED AND owning exam published (ADR-012 §2). */
-  listPublishedByEnrollment(enrollmentId: string): Promise<Mark[]>;
+  listPublishedByEnrollment(schoolId: string, enrollmentId: string): Promise<Mark[]>;
   /** Idempotent draft upsert on the natural key (assessmentId, enrollmentId). */
   upsert(input: UpsertMarkInput): Promise<Mark>;
   /** Write the computed snapshot (called only at lock). */
@@ -41,11 +46,16 @@ export interface MarkRepository {
 export function createMarkRepository(client: DbClient): MarkRepository {
   return {
     findById: (id) => client.mark.findUnique({ where: { id } }),
-    listByExamSection: (examSectionId) => client.mark.findMany({ where: { examSectionId } }),
-    listByEnrollment: (enrollmentId) => client.mark.findMany({ where: { enrollmentId } }),
-    listPublishedByEnrollment: (enrollmentId) =>
+    listByExamSection: (schoolId, examSectionId) =>
+      client.mark.findMany({ where: { schoolId, examSectionId } }),
+    listByEnrollment: (schoolId, enrollmentId) =>
+      client.mark.findMany({ where: { schoolId, enrollmentId } }),
+    listByEnrollments: (schoolId, enrollmentIds) =>
+      client.mark.findMany({ where: { schoolId, enrollmentId: { in: [...enrollmentIds] } } }),
+    listPublishedByEnrollment: (schoolId, enrollmentId) =>
       client.mark.findMany({
         where: {
+          schoolId,
           enrollmentId,
           examSection: { status: "LOCKED", assessment: { exam: { isPublished: true } } },
         },

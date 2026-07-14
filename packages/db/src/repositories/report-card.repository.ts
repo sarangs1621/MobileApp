@@ -74,6 +74,8 @@ export interface ReportCardRepository {
   findById(id: string): Promise<ReportCard | null>;
   /** A student's card trail for one enrollment (year-over-year read), newest-version first. */
   listByEnrollment(enrollmentId: string): Promise<ReportCard[]>;
+  /** Batch read for the section roster (PERFORMANCE_REVIEW §follow-ups 6) — one query. */
+  listByEnrollments(enrollmentIds: readonly string[]): Promise<ReportCard[]>;
   /** Parent read — PUBLISHED cards only for an enrollment. */
   listPublishedByEnrollment(enrollmentId: string): Promise<ReportCard[]>;
   /** Every version in a (enrollment, kind, scope) — for version bump, live-published lookup, and the active-draft guard. */
@@ -109,6 +111,11 @@ export function createReportCardRepository(client: DbClient): ReportCardReposito
     listByEnrollment: (enrollmentId) =>
       client.reportCard.findMany({
         where: { enrollmentId },
+        orderBy: [{ kind: "asc" }, { version: "desc" }],
+      }),
+    listByEnrollments: (enrollmentIds) =>
+      client.reportCard.findMany({
+        where: { enrollmentId: { in: [...enrollmentIds] } },
         orderBy: [{ kind: "asc" }, { version: "desc" }],
       }),
     listPublishedByEnrollment: (enrollmentId) =>

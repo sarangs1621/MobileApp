@@ -1843,6 +1843,7 @@ model Payment {
   @@index([invoiceId])
   @@index([receiptNumber])
   @@index([schoolId, createdAt]) // keyset-paginated payment list (M17 perf review; sort+cursor on createdAt)
+  @@index([schoolId, paymentDate]) // monthlyTotals SQL groupBy (perf review follow-up 2 — added WITH the feeCollection rewrite, as planned)
 }
 
 enum InvoiceStatus {
