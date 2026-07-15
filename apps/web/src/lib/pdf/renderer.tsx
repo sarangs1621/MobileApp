@@ -1,5 +1,11 @@
 import { Document, Page, StyleSheet, Text, View, renderToBuffer } from "@react-pdf/renderer";
-import type { CertificatePdfData, PdfRenderer, PdfRow, ReportCardPdfData } from "@repo/api";
+import type {
+  CertificatePdfData,
+  PdfRenderer,
+  PdfRow,
+  ReportCardPdfData,
+  ReportCardPdfMark,
+} from "@repo/api";
 
 /**
  * The web host's `PdfRenderer` adapter (ADR-026). This is the ONLY place react-pdf
@@ -39,6 +45,25 @@ const styles = StyleSheet.create({
   label: { width: "40%", fontFamily: "Helvetica-Bold", color: "#333" },
   value: { width: "60%" },
   issued: { marginTop: 32, fontSize: 10, color: "#555" },
+  marksTable: { marginBottom: 24 },
+  marksHead: {
+    flexDirection: "row",
+    borderBottomWidth: 1.5,
+    borderBottomColor: "#1a1a1a",
+    paddingVertical: 5,
+  },
+  marksRow: {
+    flexDirection: "row",
+    borderBottomWidth: 1,
+    borderBottomColor: "#e2e2e2",
+    paddingVertical: 5,
+  },
+  colExam: { width: "24%" },
+  colSubject: { width: "30%" },
+  colMarks: { width: "20%" },
+  colPct: { width: "13%", textAlign: "right" },
+  colGrade: { width: "13%", textAlign: "right" },
+  marksHeadText: { fontFamily: "Helvetica-Bold", color: "#333" },
 });
 
 function placement(cls: string | null, section: string | null): string {
@@ -50,6 +75,8 @@ function TableDoc(props: {
   title: string;
   studentName: string;
   placementLine: string;
+  /** Subject-wise marks table (report cards); omitted for certificates. */
+  marks?: ReportCardPdfMark[];
   rows: PdfRow[];
   issuedOn: string;
 }) {
@@ -63,6 +90,26 @@ function TableDoc(props: {
         <Text style={styles.subline}>
           {props.studentName} — {props.placementLine}
         </Text>
+        {props.marks && props.marks.length > 0 ? (
+          <View style={styles.marksTable}>
+            <View style={styles.marksHead}>
+              <Text style={[styles.colExam, styles.marksHeadText]}>Exam</Text>
+              <Text style={[styles.colSubject, styles.marksHeadText]}>Subject</Text>
+              <Text style={[styles.colMarks, styles.marksHeadText]}>Marks</Text>
+              <Text style={[styles.colPct, styles.marksHeadText]}>%</Text>
+              <Text style={[styles.colGrade, styles.marksHeadText]}>Grade</Text>
+            </View>
+            {props.marks.map((m, i) => (
+              <View key={i} style={styles.marksRow}>
+                <Text style={styles.colExam}>{m.exam}</Text>
+                <Text style={styles.colSubject}>{m.subject}</Text>
+                <Text style={styles.colMarks}>{m.marks}</Text>
+                <Text style={styles.colPct}>{m.percentage}</Text>
+                <Text style={styles.colGrade}>{m.grade}</Text>
+              </View>
+            ))}
+          </View>
+        ) : null}
         <View>
           {props.rows.map((r, i) => (
             <View key={i} style={styles.row}>
@@ -101,6 +148,7 @@ export function createPdfRenderer(): PdfRenderer {
           title={data.title}
           studentName={data.studentName}
           placementLine={placement(data.class, data.section)}
+          marks={data.marks}
           rows={data.rows}
           issuedOn={data.issuedOn}
         />,

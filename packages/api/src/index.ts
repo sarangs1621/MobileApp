@@ -16,4 +16,10 @@ export { checkReadiness, type ReadinessReport } from "@repo/business";
 // Host-implemented signed-URL port (ADR-004) — keeps apps off @repo/business.
 export type { StoragePort } from "@repo/business";
 // Host-implemented PDF renderer port (ADR-026) — apps/web supplies the react-pdf adapter.
-export type { PdfRenderer, CertificatePdfData, ReportCardPdfData, PdfRow } from "@repo/business";
+export type {
+  PdfRenderer,
+  CertificatePdfData,
+  ReportCardPdfData,
+  ReportCardPdfMark,
+  PdfRow,
+} from "@repo/business";

@@ -26,6 +26,19 @@ export interface CertificatePdfData {
   rows: PdfRow[];
 }
 
+/** One subject line of the marks table — values come from the FROZEN Mark
+ *  snapshot columns (totalObtained/percentage/gradeLetterSnapshot, ADR-012). */
+export interface ReportCardPdfMark {
+  exam: string;
+  subject: string;
+  /** "78 / 100", "Absent", or "—". */
+  marks: string;
+  /** "78%" or "—". */
+  percentage: string;
+  /** Frozen grade letter, or "—". */
+  grade: string;
+}
+
 /** A report card, rendered from its frozen snapshot columns (ADR-014) after publish. */
 export interface ReportCardPdfData {
   schoolName: string;
@@ -35,6 +48,8 @@ export interface ReportCardPdfData {
   section: string | null;
   /** IST publish/issue date. */
   issuedOn: string;
+  /** Subject-wise marks (frozen Mark snapshots); may be empty (no published marks). */
+  marks: ReportCardPdfMark[];
   /** Snapshot + authored values (rank, GPA, attendance, remarks, …) as a table. */
   rows: PdfRow[];
 }

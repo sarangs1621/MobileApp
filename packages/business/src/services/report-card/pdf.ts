@@ -4,7 +4,12 @@ import type { ReportCardDto } from "@repo/types";
 
 import { assertCan } from "../../authorization";
 import type { ServiceContext } from "../../context";
-import type { PdfRenderer, PdfRow, ReportCardPdfData } from "../document/pdf-renderer.port";
+import type {
+  PdfRenderer,
+  PdfRow,
+  ReportCardPdfData,
+  ReportCardPdfMark,
+} from "../document/pdf-renderer.port";
 import type { StoragePort } from "../people/document-storage.service";
 
 import { assertReportCardReadScope, loadReportCardInSchool } from "./scope";
@@ -41,11 +46,80 @@ function reportCardRows(card: ReportCardDto, assessment: string): PdfRow[] {
 }
 
 /**
+ * Subject-wise marks for the card, from the FROZEN Mark snapshot columns
+ * (totalObtained / percentage / gradeLetterSnapshot — immutable at lock, ADR-012).
+ * Published marks only (what a parent may see); EXAM cards restrict to the card's
+ * exam, TERM/ANNUAL cards list every published mark of the enrollment. Names
+ * (exam/subject) resolve once here — the PDF renders exactly once, at publish.
+ */
+async function marksTable(
+  ctx: ServiceContext,
+  card: ReportCardDto,
+  enrollmentId: string,
+): Promise<ReportCardPdfMark[]> {
+  const marks = await ctx.repositories.marks.listPublishedByEnrollment(card.schoolId, enrollmentId);
+  const assessmentIds = [...new Set(marks.map((m) => m.assessmentId))];
+  const assessments = new Map(
+    (await Promise.all(assessmentIds.map((id) => ctx.repositories.assessments.findById(id))))
+      .filter((a) => a !== null)
+      .map((a) => [a.id, a]),
+  );
+  const named = async <T>(ids: string[], find: (id: string) => Promise<T | null>) =>
+    new Map(
+      (await Promise.all(ids.map(async (id) => [id, await find(id)] as const))).flatMap(
+        ([id, row]) => (row ? [[id, row] as const] : []),
+      ),
+    );
+  const exams = await named([...new Set([...assessments.values()].map((a) => a.examId))], (id) =>
+    ctx.repositories.exams.findById(id),
+  );
+  const subjects = await named(
+    [...new Set([...assessments.values()].map((a) => a.subjectId))],
+    (id) => ctx.repositories.subjects.findById(id),
+  );
+
+  return marks
+    .filter((m) => {
+      const a = assessments.get(m.assessmentId);
+      return a !== undefined && (card.examId === null || a.examId === card.examId);
+    })
+    .map((m) => {
+      const a = assessments.get(m.assessmentId)!;
+      return { mark: m, assessment: a };
+    })
+    .sort(
+      (x, y) =>
+        (exams.get(x.assessment.examId)?.name ?? "").localeCompare(
+          exams.get(y.assessment.examId)?.name ?? "",
+        ) || x.assessment.displayOrder - y.assessment.displayOrder,
+    )
+    .map(({ mark, assessment }) => {
+      const max = assessment.maxTheory + (assessment.maxPractical ?? 0);
+      return {
+        exam: exams.get(assessment.examId)?.name ?? "—",
+        subject: subjects.get(assessment.subjectId)?.name ?? "—",
+        marks: mark.isAbsent
+          ? "Absent"
+          : mark.totalObtained !== null
+            ? `${mark.totalObtained} / ${max}`
+            : "—",
+        percentage: mark.percentage !== null ? `${mark.percentage}%` : "—",
+        grade: mark.gradeLetterSnapshot ?? "—",
+      };
+    });
+}
+
+/**
  * BEST-EFFORT (ADR-026): render a PUBLISHED card from its FROZEN snapshot (ADR-014),
  * upload the PDF to the private DOCUMENTS bucket, and persist its PATH (never a URL).
  * Runs AFTER the publish transaction has committed — a failure here is logged and
  * swallowed, NEVER propagated: `pdfPath` is not lifecycle-gating, so a render/upload
  * hiccup must not fail (or appear to fail) a durable publish.
+ *
+ * Names (student/class/section/branding/exam/term) resolve LIVE here, but the PDF
+ * renders exactly ONCE — at publish — so what lands in storage is effectively a
+ * publish-time snapshot (a later rename never rewrites an issued PDF; a reopen +
+ * re-publish is a NEW version and re-resolves deliberately).
  */
 export async function renderReportCardPdf(
   ctx: ServiceContext,
@@ -76,6 +150,7 @@ export async function renderReportCardPdf(
       class: klass?.name ?? null,
       section: section?.name ?? null,
       issuedOn: istDate(card.publishedAt),
+      marks: await marksTable(ctx, card, enrollment.id),
       rows: reportCardRows(card, exam?.name ?? term?.name ?? "Annual"),
     };
     const bytes = await pdf.renderReportCard(data);

@@ -26,6 +26,10 @@ const card: ReportCardPdfData = {
   class: "Grade 5",
   section: "B",
   issuedOn: "2026-07-13",
+  marks: [
+    { exam: "Term 1", subject: "Mathematics", marks: "78 / 100", percentage: "78%", grade: "A" },
+    { exam: "Term 1", subject: "Science", marks: "Absent", percentage: "—", grade: "—" },
+  ],
   rows: [
     { label: "Assessment", value: "Term 1" },
     { label: "Rank", value: "3 of 40" },
