@@ -91,6 +91,10 @@ CI and offline builds set `SKIP_ENV_VALIDATION=true` so `build`/`typecheck` run 
 
 ### Login credentials
 
+> Your own environment's sign-in details live in **`LOGIN.local.md`** at the
+> repo root — gitignored on purpose. This repo is public: never commit real
+> credentials here.
+
 There are **no default or hardcoded credentials** — public signup is disabled
 (ADR-001); every account is provisioned via the Supabase Admin API by the ops
 scripts, which read the repo-root `.env` (copy `.env.example`):

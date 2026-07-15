@@ -2,15 +2,33 @@
 
 import { signInWithOtp, signInWithPassword, verifyOtp } from "@repo/auth";
 import { cn } from "@repo/ui";
-import { School } from "lucide-react";
+import {
+  Briefcase,
+  CalendarCheck,
+  GraduationCap,
+  MessageSquare,
+  School,
+  Users,
+} from "lucide-react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 
-import { Button, Card, Input } from "@/src/components/ui";
+import { Button, Input } from "@/src/components/ui";
 import { getSupabaseClient } from "@/src/lib/supabase/client";
 
 type Mode = "staff" | "parent";
+
+const MODES = [
+  { key: "staff", label: "Staff", icon: Briefcase },
+  { key: "parent", label: "Parent", icon: Users },
+] as const;
+
+const HIGHLIGHTS = [
+  { icon: CalendarCheck, text: "Attendance, homework and the day's classwork" },
+  { icon: GraduationCap, text: "Exams, grades and report cards" },
+  { icon: MessageSquare, text: "Fees, announcements and parent messaging" },
+] as const;
 
 export default function LoginPage() {
   const router = useRouter();
@@ -57,30 +75,80 @@ export default function LoginPage() {
   }
 
   return (
-    <main className="flex min-h-dvh items-center justify-center bg-neutral-50 p-6">
-      <div className="w-full max-w-sm">
-        <div className="mb-6 flex flex-col items-center gap-2 text-center">
-          <span className="flex size-14 items-center justify-center rounded-2xl bg-navy-700">
-            <School aria-hidden strokeWidth={1.75} className="size-7 text-white" />
+    <main className="flex min-h-dvh bg-white">
+      <aside className="relative hidden w-1/2 flex-col justify-between overflow-hidden bg-navy-900 p-12 lg:flex">
+        <div
+          aria-hidden
+          className="pointer-events-none absolute -left-32 -top-32 size-[30rem] rounded-full bg-navy-600/30 blur-3xl"
+        />
+        <div className="relative flex items-center gap-3">
+          <span className="flex size-11 items-center justify-center rounded-xl bg-white/10 ring-1 ring-white/15">
+            <School aria-hidden strokeWidth={1.75} className="size-6 text-white" />
           </span>
-          <h1 className="text-display font-semibold text-neutral-900">Sri Gujarathi Vidhyalaya</h1>
-          <p className="text-sm text-neutral-500">School Portal — sign in to continue</p>
+          <div>
+            <p className="font-semibold text-white">Sri Gujarathi Vidhyalaya</p>
+            <p className="text-sm text-navy-300">School Portal</p>
+          </div>
         </div>
 
-        <Card className="flex flex-col gap-5">
-          <div className="flex rounded-md border border-neutral-300 bg-neutral-100 p-1">
-            {(["staff", "parent"] as const).map((m) => (
+        <div className="relative flex max-w-md flex-col gap-10">
+          <p className="text-balance text-3xl font-semibold leading-snug text-white">
+            The whole school day, in one place.
+          </p>
+          <ul className="flex flex-col gap-5">
+            {HIGHLIGHTS.map(({ icon: Icon, text }) => (
+              <li key={text} className="flex items-center gap-4">
+                <span className="flex size-9 shrink-0 items-center justify-center rounded-lg bg-white/10 ring-1 ring-white/10">
+                  <Icon aria-hidden strokeWidth={1.75} className="size-5 text-navy-200" />
+                </span>
+                <span className="text-navy-100">{text}</span>
+              </li>
+            ))}
+          </ul>
+        </div>
+
+        <p className="relative text-sm text-navy-300">
+          © {new Date().getFullYear()} Sri Gujarathi Vidhyalaya
+        </p>
+      </aside>
+
+      <div className="flex flex-1 items-center justify-center p-6 lg:p-12">
+        <div className="flex w-full max-w-sm flex-col gap-8">
+          <div className="flex flex-col items-center gap-2 text-center lg:hidden">
+            <span className="flex size-14 items-center justify-center rounded-2xl bg-navy-800">
+              <School aria-hidden strokeWidth={1.75} className="size-7 text-white" />
+            </span>
+            <p className="text-title text-neutral-900">Sri Gujarathi Vidhyalaya</p>
+          </div>
+
+          <div className="flex flex-col gap-1 text-center lg:text-left">
+            <h1 className="text-display text-neutral-900">Welcome back</h1>
+            <p className="text-neutral-500">Sign in to the school portal</p>
+          </div>
+
+          <div
+            className="flex rounded-lg bg-neutral-100 p-1"
+            role="group"
+            aria-label="Account type"
+          >
+            {MODES.map(({ key, label, icon: Icon }) => (
               <button
-                key={m}
+                key={key}
                 type="button"
-                aria-pressed={mode === m}
-                onClick={() => setMode(m)}
+                aria-pressed={mode === key}
+                onClick={() => {
+                  setMode(key);
+                  setError(null);
+                }}
                 className={cn(
-                  "h-9 flex-1 rounded font-medium capitalize transition-colors duration-fast",
-                  mode === m ? "bg-white text-primary-700 shadow-sm" : "text-neutral-500",
+                  "flex h-10 flex-1 items-center justify-center gap-2 rounded-md font-medium transition-colors duration-fast",
+                  mode === key
+                    ? "bg-white text-navy-800 shadow-sm"
+                    : "text-neutral-500 hover:text-neutral-700",
                 )}
               >
-                {m}
+                <Icon aria-hidden strokeWidth={1.75} className="size-4" />
+                {label}
               </button>
             ))}
           </div>
@@ -104,10 +172,13 @@ export default function LoginPage() {
                   onChange={(e) => setPassword(e.target.value)}
                   required
                 />
-                <Link href="/forgot-password" className="-mt-1 text-sm text-primary-700">
+                <Link
+                  href="/forgot-password"
+                  className="-mt-2 self-end text-sm font-medium text-primary-700 hover:text-primary-800"
+                >
                   Forgot password?
                 </Link>
-                <Button type="submit" loading={busy}>
+                <Button type="submit" size="lg" loading={busy}>
                   Sign in
                 </Button>
               </>
@@ -117,34 +188,57 @@ export default function LoginPage() {
                   label="Phone number"
                   type="tel"
                   autoComplete="tel"
+                  helper="Use the mobile number registered with the school."
                   value={phone}
                   onChange={(e) => setPhone(e.target.value)}
                   disabled={otpSent}
                   required
                 />
                 {otpSent ? (
-                  <Input
-                    label="Verification code"
-                    inputMode="numeric"
-                    autoComplete="one-time-code"
-                    value={code}
-                    onChange={(e) => setCode(e.target.value)}
-                    required
-                  />
+                  <>
+                    <Input
+                      label="Verification code"
+                      inputMode="numeric"
+                      autoComplete="one-time-code"
+                      helper="We sent a 6-digit code to your phone."
+                      value={code}
+                      onChange={(e) => setCode(e.target.value)}
+                      required
+                    />
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setOtpSent(false);
+                        setCode("");
+                        setError(null);
+                      }}
+                      className="-mt-2 self-end text-sm font-medium text-primary-700 hover:text-primary-800"
+                    >
+                      Change number
+                    </button>
+                  </>
                 ) : null}
-                <Button type="submit" loading={busy}>
+                <Button type="submit" size="lg" loading={busy}>
                   {otpSent ? "Verify code" : "Send code"}
                 </Button>
               </>
             )}
 
             {error ? (
-              <p className="text-sm text-danger-600" role="alert">
+              <div
+                role="alert"
+                className="rounded-md border border-danger-200 bg-danger-50 px-3 py-2 text-sm text-danger-700"
+              >
                 {error}
-              </p>
+              </div>
             ) : null}
           </form>
-        </Card>
+
+          <p className="text-center text-sm text-neutral-500">
+            Accounts are created by the school office — contact the office if you can&apos;t sign
+            in.
+          </p>
+        </div>
       </div>
     </main>
   );

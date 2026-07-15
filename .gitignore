@@ -25,6 +25,7 @@ packages/db/prisma/*.db
 .env
 .env.*
 !.env.example
+LOGIN.local.md
 
 # expo generated
 apps/mobile/expo-env.d.ts
