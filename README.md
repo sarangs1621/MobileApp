@@ -89,6 +89,12 @@ CI and offline builds set `SKIP_ENV_VALIDATION=true` so `build`/`typecheck` run 
    ```
    Or scan the QR code with the Expo Go app on your phone.
 
+> **Push notifications are off by default** — two switches must be set for
+> go-live: server `PUSH_NOTIFICATIONS_ENABLED="true"` and an EAS `projectId`
+> in `apps/mobile/app.json` (`extra.eas.projectId`). Until then notifications
+> are in-app only and the mobile Settings screen shows a warning. See
+> `docs/DEPLOYMENT.md` → "Push notifications go-live".
+
 ### Login credentials
 
 > Your own environment's sign-in details live in **`LOGIN.local.md`** at the

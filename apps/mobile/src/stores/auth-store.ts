@@ -14,12 +14,19 @@ import { trpcClient } from "../lib/trpc";
 
 type AuthStatus = "loading" | "signedIn" | "signedOut";
 
+/** Why this device is (or isn't) receiving pushes — surfaced in Settings so an
+ *  operator can tell Phase 1 isn't live instead of it silently no-oping. */
+export type PushRegistrationStatus =
+  "pending" | "registered" | "no-project-id" | "permission-denied" | "token-error";
+
 interface AuthState {
   status: AuthStatus;
   session: Session | null;
   /** Expo push token registered for this device (for logout deregistration). */
   pushToken: string | null;
+  pushStatus: PushRegistrationStatus;
   setPushToken: (token: string | null) => void;
+  setPushStatus: (status: PushRegistrationStatus) => void;
   /** Restore the session and subscribe to changes. Returns an unsubscribe fn. */
   initialize: () => () => void;
   signInWithEmail: (email: string, password: string) => Promise<void>;
@@ -32,7 +39,9 @@ export const useAuthStore = create<AuthState>((set, get) => ({
   status: "loading",
   session: null,
   pushToken: null,
+  pushStatus: "pending",
   setPushToken: (token) => set({ pushToken: token }),
+  setPushStatus: (pushStatus) => set({ pushStatus }),
 
   initialize: () => {
     const apply = (session: Session | null): void => {

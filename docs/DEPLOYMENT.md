@@ -52,6 +52,22 @@ typecheck → test → build → db:validate) then **`docker`** job (`needs: ci`
 (validates the Dockerfile end-to-end). Any stage fails ⇒ pipeline fails. No deploy job is wired
 (no live secrets in CI) — deployment is `scripts/deploy.sh` from a host with `.env`.
 
+## Push notifications go-live (Phase 1)
+
+Push delivery is wired end-to-end but ships **off by default on BOTH ends** — until both
+switches below are set, the app looks done while delivering zero pushes:
+
+1. **Server** — set `PUSH_NOTIFICATIONS_ENABLED="true"` in the deploy `.env` (see
+   `.env.example`); optional `EXPO_ACCESS_TOKEN` if the Expo project enforces push security.
+   Without it the Expo adapter is never wired and every notification is in-app only.
+2. **Mobile build** — set the EAS project id in `apps/mobile/app.json` →
+   `extra.eas.projectId` (from `eas init` / expo.dev project page). Without it the app
+   skips push registration entirely, so no device ever gets a token. The mobile Settings
+   screen shows a visible warning while registration is skipped.
+
+Verify: log in on a device, Settings shows no push warning, then trigger any notifying
+action (e.g. publish an announcement) and confirm the push arrives with the app closed.
+
 ## Rollback
 `BACKUP.md §7` — re-point to the previous tagged image; pair with a forward corrective migration
 or restore if the bad release changed the schema.

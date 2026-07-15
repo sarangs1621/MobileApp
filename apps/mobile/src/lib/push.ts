@@ -30,40 +30,49 @@ Notifications.setNotificationHandler({
 
 const platform = (): "ios" | "android" => (Platform.OS === "ios" ? "ios" : "android");
 
-async function getExpoPushToken(): Promise<string | null> {
+async function getExpoPushToken(): Promise<
+  { token: string } | { token: null; status: "no-project-id" | "permission-denied" | "token-error" }
+> {
   const existing = await Notifications.getPermissionsAsync();
   const granted = existing.granted || (await Notifications.requestPermissionsAsync()).granted;
   if (!granted) {
-    return null;
+    return { token: null, status: "permission-denied" };
   }
   const projectId = Constants.expoConfig?.extra?.eas?.projectId ?? Constants.easConfig?.projectId;
   if (!projectId) {
     console.warn("[push] no EAS projectId configured — skipping push registration");
-    return null;
+    return { token: null, status: "no-project-id" };
   }
   try {
     const { data } = await Notifications.getExpoPushTokenAsync({ projectId });
-    return data;
+    return { token: data };
   } catch (err) {
     console.warn("[push] failed to resolve Expo push token", err);
-    return null;
+    return { token: null, status: "token-error" };
   }
 }
 
 /** Register this device once, on mount of a signed-in ACTIVE session. */
 export function usePushRegistration(): void {
   const setPushToken = useAuthStore((s) => s.setPushToken);
+  const setPushStatus = useAuthStore((s) => s.setPushStatus);
   const register = trpc.notification.registerDevice.useMutation();
 
   useEffect(() => {
     let cancelled = false;
     void (async () => {
-      const token = await getExpoPushToken();
-      if (!token || cancelled) {
+      const result = await getExpoPushToken();
+      if (cancelled) {
         return;
       }
-      setPushToken(token);
-      register.mutate({ expoPushToken: token, platform: platform() });
+      if (result.token === null) {
+        // Surfaced in Settings so the operator can tell push isn't live.
+        setPushStatus(result.status);
+        return;
+      }
+      setPushStatus("registered");
+      setPushToken(result.token);
+      register.mutate({ expoPushToken: result.token, platform: platform() });
     })();
     return () => {
       cancelled = true;

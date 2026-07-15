@@ -7,6 +7,7 @@ import { Pressable, ScrollView, Text, View } from "react-native";
 
 import { Field, Header, Loading } from "../../../components/behaviour-ui";
 import { trpc } from "../../../lib/trpc";
+import { useAuthStore, type PushRegistrationStatus } from "../../../stores/auth-store";
 
 /**
  * School configuration (M16 Step 6, ADR-024). Everyone sees the branding + current
@@ -70,6 +71,8 @@ export default function SettingsScreen() {
           </Field>
         </Card>
 
+        <PushStatusNote />
+
         <Card title="App preferences">
           <Field label="Theme">
             {canManage ? (
@@ -128,6 +131,30 @@ export default function SettingsScreen() {
           </Card>
         ) : null}
       </ScrollView>
+    </View>
+  );
+}
+
+const PUSH_STATUS_WARNINGS: Partial<Record<PushRegistrationStatus, string>> = {
+  "no-project-id":
+    "Push notifications are NOT active: this build has no EAS projectId (app.json → extra.eas.projectId). In-app notifications still work; see docs/DEPLOYMENT.md go-live steps.",
+  "permission-denied":
+    "Push notifications are off: notification permission was denied for this app. Enable it in system settings to receive alerts.",
+  "token-error":
+    "Push notifications are NOT active: this device could not get a push token (see app logs).",
+};
+
+/** Visible diagnostic when push registration was skipped — otherwise a half-configured
+ *  deployment looks "done" while delivering nothing (Phase 1 go-live check). */
+function PushStatusNote() {
+  const pushStatus = useAuthStore((s) => s.pushStatus);
+  const warning = PUSH_STATUS_WARNINGS[pushStatus];
+  if (!warning) {
+    return null;
+  }
+  return (
+    <View className="rounded-md border border-warning bg-warning/10 p-3">
+      <Text className="text-sm text-foreground">{warning}</Text>
     </View>
   );
 }
