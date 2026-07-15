@@ -16,7 +16,7 @@ app connects as service_role. Tenancy is a loose `schoolId` on every row.
   ownership; **no transport role gate**. `system:manage` (ops) is **SUPER_ADMIN only**.
 - **RLS:** every table (52 models) RLS-enabled; anon denied; per-role SELECT policies.
 - **Headers (`next.config.ts`):** X-Frame-Options DENY, nosniff, Referrer-Policy, HSTS,
-  Permissions-Policy, **CSP (report-only — enforce phase pending, see checklist)**.
+  Permissions-Policy, **CSP (ENFORCED — per-request nonce + `'strict-dynamic'`, set in `apps/web/middleware.ts`)**.
 - **CSRF:** tRPC JSON-POST forces preflight; no CORS headers; SameSite-Lax; no state-changing GET.
 - **Rate limiting:** publish/approve (20/min) + upload mints (30/min), per principal
   (`packages/api/src/rate-limit.ts`). Login is Supabase-direct (rate-limited there).

@@ -36,43 +36,12 @@ const config: NextConfig = {
           { key: "Referrer-Policy", value: "strict-origin-when-cross-origin" },
           { key: "Strict-Transport-Security", value: "max-age=31536000; includeSubDomains" },
           { key: "Permissions-Policy", value: "camera=(), microphone=(), geolocation=()" },
-          // CSP ships REPORT-ONLY first (ADR-025 §2 deviation 2): it surfaces
-          // violations in the browser console without risk of white-screening the
-          // Next 15 app shell. Enforce phase = drop 'unsafe-inline' from script-src
-          // and wire per-request nonces. Non-blocking, so an imperfect origin is safe.
-          { key: "Content-Security-Policy-Report-Only", value: contentSecurityPolicy },
+          // CSP is ENFORCED with a per-request nonce — set in middleware.ts (it
+          // needs a fresh nonce per request, which static headers can't provide).
         ],
       },
     ];
   },
 };
-
-/**
- * Report-only CSP. `connect-src`/`img-src` allow the Supabase origin (REST +
- * realtime WS + storage) derived from the public env at config load.
- */
-const supabaseOrigin = (() => {
-  try {
-    return new URL(process.env.NEXT_PUBLIC_SUPABASE_URL ?? "").origin;
-  } catch {
-    return "";
-  }
-})();
-const supabaseWs = supabaseOrigin.replace(/^https:/, "wss:");
-
-const contentSecurityPolicy = [
-  "default-src 'self'",
-  "base-uri 'self'",
-  "object-src 'none'",
-  "frame-ancestors 'none'",
-  "form-action 'self'",
-  `img-src 'self' data: blob: ${supabaseOrigin}`.trim(),
-  "font-src 'self' data:",
-  "style-src 'self' 'unsafe-inline'",
-  "script-src 'self' 'unsafe-inline'",
-  `connect-src 'self' ${supabaseOrigin} ${supabaseWs}`.trim(),
-]
-  .join("; ")
-  .replace(/\s+/g, " ");
 
 export default config;
