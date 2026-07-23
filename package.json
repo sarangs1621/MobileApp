@@ -8,10 +8,6 @@
     "node": ">=24 <25",
     "pnpm": ">=9"
   },
-  "resolutions": {
-    "react": "19.1.0",
-    "react-dom": "19.1.0"
-  },
   "scripts": {
     "build": "turbo run build",
     "dev": "turbo run dev",
