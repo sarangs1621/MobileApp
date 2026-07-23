@@ -243,16 +243,19 @@ pnpm --filter @repo/db seed             # create demo school + accounts (idempot
 | Office Admin | `office@sgv.seed` | password `Test@12345` |
 | Accountant | `accountant@sgv.seed` | password `Test@12345` |
 | Teacher | `teacher@sgv.seed` | password `Test@12345` |
-| Parent | phone `+91 90000 00001` | SMS OTP (see below) |
+| Parent | `parent@sgv.seed` (QA bypass) | password `Test@12345` — see below |
 
 Seeded structure: academic year **2026–27** (active), **Grade 1 A/B-less A** + **Grade 2 A**, subjects
 (Gujarati/Maths/English/EVS), 5 students, the teacher assigned to Grade 1 A (and its class teacher),
 and the parent linked to **Aarav Shah (Grade 1 A)**. Testers then *exercise* the app (mark attendance,
 set homework, generate invoices, post announcements) to create the rest of the data.
 
-**Parent login without a real SMS provider:** in the QA Supabase project, add a **test phone number**
-under *Authentication → Providers → Phone → Test OTP* (e.g. `+919000000001` → `123456`). The tester
-then enters that fixed code — no SMS/DLT needed for QA.
+**Parent login — QA bypass (no OTP/SMS needed):** the seeded parent also has an email+password, so a
+tester signs in through the **Staff portal** screen with `parent@sgv.seed` / `Test@12345` — the app
+reads the role from the account and loads the **parent app**. (The portal chooser only picks a sign-in
+screen; the role comes from `auth.me`.) Real parents have no email/password, so this can't be used in
+production. When phone OTP is configured later, the real parent login is phone `+91 90000 00001`; you
+can then drop the email from the seed if you want the bypass gone.
 
 ### 3. Run the apps
 

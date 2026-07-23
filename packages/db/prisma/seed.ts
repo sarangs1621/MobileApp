@@ -18,6 +18,10 @@ const SCHOOL_ID = "seed-demo-school";
 const YEAR_ID = "seed-year-2026";
 const PASSWORD = "Test@12345";
 const PARENT_PHONE = "+919000000001";
+// QA bypass: the parent also gets an email+password so a tester can sign in via
+// the Staff portal (which loads the PARENT app — role comes from auth.me) WITHOUT
+// a phone OTP. Real parents have no email/password, so this can't be used in prod.
+const PARENT_EMAIL = "parent@sgv.seed";
 
 const STAFF = [
   {
@@ -120,7 +124,12 @@ async function main(): Promise<void> {
     }
     const parentUid =
       (await adminFindUserId(supabase, { phone: PARENT_PHONE })) ??
-      (await adminCreateUser(supabase, { phone: PARENT_PHONE }));
+      (await adminFindUserId(supabase, { email: PARENT_EMAIL })) ??
+      (await adminCreateUser(supabase, {
+        email: PARENT_EMAIL,
+        password: PASSWORD,
+        phone: PARENT_PHONE,
+      }));
     const U = (key: string): string => {
       const value = uid[key];
       if (value === undefined) throw new Error(`missing uid for ${key}`);
@@ -162,8 +171,9 @@ async function main(): Promise<void> {
         role: "PARENT",
         status: "ACTIVE",
         phone: PARENT_PHONE,
+        email: PARENT_EMAIL,
       },
-      update: { status: "ACTIVE", phone: PARENT_PHONE },
+      update: { status: "ACTIVE", phone: PARENT_PHONE, email: PARENT_EMAIL },
     });
     const parent = await prisma.parent.upsert({
       where: { userId: parentUid },
@@ -318,7 +328,8 @@ async function main(): Promise<void> {
 
     console.warn(
       `[seed] done. Staff logins: super/office/accountant/teacher@sgv.seed (password ${PASSWORD}). ` +
-        `Parent login: phone ${PARENT_PHONE} (needs a Supabase test-OTP for that number). ` +
+        `Parent: sign in via the STAFF PORTAL with ${PARENT_EMAIL} / ${PASSWORD} (QA bypass — loads the ` +
+        `parent app; no OTP needed). Real parent login is phone ${PARENT_PHONE} once phone OTP is set up. ` +
         `Parent's child = Aarav Shah, Grade 1 A.`,
     );
   } finally {
