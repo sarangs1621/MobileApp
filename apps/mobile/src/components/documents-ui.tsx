@@ -33,15 +33,15 @@ export const DOCUMENT_STATUS_LABEL: Record<DocumentStatusKey, string> = {
 };
 
 const DOCUMENT_STATUS_CLASS: Record<DocumentStatusKey, string> = {
-  GENERATED: "text-muted-foreground",
-  UPLOADED: "text-muted-foreground",
-  APPROVED: "text-success",
-  ARCHIVED: "text-muted-foreground",
+  GENERATED: "text-neutral-500",
+  UPLOADED: "text-neutral-500",
+  APPROVED: "text-success-600",
+  ARCHIVED: "text-neutral-500",
 };
 
 export function DocumentStatusText({ status }: { status: DocumentStatusKey }) {
   return (
-    <Text className={`text-xs font-semibold ${DOCUMENT_STATUS_CLASS[status]}`}>
+    <Text className={`font-sans text-caption font-semibold ${DOCUMENT_STATUS_CLASS[status]}`}>
       {DOCUMENT_STATUS_LABEL[status]}
     </Text>
   );

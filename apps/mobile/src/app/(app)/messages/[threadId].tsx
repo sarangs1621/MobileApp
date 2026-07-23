@@ -1,5 +1,6 @@
 import { useTranslation } from "@repo/i18n";
 import { useLocalSearchParams, useRouter } from "expo-router";
+import { CaretLeft, PaperPlaneTilt } from "phosphor-react-native";
 import { useEffect, useState } from "react";
 import {
   FlatList,
@@ -10,6 +11,7 @@ import {
   TextInput,
   View,
 } from "react-native";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 import { trpc } from "../../../lib/trpc";
 
@@ -23,6 +25,7 @@ export default function ConversationScreen() {
   const { dict } = useTranslation();
   const t = dict.messages;
   const router = useRouter();
+  const insets = useSafeAreaInsets();
   const { threadId, name, student } = useLocalSearchParams<{
     threadId: string;
     name?: string;
@@ -63,27 +66,34 @@ export default function ConversationScreen() {
     send.mutate({ threadId, body: trimmed });
   };
 
+  const canSend = body.trim().length > 0 && !send.isPending;
+
   return (
     <KeyboardAvoidingView
       behavior={Platform.OS === "ios" ? "padding" : undefined}
-      className="flex-1 bg-background"
+      className="flex-1 bg-neutral-50"
     >
-      <View className="border-b border-border px-4 py-3">
-        <View className="flex-row items-center gap-3">
+      <View
+        style={{ paddingTop: insets.top + 12 }}
+        className="border-b border-subtle bg-white px-3 pb-3"
+      >
+        <View className="flex-row items-center gap-2">
           <Pressable
             accessibilityRole="button"
             accessibilityLabel={t.goBack}
             onPress={() => router.back()}
-            className="min-h-11 min-w-11 items-center justify-center rounded-md"
+            className="size-11 items-center justify-center rounded-xl active:bg-primary-50"
           >
-            <Text className="text-lg text-foreground">←</Text>
+            <CaretLeft size={22} color="#44382C" weight="bold" />
           </Pressable>
-          <Text className="flex-1 text-xl font-semibold text-foreground" numberOfLines={1}>
+          <Text className="flex-1 font-display text-title text-neutral-900" numberOfLines={1}>
             {name || t.conversation}
           </Text>
         </View>
         {student ? (
-          <Text className="ml-14 text-xs text-muted-foreground">{t.about(student)}</Text>
+          <Text className="ml-[52px] font-sans text-caption text-neutral-500">
+            {t.about(student)}
+          </Text>
         ) : null}
       </View>
 
@@ -93,23 +103,25 @@ export default function ConversationScreen() {
         keyExtractor={(item) => item.id}
         contentContainerClassName="p-4 gap-2"
         ListEmptyComponent={
-          query.isLoading ? null : <Text className="text-muted-foreground">{t.noMessages}</Text>
+          query.isLoading ? null : (
+            <Text className="font-sans text-neutral-500">{t.noMessages}</Text>
+          )
         }
         renderItem={({ item }) => {
           const mine = item.senderUserId === myUserId;
           return (
             <View className={mine ? "items-end" : "items-start"}>
               <View
-                className={`max-w-[80%] rounded-lg px-3 py-2 ${
-                  mine ? "bg-primary" : "border border-border bg-card"
+                className={`max-w-[80%] rounded-2xl px-3.5 py-2.5 ${
+                  mine ? "bg-primary-600" : "border border-subtle bg-white"
                 }`}
               >
-                <Text className={mine ? "text-primary-foreground" : "text-foreground"}>
+                <Text className={`font-sans ${mine ? "text-neutral-50" : "text-neutral-900"}`}>
                   {item.body}
                 </Text>
                 <Text
-                  className={`mt-1 text-xs ${
-                    mine ? "text-primary-foreground/70" : "text-muted-foreground"
+                  className={`mt-1 font-sans text-caption ${
+                    mine ? "text-neutral-50/70" : "text-neutral-400"
                   }`}
                 >
                   {new Date(item.createdAt).toLocaleTimeString([], {
@@ -123,24 +135,29 @@ export default function ConversationScreen() {
         }}
       />
 
-      <View className="flex-row items-end gap-2 border-t border-border p-3">
+      <View
+        style={{ paddingBottom: insets.bottom + 12 }}
+        className="flex-row items-end gap-2 border-t border-subtle bg-white px-3 pt-3"
+      >
         <TextInput
-          className="min-h-11 flex-1 rounded-md border border-border bg-card px-3 py-2 text-foreground"
+          className="min-h-11 flex-1 rounded-[10px] border border-subtle bg-white px-3 py-2.5 font-sans text-body text-neutral-900"
           value={body}
           placeholder={t.writeMessage}
+          placeholderTextColor="#948676"
           accessibilityLabel={t.writeMessage}
           multiline
           onChangeText={setBody}
         />
         <Pressable
           accessibilityRole="button"
-          disabled={body.trim().length === 0 || send.isPending}
+          accessibilityLabel={t.send}
+          disabled={!canSend}
           onPress={submit}
-          className={`min-h-11 justify-center rounded-md px-4 ${
-            body.trim().length > 0 && !send.isPending ? "bg-primary" : "bg-muted"
+          className={`size-11 items-center justify-center rounded-full ${
+            canSend ? "bg-primary-600" : "bg-neutral-200"
           }`}
         >
-          <Text className="font-medium text-primary-foreground">{t.send}</Text>
+          <PaperPlaneTilt size={18} color={canSend ? "#FCF9F3" : "#948676"} weight="fill" />
         </Pressable>
       </View>
     </KeyboardAvoidingView>

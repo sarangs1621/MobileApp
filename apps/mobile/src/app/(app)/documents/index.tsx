@@ -2,6 +2,7 @@ import { Link, useRouter } from "expo-router";
 import { FlatList, Pressable, Text, View } from "react-native";
 
 import { Header, Loading } from "../../../components/behaviour-ui";
+import { Avatar } from "../../../components/ui";
 import { trpc } from "../../../lib/trpc";
 
 /**
@@ -24,7 +25,9 @@ export default function DocumentsHomeScreen() {
           data={rows}
           keyExtractor={(s) => s.id}
           contentContainerClassName="p-4 gap-3"
-          ListEmptyComponent={<Text className="text-muted-foreground">No students found.</Text>}
+          ListEmptyComponent={
+            <Text className="font-sans text-neutral-500">No students found.</Text>
+          }
           renderItem={({ item }) => (
             <Link
               href={{ pathname: "/documents/student/[studentId]", params: { studentId: item.id } }}
@@ -32,12 +35,17 @@ export default function DocumentsHomeScreen() {
             >
               <Pressable
                 accessibilityRole="button"
-                className="gap-1 rounded-md border border-border bg-card p-4"
+                className="flex-row items-center gap-3 rounded-card border border-subtle bg-card p-4 shadow-sm active:bg-neutral-50"
               >
-                <Text className="font-medium text-foreground">
-                  {item.firstName} {item.lastName}
-                </Text>
-                <Text className="text-sm text-muted-foreground">Admission {item.admissionNo}</Text>
+                <Avatar name={`${item.firstName} ${item.lastName}`} />
+                <View className="flex-1">
+                  <Text className="font-sans text-body font-semibold text-neutral-900">
+                    {item.firstName} {item.lastName}
+                  </Text>
+                  <Text className="font-sans text-sm text-neutral-500">
+                    Admission {item.admissionNo}
+                  </Text>
+                </View>
               </Pressable>
             </Link>
           )}

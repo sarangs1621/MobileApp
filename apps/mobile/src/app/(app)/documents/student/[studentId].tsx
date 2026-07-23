@@ -76,14 +76,14 @@ export default function StudentDocumentsScreen() {
           }
         >
           {error ? (
-            <Text className="rounded-md bg-destructive/10 p-3 text-sm text-destructive">
+            <Text className="rounded-xl bg-danger-100 p-3 font-sans text-sm text-danger-700">
               {error}
             </Text>
           ) : null}
 
           {canManage ? (
-            <View className="gap-2 rounded-md border border-border bg-card p-4">
-              <Text className="text-sm font-medium text-muted-foreground">
+            <View className="gap-2 rounded-card border border-subtle bg-card p-4 shadow-sm">
+              <Text className="font-sans text-caption font-semibold uppercase tracking-eyebrow text-neutral-500">
                 Generate a certificate
               </Text>
               <View className="flex-row flex-wrap gap-2">
@@ -96,15 +96,17 @@ export default function StudentDocumentsScreen() {
                       setError(null);
                       generate.mutate({ studentId: studentId ?? "", type: t });
                     }}
-                    className="rounded-md border border-border bg-background px-3 py-2"
+                    className={`rounded-pill border border-subtle bg-white px-3.5 py-2 active:bg-primary-50 ${
+                      busy ? "opacity-50" : ""
+                    }`}
                   >
-                    <Text className="text-xs font-medium text-foreground">
+                    <Text className="font-sans text-caption font-semibold text-neutral-700">
                       {DOCUMENT_TYPE_LABEL[t]}
                     </Text>
                   </Pressable>
                 ))}
               </View>
-              <Text className="text-xs text-muted-foreground">
+              <Text className="font-sans text-caption text-neutral-400">
                 Generated certificates snapshot the student’s current details. Upload prepared files
                 from the web console.
               </Text>
@@ -112,23 +114,29 @@ export default function StudentDocumentsScreen() {
           ) : null}
 
           {rows.length === 0 ? (
-            <Text className="text-muted-foreground">No documents yet.</Text>
+            <Text className="font-sans text-neutral-500">No documents yet.</Text>
           ) : (
             [...groups.entries()].map(([type, docs]) => (
               <View key={type} className="gap-2">
-                <Text className="text-sm font-semibold text-foreground">
+                <Text className="font-sans text-caption font-semibold uppercase tracking-eyebrow text-neutral-500">
                   {DOCUMENT_TYPE_LABEL[type]}
                 </Text>
                 {docs.map((d) => (
-                  <View key={d.id} className="gap-2 rounded-md border border-border bg-card p-4">
+                  <View
+                    key={d.id}
+                    className="gap-2 rounded-card border border-subtle bg-card p-4 shadow-sm"
+                  >
                     <View className="flex-row items-center justify-between gap-2">
-                      <Text className="flex-1 text-foreground" numberOfLines={1}>
+                      <Text
+                        className="flex-1 font-sans text-body font-semibold text-neutral-900"
+                        numberOfLines={1}
+                      >
                         {d.fileName ?? d.snapshot?.studentName ?? "Certificate"}
                       </Text>
                       <DocumentStatusText status={d.status} />
                     </View>
                     {d.snapshot?.issuedOn ? (
-                      <Text className="text-xs text-muted-foreground">
+                      <Text className="font-sans text-caption text-neutral-400">
                         Issued {d.snapshot.issuedOn}
                       </Text>
                     ) : null}
@@ -137,7 +145,7 @@ export default function StudentDocumentsScreen() {
                       {d.hasFile ? (
                         <ActionButton label="Open" onPress={() => open(d.id)} />
                       ) : (
-                        <Text className="self-center text-xs text-muted-foreground">
+                        <Text className="self-center font-sans text-caption text-neutral-400">
                           No file yet
                         </Text>
                       )}
@@ -191,12 +199,16 @@ function ActionButton({
       accessibilityRole="button"
       disabled={disabled}
       onPress={onPress}
-      className={`rounded-md border px-3 py-2 ${
-        destructive ? "border-destructive" : "border-border bg-background"
+      className={`rounded-pill border px-4 py-2 ${
+        destructive
+          ? "border-danger-600 bg-white active:bg-danger-100"
+          : "border-strong bg-white active:bg-primary-50"
       } ${disabled ? "opacity-50" : ""}`}
     >
       <Text
-        className={`text-xs font-medium ${destructive ? "text-destructive" : "text-foreground"}`}
+        className={`font-sans text-caption font-semibold ${
+          destructive ? "text-danger-600" : "text-primary-700"
+        }`}
       >
         {label}
       </Text>

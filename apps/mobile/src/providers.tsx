@@ -4,6 +4,7 @@ import { useQueryClient } from "@tanstack/react-query";
 import { PersistQueryClientProvider } from "@tanstack/react-query-persist-client";
 import Constants from "expo-constants";
 import { useEffect, useState, type ReactNode } from "react";
+import { SafeAreaProvider } from "react-native-safe-area-context";
 
 import {
   asyncStoragePersister,
@@ -27,25 +28,27 @@ export function Providers({ children }: { children: ReactNode }) {
   useEffect(() => initialize(), [initialize]);
 
   return (
-    <trpc.Provider client={trpcClient} queryClient={queryClient}>
-      <PersistQueryClientProvider
-        client={queryClient}
-        persistOptions={{
-          persister: asyncStoragePersister,
-          maxAge: DAY_MS,
-          buster: appVersion,
-          // Only cache successful reads on the allowlist (STATE_MANAGEMENT_PLAN §6).
-          dehydrateOptions: {
-            shouldDehydrateQuery: (q) => q.state.status === "success" && shouldPersistQuery(q),
-          },
-        }}
-      >
-        <ThemeProvider>
-          <CacheOnLogout />
-          <LocaleFromProfile>{children}</LocaleFromProfile>
-        </ThemeProvider>
-      </PersistQueryClientProvider>
-    </trpc.Provider>
+    <SafeAreaProvider>
+      <trpc.Provider client={trpcClient} queryClient={queryClient}>
+        <PersistQueryClientProvider
+          client={queryClient}
+          persistOptions={{
+            persister: asyncStoragePersister,
+            maxAge: DAY_MS,
+            buster: appVersion,
+            // Only cache successful reads on the allowlist (STATE_MANAGEMENT_PLAN §6).
+            dehydrateOptions: {
+              shouldDehydrateQuery: (q) => q.state.status === "success" && shouldPersistQuery(q),
+            },
+          }}
+        >
+          <ThemeProvider>
+            <CacheOnLogout />
+            <LocaleFromProfile>{children}</LocaleFromProfile>
+          </ThemeProvider>
+        </PersistQueryClientProvider>
+      </trpc.Provider>
+    </SafeAreaProvider>
   );
 }
 

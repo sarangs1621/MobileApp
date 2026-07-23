@@ -20,7 +20,7 @@ export default function MyReferralsScreen() {
   const rows = list.data ?? [];
 
   return (
-    <View className="flex-1 bg-background">
+    <View className="flex-1 bg-neutral-50">
       <Header title="Behaviour referrals" onBack={() => router.back()} />
       {list.isLoading ? (
         <Loading />
@@ -33,7 +33,7 @@ export default function MyReferralsScreen() {
             <RefreshControl refreshing={list.isRefetching} onRefresh={() => list.refetch()} />
           }
           ListEmptyComponent={
-            <Text className="text-muted-foreground">
+            <Text className="font-sans text-neutral-500">
               You have no referrals. Open a student’s profile to record one.
             </Text>
           }
@@ -41,14 +41,16 @@ export default function MyReferralsScreen() {
             <Link href={{ pathname: "/behaviour/[id]", params: { id: item.id } }} asChild>
               <Pressable
                 accessibilityRole="button"
-                className="gap-1 rounded-md border border-border bg-card p-4"
+                className="gap-1.5 rounded-card border border-subtle bg-card p-4 shadow-sm active:bg-neutral-50"
               >
                 <View className="flex-row items-center justify-between gap-2">
-                  <Text className="flex-1 font-medium text-foreground">{item.title}</Text>
+                  <Text className="flex-1 font-sans text-body font-semibold text-neutral-900">
+                    {item.title}
+                  </Text>
                   <SeverityText severity={item.severity} />
                 </View>
                 <View className="flex-row items-center justify-between gap-2">
-                  <Text className="text-xs text-muted-foreground">
+                  <Text className="font-sans text-caption text-neutral-500">
                     {CATEGORY_LABEL[item.category]}
                   </Text>
                   <StatusText status={item.status} />

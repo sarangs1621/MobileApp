@@ -1,34 +1,43 @@
 import { PERMISSIONS } from "@repo/constants";
 import type { LocaleCode } from "@repo/constants";
 import { can } from "@repo/core";
-import { useRouter } from "expo-router";
+import { Buildings, GlobeHemisphereEast, Storefront } from "phosphor-react-native";
 import { useEffect, useState } from "react";
-import { Pressable, ScrollView, Text, View } from "react-native";
+import { Text, View } from "react-native";
 
-import { Field, Header, Loading } from "../../../components/behaviour-ui";
+import {
+  Banner,
+  Button,
+  SectionCard,
+  SegmentedControl,
+  ScreenScaffold,
+  Skeleton,
+  useToast,
+} from "../../../components/ui";
 import { trpc } from "../../../lib/trpc";
 import { useAuthStore, type PushRegistrationStatus } from "../../../stores/auth-store";
 
 /**
- * School configuration (M16 Step 6, ADR-024). Everyone sees the branding + current
- * app preferences (read-only). Admins (settings:manage) edit the two phone-relevant
- * defaults — theme + language — inline. School profile / academic / numbering are
- * shown READ-ONLY with a pointer to the web admin console (the M13/M15 mobile-is-
- * lighter precedent — no heavy admin forms on the phone).
+ * School configuration (M16 Step 6, ADR-024; design handoff §Administration).
+ * Everyone sees the branding + current app preferences (read-only). Admins
+ * (settings:manage) edit the two phone-relevant defaults — theme + language —
+ * inline. School profile / academic / numbering are shown READ-ONLY with a
+ * pointer to the web admin console (the mobile-is-lighter precedent — no heavy
+ * admin forms on the phone).
  */
 type ThemeValue = "light" | "dark" | "system";
-const THEMES: { value: ThemeValue; label: string }[] = [
-  { value: "light", label: "Light" },
-  { value: "dark", label: "Dark" },
-  { value: "system", label: "System" },
+const THEMES: { key: ThemeValue; label: string }[] = [
+  { key: "light", label: "Light" },
+  { key: "dark", label: "Dark" },
+  { key: "system", label: "System" },
 ];
-const LANGUAGES: { value: LocaleCode; label: string }[] = [
-  { value: "en", label: "English" },
-  { value: "ml", label: "Malayalam" },
+const LANGUAGES: { key: LocaleCode; label: string }[] = [
+  { key: "en", label: "English" },
+  { key: "ml", label: "Malayalam" },
 ];
 
 export default function SettingsScreen() {
-  const router = useRouter();
+  const { show } = useToast();
   const role = trpc.auth.me.useQuery().data?.role;
   const canManage = role !== undefined && can(role, PERMISSIONS.SETTINGS_MANAGE);
 
@@ -36,7 +45,11 @@ export default function SettingsScreen() {
   const school = trpc.settings.get.useQuery(undefined, { enabled: canManage });
   const utils = trpc.useUtils();
   const save = trpc.configuration.update.useMutation({
-    onSuccess: () => void utils.settings.getPublic.invalidate(),
+    onSuccess: () => {
+      show("success", "Preferences saved");
+      return utils.settings.getPublic.invalidate();
+    },
+    onError: (e) => show("error", e.message),
   });
 
   const [theme, setTheme] = useState<ThemeValue | null>(null);
@@ -52,86 +65,84 @@ export default function SettingsScreen() {
 
   if (pub.isLoading || !pub.data) {
     return (
-      <View className="flex-1 bg-background">
-        <Header title="Settings" onBack={() => router.back()} />
-        <Loading />
-      </View>
+      <ScreenScaffold
+        title={canManage ? "Administration" : "Settings"}
+        subtitle="School configuration"
+      >
+        <Skeleton className="h-32 rounded-card" />
+        <Skeleton className="h-40 rounded-card" />
+      </ScreenScaffold>
     );
   }
 
   const dirty = theme !== pub.data.theme || language !== pub.data.language;
+  const themeValue = theme ?? (pub.data.theme as ThemeValue);
+  const languageValue = language ?? pub.data.language;
 
   return (
-    <View className="flex-1 bg-background">
-      <Header title="Settings" onBack={() => router.back()} />
-      <ScrollView contentContainerClassName="p-4 gap-4">
-        <Card title="School">
-          <Field label="Name">
-            <Text className="text-foreground">{pub.data.branding.displayName ?? "—"}</Text>
-          </Field>
-        </Card>
+    <ScreenScaffold
+      title={canManage ? "Administration" : "Settings"}
+      subtitle="School configuration"
+    >
+      <SectionCard Icon={Buildings} tint="gold" title="School">
+        <ReadRow label="Name" value={pub.data.branding.displayName ?? "—"} />
+      </SectionCard>
 
-        <PushStatusNote />
+      <PushStatusNote />
 
-        <Card title="App preferences">
-          <Field label="Theme">
-            {canManage ? (
-              <Segmented options={THEMES} value={theme} onChange={setTheme} />
-            ) : (
-              <Text className="text-foreground">{label(THEMES, pub.data.theme as ThemeValue)}</Text>
-            )}
-          </Field>
-          <Field label="Language">
-            {canManage ? (
-              <Segmented options={LANGUAGES} value={language} onChange={setLanguage} />
-            ) : (
-              <Text className="text-foreground">{label(LANGUAGES, pub.data.language)}</Text>
-            )}
-          </Field>
+      <SectionCard
+        Icon={GlobeHemisphereEast}
+        tint="cream"
+        title="App preferences"
+        subtitle="Theme and language"
+      >
+        <View className="gap-1.5">
+          <Text className="font-sans text-sm font-semibold text-neutral-900">Theme</Text>
           {canManage ? (
-            <Pressable
-              accessibilityRole="button"
-              disabled={!dirty || save.isPending}
-              onPress={() => {
-                if (theme !== null && language !== null) save.mutate({ theme, language });
-              }}
-              className={`min-h-11 items-center justify-center rounded-md px-4 py-3 ${
-                dirty && !save.isPending ? "bg-primary" : "bg-muted"
-              }`}
-            >
-              <Text className="font-medium text-primary-foreground">
-                {save.isPending ? "Saving…" : "Save preferences"}
-              </Text>
-            </Pressable>
-          ) : null}
-          {save.error ? (
-            <Text className="text-sm text-destructive">{save.error.message}</Text>
-          ) : null}
-        </Card>
-
-        {canManage ? (
-          <Card title="School profile">
-            <Field label="Principal">
-              <Text className="text-foreground">{school.data?.principalName ?? "—"}</Text>
-            </Field>
-            <Field label="Contact email">
-              <Text className="text-foreground">{school.data?.contactEmail ?? "—"}</Text>
-            </Field>
-            <Field label="Contact phone">
-              <Text className="text-foreground">{school.data?.contactPhone ?? "—"}</Text>
-            </Field>
-            <Field label="Invoice / certificate prefix">
-              <Text className="text-foreground">
-                {school.data?.invoicePrefix ?? "—"} / {school.data?.certificatePrefix ?? "—"}
-              </Text>
-            </Field>
-            <Text className="px-1 text-xs text-muted-foreground">
-              Edit the school profile, academic defaults and numbering on the web admin console.
+            <SegmentedControl options={THEMES} value={themeValue} onChange={setTheme} />
+          ) : (
+            <Text className="font-sans text-body text-neutral-800">
+              {label(THEMES, themeValue)}
             </Text>
-          </Card>
+          )}
+        </View>
+        <View className="gap-1.5">
+          <Text className="font-sans text-sm font-semibold text-neutral-900">Language</Text>
+          {canManage ? (
+            <SegmentedControl options={LANGUAGES} value={languageValue} onChange={setLanguage} />
+          ) : (
+            <Text className="font-sans text-body text-neutral-800">
+              {label(LANGUAGES, languageValue)}
+            </Text>
+          )}
+        </View>
+        {canManage ? (
+          <Button
+            label={save.isPending ? "Saving…" : "Save preferences"}
+            loading={save.isPending}
+            disabled={!dirty}
+            onPress={() => {
+              if (theme !== null && language !== null) save.mutate({ theme, language });
+            }}
+          />
         ) : null}
-      </ScrollView>
-    </View>
+      </SectionCard>
+
+      {canManage ? (
+        <SectionCard Icon={Storefront} tint="maroon" title="School profile">
+          <ReadRow label="Principal" value={school.data?.principalName ?? "—"} />
+          <ReadRow label="Contact email" value={school.data?.contactEmail ?? "—"} />
+          <ReadRow label="Contact phone" value={school.data?.contactPhone ?? "—"} />
+          <ReadRow
+            label="Invoice / certificate prefix"
+            value={`${school.data?.invoicePrefix ?? "—"} / ${school.data?.certificatePrefix ?? "—"}`}
+          />
+          <Text className="font-sans text-caption text-neutral-400">
+            Edit the school profile, academic defaults and numbering on the web admin console.
+          </Text>
+        </SectionCard>
+      ) : null}
+    </ScreenScaffold>
   );
 }
 
@@ -142,6 +153,8 @@ const PUSH_STATUS_WARNINGS: Partial<Record<PushRegistrationStatus, string>> = {
     "Push notifications are off: notification permission was denied for this app. Enable it in system settings to receive alerts.",
   "token-error":
     "Push notifications are NOT active: this device could not get a push token (see app logs).",
+  "expo-go":
+    "Push notifications are NOT active in Expo Go (removed in SDK 53). Use a development build to test push.",
 };
 
 /** Visible diagnostic when push registration was skipped — otherwise a half-configured
@@ -152,54 +165,18 @@ function PushStatusNote() {
   if (!warning) {
     return null;
   }
-  return (
-    <View className="rounded-md border border-warning bg-warning/10 p-3">
-      <Text className="text-sm text-foreground">{warning}</Text>
-    </View>
-  );
+  return <Banner tone="warning">{warning}</Banner>;
 }
 
-function label<T extends string>(options: { value: T; label: string }[], value: T): string {
-  return options.find((o) => o.value === value)?.label ?? value;
+function label<T extends string>(options: { key: T; label: string }[], value: T): string {
+  return options.find((o) => o.key === value)?.label ?? value;
 }
 
-function Segmented<T extends string>({
-  options,
-  value,
-  onChange,
-}: {
-  options: { value: T; label: string }[];
-  value: T | null;
-  onChange: (v: T) => void;
-}) {
+function ReadRow({ label, value }: { label: string; value: string }) {
   return (
-    <View className="flex-row flex-wrap gap-2">
-      {options.map((o) => {
-        const selected = o.value === value;
-        return (
-          <Pressable
-            key={o.value}
-            accessibilityRole="button"
-            onPress={() => onChange(o.value)}
-            className={`min-h-11 justify-center rounded-md border px-4 py-2 ${
-              selected ? "border-primary bg-primary" : "border-border bg-card"
-            }`}
-          >
-            <Text className={selected ? "font-medium text-primary-foreground" : "text-foreground"}>
-              {o.label}
-            </Text>
-          </Pressable>
-        );
-      })}
-    </View>
-  );
-}
-
-function Card({ title, children }: { title: string; children: React.ReactNode }) {
-  return (
-    <View className="gap-2 rounded-md border border-border bg-card p-4">
-      <Text className="text-sm font-medium text-muted-foreground">{title}</Text>
-      {children}
+    <View className="gap-0.5">
+      <Text className="font-sans text-caption text-neutral-500">{label}</Text>
+      <Text className="font-sans text-body text-neutral-900">{value}</Text>
     </View>
   );
 }

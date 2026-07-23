@@ -1,24 +1,23 @@
 "use client";
 
+import { Exam, GraduationCap, Info, PencilSimple, Plus, Trash } from "@phosphor-icons/react";
 import type { ExamDto, ExamTypeKey } from "@repo/types";
-import { GraduationCap } from "lucide-react";
+import { cn } from "@repo/ui";
 import Link from "next/link";
 import { useEffect, useState } from "react";
 
 import { EXAM_TYPE_LABEL, EXAM_TYPES } from "@/src/components/exam/ui";
 import {
   Button,
-  ConfirmDialog,
-  DataTable,
   Dialog,
   EmptyState,
+  ErrorState,
+  IconButton,
   Input,
   Select,
+  Skeleton,
   StatusChip,
-  TableToolbar,
-  PageHeader,
   useToast,
-  type Column,
 } from "@/src/components/ui";
 import { trpc } from "@/src/trpc/react";
 
@@ -27,16 +26,67 @@ type ExamFormValues = {
   type: ExamTypeKey;
   startDate: string | null;
   endDate: string | null;
+  gradeScaleId: string | null;
+  publishNow: boolean;
 };
 
+/** Today as YYYY-MM-DD in school time. */
+const todayIso = () => new Date().toLocaleDateString("en-CA", { timeZone: "Asia/Kolkata" });
+
+const fmt = (iso: string, opts: Intl.DateTimeFormatOptions) =>
+  new Date(iso + "T00:00:00").toLocaleDateString("en-IN", opts);
+
+/** "2026-07-20".."2026-07-24" → "20 – 24 Jul 2026". */
+function fmtRange(start: string | null, end: string | null): string {
+  if (!start && !end) return "—";
+  if (start && end) {
+    if (start === end) return fmt(start, { day: "numeric", month: "short", year: "numeric" });
+    return start.slice(0, 7) === end.slice(0, 7)
+      ? `${Number(start.slice(8, 10))} – ${fmt(end, { day: "numeric", month: "short", year: "numeric" })}`
+      : `${fmt(start, { day: "numeric", month: "short" })} – ${fmt(end, { day: "numeric", month: "short", year: "numeric" })}`;
+  }
+  const one = (start ?? end)!;
+  return fmt(one, { day: "numeric", month: "short", year: "numeric" });
+}
+
+/** Timing subline: in progress / starts in N days / ended. */
+function timing(exam: ExamDto): { label: string; live: boolean } | null {
+  const today = todayIso();
+  const { startDate, endDate } = exam;
+  if (startDate && startDate <= today && (!endDate || today <= endDate)) {
+    return {
+      label: endDate
+        ? today === endDate
+          ? "In progress — ends today"
+          : `In progress — ends ${fmt(endDate, { weekday: "short" })}`
+        : "In progress",
+      live: true,
+    };
+  }
+  if (startDate && startDate > today) {
+    const days = Math.round(
+      (new Date(startDate + "T00:00:00").getTime() - new Date(today + "T00:00:00").getTime()) /
+        86_400_000,
+    );
+    return { label: days === 1 ? "Starts tomorrow" : `Starts in ${days} days`, live: false };
+  }
+  if (endDate && endDate < today) {
+    return { label: `Ended ${fmt(endDate, { day: "numeric", month: "short" })}`, live: false };
+  }
+  return null;
+}
+
 /**
- * Exam dashboard (M5, ADR-012). Lists a year's exams; create/edit/delete; publish
- * with the R3 locked-vs-total confirm (parents never see partial). Assessments +
- * the register lifecycle live on the exam detail page.
+ * Exam dashboard (M5, ADR-012; design handoff §3). Lists a year's exams with
+ * contextual row actions — published exams lead with "Enter marks", drafts with
+ * "Publish" (the R3 locked-vs-total confirm; parents never see partial) plus
+ * edit/delete. The modal uses the handoff type chip grid, grade-scale picker and
+ * a publish-immediately toggle (create only — it chains the publish mutation).
  */
 export default function ExamsDashboardPage() {
   const { show } = useToast();
   const years = trpc.academicYear.list.useQuery();
+  const scales = trpc.gradeScale.list.useQuery();
   const [yearId, setYearId] = useState("");
   // Default to the active year once loaded.
   useEffect(() => {
@@ -50,11 +100,13 @@ export default function ExamsDashboardPage() {
   const utils = trpc.useUtils();
   const invalidate = () => utils.exam.list.invalidate();
 
-  const create = trpc.exam.create.useMutation({
+  const publish = trpc.exam.publish.useMutation({
     onSuccess: () => {
       void invalidate();
-      show("success", "Exam created");
     },
+    onError: (e) => show("error", e.message),
+  });
+  const create = trpc.exam.create.useMutation({
     onError: (e) => show("error", e.message),
   });
   const update = trpc.exam.update.useMutation({
@@ -78,122 +130,171 @@ export default function ExamsDashboardPage() {
 
   const rows = [...(exams.data ?? [])].sort((a, b) => a.displayOrder - b.displayOrder);
 
-  const columns: Column<ExamDto>[] = [
-    {
-      key: "name",
-      header: "Name",
-      render: (exam) => (
-        <Link href={`/exams/${exam.id}`} className="font-medium text-primary-700 hover:underline">
-          {exam.name}
-        </Link>
-      ),
-    },
-    { key: "type", header: "Type", render: (exam) => EXAM_TYPE_LABEL[exam.type] },
-    {
-      key: "dates",
-      header: "Dates",
-      render: (exam) => (
-        <span className="text-neutral-500">
-          {exam.startDate ?? "—"}
-          {exam.endDate ? ` → ${exam.endDate}` : ""}
-        </span>
-      ),
-    },
-    {
-      key: "status",
-      header: "Status",
-      render: (exam) => <StatusChip status={exam.isPublished ? "PUBLISHED" : "DRAFT"} />,
-    },
-    {
-      key: "actions",
-      header: "Actions",
-      render: (exam) =>
-        exam.isPublished ? null : (
-          <div className="flex flex-wrap gap-1">
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={() => {
-                create.reset();
-                update.reset();
-                setEditing(exam);
-              }}
-            >
-              Edit
-            </Button>
-            <Button
-              variant="destructive"
-              size="sm"
-              onClick={() => {
-                remove.reset();
-                setDeleting(exam);
-              }}
-            >
-              Delete
-            </Button>
-            <Button variant="ghost" size="sm" onClick={() => setPublishing(exam)}>
-              Publish
-            </Button>
-          </div>
-        ),
-    },
-  ];
-
   return (
-    <section className="flex flex-col gap-4">
-      <PageHeader
-        title="Exams"
-        action={
-          <Button
-            icon={GraduationCap}
-            disabled={yearId === ""}
-            onClick={() => {
-              create.reset();
-              update.reset();
-              setEditing("new");
-            }}
-          >
-            New exam
-          </Button>
-        }
-      />
+    <section className="flex flex-col gap-3.5">
+      {/* Filter row */}
+      <div className="flex flex-wrap items-end gap-3">
+        <div className="min-w-[170px]">
+          <Select label="Academic year" value={yearId} onChange={(e) => setYearId(e.target.value)}>
+            {(years.data ?? []).map((y) => (
+              <option key={y.id} value={y.id}>
+                {y.name}
+                {y.status === "ACTIVE" ? " (active)" : ""}
+              </option>
+            ))}
+          </Select>
+        </div>
+        <div className="flex-1" />
+        <Button
+          size="sm"
+          icon={Plus}
+          disabled={yearId === ""}
+          onClick={() => {
+            create.reset();
+            update.reset();
+            setEditing("new");
+          }}
+        >
+          New exam
+        </Button>
+      </div>
 
-      <DataTable
-        columns={columns}
-        rows={rows}
-        rowKey={(exam) => exam.id}
-        loading={exams.isLoading}
-        error={exams.isError}
-        onRetry={() => void exams.refetch()}
-        toolbar={
-          <TableToolbar
-            filters={
-              <Select
-                label="Academic year"
-                value={yearId}
-                onChange={(e) => setYearId(e.target.value)}
-              >
-                {(years.data ?? []).map((y) => (
-                  <option key={y.id} value={y.id}>
-                    {y.name}
-                    {y.status === "ACTIVE" ? " (active)" : ""}
-                  </option>
-                ))}
-              </Select>
+      {/* Exam table card */}
+      <div className="overflow-hidden rounded-card border border-subtle bg-white shadow-sm">
+        <div className="grid grid-cols-[1.5fr_0.9fr_1.4fr_1fr_auto] items-center gap-3 border-b border-cream-100 px-5 py-2.5 text-[11px] font-bold uppercase tracking-[0.1em] text-ink-400">
+          <span>Exam</span>
+          <span>Type</span>
+          <span>Dates</span>
+          <span>Status</span>
+          <span className="w-[170px] text-right">Actions</span>
+        </div>
+        {exams.isLoading || yearId === "" ? (
+          <div className="flex flex-col gap-3 p-5">
+            <Skeleton className="h-11" />
+            <Skeleton className="h-11" />
+          </div>
+        ) : exams.isError ? (
+          <ErrorState onRetry={() => void exams.refetch()} />
+        ) : rows.length === 0 ? (
+          <EmptyState
+            icon={GraduationCap}
+            title="No exams for this year yet."
+            message="Create the first exam — assessments and marks registers hang off it."
+            action={
+              <Button size="sm" icon={Plus} onClick={() => setEditing("new")}>
+                New exam
+              </Button>
             }
           />
-        }
-        empty={<EmptyState icon={GraduationCap} title="No exams for this year yet." />}
-      />
+        ) : (
+          rows.map((exam) => {
+            const t = timing(exam);
+            return (
+              <div
+                key={exam.id}
+                className="grid grid-cols-[1.5fr_0.9fr_1.4fr_1fr_auto] items-center gap-3 border-b border-cream-100 px-5 py-[15px] transition-colors duration-fast last:border-0 hover:bg-cream-50"
+              >
+                <span className="flex items-center gap-3">
+                  <span
+                    className={cn(
+                      "flex size-9 shrink-0 items-center justify-center rounded-[11px]",
+                      t?.live ? "bg-gold-100 text-gold-700" : "bg-maroon-50 text-maroon-700",
+                    )}
+                  >
+                    <Exam aria-hidden size={18} weight={t?.live ? "bold" : "regular"} />
+                  </span>
+                  <span className="flex min-w-0 flex-col gap-px">
+                    <Link
+                      href={`/exams/${exam.id}`}
+                      className="truncate text-[14.5px] font-semibold text-ink-900 hover:text-maroon-700"
+                    >
+                      {exam.name}
+                    </Link>
+                    {t ? (
+                      <span
+                        className={cn(
+                          "text-caption",
+                          t.live ? "font-semibold text-gold-700" : "text-ink-400",
+                        )}
+                      >
+                        {t.label}
+                      </span>
+                    ) : null}
+                  </span>
+                </span>
+                <span>
+                  <StatusChip tone="neutral" label={EXAM_TYPE_LABEL[exam.type]} />
+                </span>
+                <span className="text-[13.5px] text-ink-500">
+                  {fmtRange(exam.startDate, exam.endDate)}
+                </span>
+                <span>
+                  <StatusChip
+                    status={exam.isPublished ? "PUBLISHED" : "DRAFT"}
+                    dot={exam.isPublished}
+                  />
+                </span>
+                <span className="flex w-[170px] items-center justify-end gap-1.5">
+                  {exam.isPublished ? (
+                    <Link
+                      href={`/exams/${exam.id}`}
+                      className="whitespace-nowrap rounded-full bg-maroon-700 px-3.5 py-[7px] text-[12.5px] font-semibold text-cream-50 transition-colors duration-fast hover:bg-maroon-800"
+                    >
+                      Enter marks
+                    </Link>
+                  ) : (
+                    <>
+                      <button
+                        type="button"
+                        onClick={() => setPublishing(exam)}
+                        className="cursor-pointer whitespace-nowrap rounded-full border border-subtle bg-white px-3.5 py-[7px] text-[12.5px] font-semibold text-maroon-700 transition-colors duration-fast hover:border-maroon-200 hover:bg-maroon-50"
+                      >
+                        Publish
+                      </button>
+                      <IconButton
+                        label="Edit"
+                        icon={PencilSimple}
+                        onClick={() => {
+                          create.reset();
+                          update.reset();
+                          setEditing(exam);
+                        }}
+                      />
+                      <IconButton
+                        label="Delete"
+                        tone="danger"
+                        icon={Trash}
+                        onClick={() => {
+                          remove.reset();
+                          setDeleting(exam);
+                        }}
+                      />
+                    </>
+                  )}
+                </span>
+              </div>
+            );
+          })
+        )}
+      </div>
+
+      <p className="flex items-center gap-1.5 text-[12.5px] text-ink-400">
+        <Info aria-hidden size={15} />
+        Published exams appear on the school calendar and in parent notifications automatically.
+      </p>
 
       {editing !== null && yearId !== "" ? (
         <ExamFormModal
           exam={editing === "new" ? null : editing}
-          busy={create.isPending || update.isPending}
+          scales={(scales.data ?? []).map((s) => ({
+            id: s.id,
+            name: s.name,
+            isDefault: s.isDefault,
+          }))}
+          busy={create.isPending || update.isPending || publish.isPending}
           error={create.error?.message ?? update.error?.message ?? null}
           onClose={() => setEditing(null)}
           onSubmit={(values) => {
-            const done = { onSuccess: () => setEditing(null) };
             if (editing === "new") {
               create.mutate(
                 {
@@ -202,8 +303,22 @@ export default function ExamsDashboardPage() {
                   type: values.type,
                   ...(values.startDate ? { startDate: values.startDate } : {}),
                   ...(values.endDate ? { endDate: values.endDate } : {}),
+                  ...(values.gradeScaleId ? { gradeScaleId: values.gradeScaleId } : {}),
                 },
-                done,
+                {
+                  onSuccess: (created) => {
+                    setEditing(null);
+                    if (values.publishNow && created?.id) {
+                      publish.mutate(
+                        { examId: created.id },
+                        { onSuccess: () => show("success", "Exam saved and published") },
+                      );
+                    } else {
+                      void invalidate();
+                      show("success", "Exam saved as draft");
+                    }
+                  },
+                },
               );
             } else {
               update.mutate(
@@ -213,8 +328,9 @@ export default function ExamsDashboardPage() {
                   type: values.type,
                   startDate: values.startDate,
                   endDate: values.endDate,
+                  gradeScaleId: values.gradeScaleId,
                 },
-                done,
+                { onSuccess: () => setEditing(null) },
               );
             }
           }}
@@ -222,9 +338,8 @@ export default function ExamsDashboardPage() {
       ) : null}
 
       {deleting !== null ? (
-        <ConfirmDialog
-          title="Delete exam"
-          message={`Permanently delete “${deleting.name}”? An exam with assessments or marks cannot be deleted.`}
+        <ConfirmDeleteExam
+          exam={deleting}
           busy={remove.isPending}
           error={remove.error?.message ?? null}
           onCancel={() => setDeleting(null)}
@@ -245,14 +360,18 @@ export default function ExamsDashboardPage() {
   );
 }
 
+/* ----------------------------------------------------------------- Exam modal */
+
 function ExamFormModal({
   exam,
+  scales,
   busy,
   error,
   onClose,
   onSubmit,
 }: {
   exam: ExamDto | null;
+  scales: readonly { id: string; name: string; isDefault: boolean }[];
   busy: boolean;
   error: string | null;
   onClose: () => void;
@@ -262,6 +381,9 @@ function ExamFormModal({
   const [type, setType] = useState<ExamTypeKey>(exam?.type ?? "UNIT_TEST");
   const [startDate, setStartDate] = useState(exam?.startDate ?? "");
   const [endDate, setEndDate] = useState(exam?.endDate ?? "");
+  const [gradeScaleId, setGradeScaleId] = useState(exam?.gradeScaleId ?? "");
+  const [publishNow, setPublishNow] = useState(false);
+  const defaultScale = scales.find((s) => s.isDefault);
 
   return (
     <Dialog title={exam ? "Edit exam" : "New exam"} onClose={onClose}>
@@ -273,9 +395,11 @@ function ExamFormModal({
             type,
             startDate: startDate || null,
             endDate: endDate || null,
+            gradeScaleId: gradeScaleId || null,
+            publishNow,
           });
         }}
-        className="flex flex-col gap-3"
+        className="flex flex-col gap-[18px]"
       >
         <Input
           label="Name"
@@ -284,14 +408,34 @@ function ExamFormModal({
           placeholder="Half Yearly Examination"
           required
         />
-        <Select label="Type" value={type} onChange={(e) => setType(e.target.value as ExamTypeKey)}>
-          {EXAM_TYPES.map((t) => (
-            <option key={t} value={t}>
-              {EXAM_TYPE_LABEL[t]}
-            </option>
-          ))}
-        </Select>
-        <div className="flex flex-wrap gap-3">
+
+        {/* Type chip grid (design handoff §Choice pills) */}
+        <div className="flex flex-col gap-1.5">
+          <span className="text-[13px] font-semibold text-ink-900">Type</span>
+          <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
+            {EXAM_TYPES.map((t) => {
+              const selected = type === t;
+              return (
+                <button
+                  key={t}
+                  type="button"
+                  aria-pressed={selected}
+                  onClick={() => setType(t)}
+                  className={cn(
+                    "cursor-pointer whitespace-nowrap rounded-[11px] border px-1.5 py-2.5 text-[12.5px] font-semibold transition-colors duration-fast",
+                    selected
+                      ? "border-maroon-700 bg-maroon-50 text-maroon-800"
+                      : "border-subtle bg-white text-ink-500 hover:border-strong",
+                  )}
+                >
+                  {EXAM_TYPE_LABEL[t]}
+                </button>
+              );
+            })}
+          </div>
+        </div>
+
+        <div className="grid grid-cols-2 gap-3.5">
           <Input
             label="Start date"
             type="date"
@@ -306,17 +450,103 @@ function ExamFormModal({
           />
         </div>
 
-        {error ? <p className="text-sm text-danger-600">{error}</p> : null}
+        <Select
+          label="Grade scale"
+          value={gradeScaleId}
+          onChange={(e) => setGradeScaleId(e.target.value)}
+          helper={defaultScale ? `${defaultScale.name} is the school default.` : undefined}
+        >
+          <option value="">
+            {defaultScale ? `${defaultScale.name} (default)` : "School default"}
+          </option>
+          {scales
+            .filter((s) => !s.isDefault)
+            .map((s) => (
+              <option key={s.id} value={s.id}>
+                {s.name}
+              </option>
+            ))}
+        </Select>
 
-        <div className="mt-2 flex justify-end gap-2">
+        {/* Publish immediately — create only; chains the publish mutation. */}
+        {exam === null ? (
+          <div className="flex items-center justify-between gap-3 rounded-xl border border-subtle bg-cream-50 px-3.5 py-3">
+            <span className="flex flex-col gap-px">
+              <span className="text-[13.5px] font-semibold text-ink-900">Publish immediately</span>
+              <span className="text-caption text-ink-500">
+                Parents and teachers see it on the calendar right away.
+              </span>
+            </span>
+            <button
+              type="button"
+              role="switch"
+              aria-checked={publishNow}
+              aria-label="Publish immediately"
+              onClick={() => setPublishNow((v) => !v)}
+              className={cn(
+                "relative h-[26px] w-[46px] shrink-0 cursor-pointer rounded-[13px] transition-colors duration-base",
+                publishNow ? "bg-green-600" : "bg-sand-400",
+              )}
+            >
+              <span
+                className={cn(
+                  "absolute top-[3px] size-5 rounded-full bg-white shadow transition-[left] duration-base",
+                  publishNow ? "left-[23px]" : "left-[3px]",
+                )}
+              />
+            </button>
+          </div>
+        ) : null}
+
+        {error ? <p className="text-sm text-red-600">{error}</p> : null}
+
+        <div className="mt-1 flex justify-end gap-2.5">
           <Button type="button" variant="secondary" onClick={onClose}>
             Cancel
           </Button>
           <Button type="submit" loading={busy}>
-            Save
+            Save exam
           </Button>
         </div>
       </form>
+    </Dialog>
+  );
+}
+
+/* ------------------------------------------------------------- Delete confirm */
+
+function ConfirmDeleteExam({
+  exam,
+  busy,
+  error,
+  onCancel,
+  onConfirm,
+}: {
+  exam: ExamDto;
+  busy: boolean;
+  error: string | null;
+  onCancel: () => void;
+  onConfirm: () => void;
+}) {
+  return (
+    <Dialog title="Delete exam?" onClose={onCancel} size="sm">
+      <p className="text-sm text-ink-500">
+        Permanently delete <span className="font-semibold text-ink-900">{exam.name}</span>? An exam
+        with assessments or marks cannot be deleted.
+      </p>
+      {error ? (
+        <p className="mt-3 text-sm text-red-600" role="alert">
+          {error}
+        </p>
+      ) : null}
+      <div className="mt-5 flex justify-end gap-2.5">
+        <Button variant="secondary" size="sm" onClick={onCancel}>
+          Cancel
+        </Button>
+        <Button variant="destructive" size="sm" loading={busy} onClick={onConfirm}>
+          Delete exam
+        </Button>
+      </div>
     </Dialog>
   );
 }
@@ -353,14 +583,14 @@ function PublishModal({
   return (
     <Dialog title={`Publish “${exam.name}”`} onClose={onClose}>
       {registers.isLoading ? (
-        <p className="text-sm text-neutral-500">Loading registers…</p>
+        <p className="text-sm text-ink-500">Loading registers…</p>
       ) : total === 0 ? (
-        <p className="mb-4 text-sm text-neutral-500">
+        <p className="mb-4 text-sm text-ink-500">
           No registers have been started — parents will see no marks for this exam. Publishing is
           permanent for this exam.
         </p>
       ) : (
-        <p className="mb-4 text-sm text-neutral-500">
+        <p className="mb-4 text-sm text-ink-500">
           {locked} of {total} register{total === 1 ? "" : "s"} locked.{" "}
           {unlocked > 0
             ? `${unlocked} not yet locked won’t be visible to parents.`
@@ -368,10 +598,8 @@ function PublishModal({
           Publishing is permanent for this exam.
         </p>
       )}
-      {publish.error ? (
-        <p className="mb-3 text-sm text-danger-600">{publish.error.message}</p>
-      ) : null}
-      <div className="flex justify-end gap-2">
+      {publish.error ? <p className="mb-3 text-sm text-red-600">{publish.error.message}</p> : null}
+      <div className="flex justify-end gap-2.5">
         <Button type="button" variant="secondary" onClick={onClose}>
           Cancel
         </Button>

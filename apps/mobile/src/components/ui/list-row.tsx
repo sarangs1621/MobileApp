@@ -1,17 +1,18 @@
-import { Feather } from "@expo/vector-icons";
+import { CaretRight } from "phosphor-react-native";
 import type { ReactNode } from "react";
 import { Pressable, Text, View } from "react-native";
 
 /**
- * Avatar (ADR-UX1, mobile) — initials with a deterministic accent background.
+ * Avatar (design handoff, mobile) — initials with a deterministic accent
+ * background.
  */
 const AVATAR_BG = [
-  "bg-attendance",
-  "bg-exams",
-  "bg-homework",
-  "bg-fees",
-  "bg-calendar",
-  "bg-messages",
+  "bg-primary-600",
+  "bg-gold-600",
+  "bg-success-600",
+  "bg-info-600",
+  "bg-primary-500",
+  "bg-warning-600",
 ] as const;
 
 function initials(name: string): string {
@@ -32,14 +33,14 @@ export function Avatar({ name, size = "md" }: { name: string; size?: "sm" | "md"
     <View
       className={`items-center justify-center rounded-full ${AVATAR_BG[hashIndex(name, 6)]} ${dim}`}
     >
-      <Text className={`font-semibold text-white ${text}`}>{initials(name)}</Text>
+      <Text className={`font-sans font-semibold text-neutral-50 ${text}`}>{initials(name)}</Text>
     </View>
   );
 }
 
 /**
  * ListRow — avatar/icon slot, title, secondary line, trailing chip/chevron.
- * ≥44pt, pressed feedback. The mobile "table row".
+ * >=44pt, pressed feedback, warm-shadow card. The mobile "table row".
  */
 export function ListRow({
   title,
@@ -59,14 +60,14 @@ export function ListRow({
       accessibilityRole={onPress ? "button" : undefined}
       disabled={!onPress}
       onPress={onPress}
-      className="min-h-14 flex-row items-center gap-3 rounded-card border border-neutral-200 bg-card px-4 py-3 active:opacity-70"
+      className="min-h-14 flex-row items-center gap-3 rounded-card border border-subtle bg-card px-4 py-3 shadow-sm active:bg-neutral-50"
     >
       {leading}
       <View className="flex-1">
-        <Text className="font-sans text-body font-medium text-neutral-900">{title}</Text>
+        <Text className="font-sans text-body font-semibold text-neutral-900">{title}</Text>
         {subtitle ? <Text className="font-sans text-sm text-neutral-500">{subtitle}</Text> : null}
       </View>
-      {trailing ?? (onPress ? <Feather name="chevron-right" size={20} color="#A8A29E" /> : null)}
+      {trailing ?? (onPress ? <CaretRight size={18} color="#948676" weight="bold" /> : null)}
     </Pressable>
   );
 }

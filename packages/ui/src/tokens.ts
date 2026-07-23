@@ -1,30 +1,31 @@
 /**
  * Design tokens (UI_DESIGN_SYSTEM.md). The single source of truth consumed by
  * the Tailwind preset (web) and NativeWind (mobile). Colors are HSL channels so
- * web can wrap them as `hsl(var(--token))`. Brand hues are placeholders pending
- * §16.7 — only `primary` changes when branding lands.
+ * web can wrap them as `hsl(var(--token))`. Branding (§16.7) landed 2026-07-18:
+ * the Sri Gujarati Vidyalaya heritage identity — maroon/sienna brand (from the
+ * 1869 crest), heritage-gold accents, parchment neutrals and warm ink text.
  */
 export const colorTokens = {
-  background: "0 0% 100%",
-  foreground: "222 47% 11%",
+  background: "40 60% 97%", // cream-50 parchment page
+  foreground: "28 36% 10%", // ink-900 warm dark
   card: "0 0% 100%",
-  cardForeground: "222 47% 11%",
-  primary: "221 83% 53%",
-  primaryForeground: "0 0% 100%",
-  secondary: "210 40% 96%",
-  secondaryForeground: "222 47% 11%",
-  muted: "210 40% 96%",
-  mutedForeground: "215 16% 47%",
-  accent: "210 40% 96%",
-  accentForeground: "222 47% 11%",
-  destructive: "0 84% 60%",
-  destructiveForeground: "0 0% 100%",
-  success: "142 71% 45%",
-  warning: "38 92% 50%",
-  info: "221 83% 53%",
-  border: "214 32% 91%",
-  input: "214 32% 91%",
-  ring: "221 83% 53%",
+  cardForeground: "28 36% 10%",
+  primary: "19 72% 28%", // maroon-700 #7A3414 (crest brand)
+  primaryForeground: "40 60% 97%",
+  secondary: "40 46% 94%", // cream-100 raised surface
+  secondaryForeground: "28 36% 10%",
+  muted: "40 46% 94%",
+  mutedForeground: "30 15% 38%", // ink-500
+  accent: "43 67% 92%", // gold-100
+  accentForeground: "38 71% 25%", // gold-800
+  destructive: "8 63% 43%", // muted heritage red
+  destructiveForeground: "40 60% 97%",
+  success: "137 33% 36%",
+  warning: "38 71% 40%",
+  info: "209 51% 36%",
+  border: "36 35% 81%", // sand-300 hairline
+  input: "36 35% 81%",
+  ring: "41 51% 52%", // gold-500 focus ring
 } as const;
 
 /** 4px base spacing scale. */
@@ -50,79 +51,80 @@ export const spacing = {
  * reference-of-truth; the mobile JS config mirrors it (can't import TS — ADR §6).
  */
 export const palette = {
-  // Institutional blue — brand #2563EB is 600.
+  // Crest maroon / sienna — brand #7A3414 is 600.
   primary: {
-    50: "#EFF6FF",
-    100: "#DBEAFE",
-    200: "#BFDBFE",
-    300: "#93C5FD",
-    400: "#60A5FA",
-    500: "#3B82F6",
-    600: "#2563EB",
-    700: "#1D4ED8",
-    800: "#1E40AF",
-    900: "#1E3A8A",
-    950: "#172554",
+    50: "#FBF1E9",
+    100: "#F6E3D5",
+    200: "#ECC6AC",
+    300: "#D89A72",
+    400: "#C0703F",
+    500: "#A65326",
+    600: "#7A3414",
+    700: "#642811",
+    800: "#4F1E0C",
+    900: "#3A1607",
+    950: "#2A0F04",
   },
-  // Deep navy — emphasis surfaces (sidebar, page headers).
+  // Deep maroon — emphasis surfaces (sidebar, page headers). Keeps the `navy`
+  // name so existing `bg-navy-*` call sites rebrand without churn.
   navy: {
-    50: "#F2F6FB",
-    100: "#E3ECF5",
-    200: "#C4D6E8",
-    300: "#93B2D1",
-    400: "#5B84AE",
-    500: "#37628F",
-    600: "#294D75",
-    700: "#1E3A5F",
-    800: "#1B3251",
-    900: "#182B45",
-    950: "#0F1C2E",
+    50: "#FBF1E9",
+    100: "#F6E3D5",
+    200: "#ECC6AC",
+    300: "#D89A72",
+    400: "#C0703F",
+    500: "#A65326",
+    600: "#8F4019",
+    700: "#7A3414",
+    800: "#642811",
+    900: "#4F1E0C",
+    950: "#3A1607",
   },
-  // Warm gray (stone) — text/surfaces/borders. Never pure #000/#FFF.
+  // Warm parchment → ink — text/surfaces/borders. Never pure #000/#FFF.
   neutral: {
-    50: "#FAFAF9",
-    100: "#F5F5F4",
-    200: "#E7E5E4",
-    300: "#D6D3D1",
-    400: "#A8A29E",
-    500: "#78716C",
-    600: "#57534E",
-    700: "#44403C",
-    800: "#292524",
-    900: "#1C1917",
-    950: "#0C0A09",
+    50: "#FCF9F3",
+    100: "#F6F1E7",
+    200: "#EDE4D5",
+    300: "#E0D3BF",
+    400: "#948676",
+    500: "#6E6052",
+    600: "#5A4C3F",
+    700: "#44382C",
+    800: "#33271B",
+    900: "#241A11",
+    950: "#160F09",
   },
   success: {
-    50: "#F0FDF4",
-    100: "#DCFCE7",
-    200: "#BBF7D0",
-    500: "#22C55E",
-    600: "#16A34A",
-    700: "#15803D",
+    50: "#F1F7F2",
+    100: "#E4EFE6",
+    200: "#C9DFCF",
+    500: "#4C8C5E",
+    600: "#3E7A4F",
+    700: "#32633F",
   },
   warning: {
-    50: "#FFFBEB",
-    100: "#FEF3C7",
-    200: "#FDE68A",
-    500: "#F59E0B",
-    600: "#D97706",
-    700: "#B45309",
+    50: "#FBF4E1",
+    100: "#F6ECD4",
+    200: "#EDD9A9",
+    500: "#C28A28",
+    600: "#B07A1E",
+    700: "#8F6318",
   },
   danger: {
-    50: "#FEF2F2",
-    100: "#FEE2E2",
-    200: "#FECACA",
-    500: "#EF4444",
-    600: "#DC2626",
-    700: "#B91C1C",
+    50: "#FAEDEA",
+    100: "#F6E2DC",
+    200: "#EBC5BA",
+    500: "#C24A36",
+    600: "#B23A28",
+    700: "#922F20",
   },
   info: {
-    50: "#EFF6FF",
-    100: "#DBEAFE",
-    200: "#BFDBFE",
-    500: "#3B82F6",
-    600: "#2563EB",
-    700: "#1D4ED8",
+    50: "#EDF3F8",
+    100: "#DEE9F2",
+    200: "#BFD5E6",
+    500: "#3A6F9F",
+    600: "#2E5E8C",
+    700: "#254B70",
   },
 } as const;
 
@@ -145,10 +147,14 @@ export const typography = {
   caption: { size: 12, lineHeight: 16, weight: 500 },
 } as const;
 
-/** Inter with a system fallback (ADR-UX1 §2). ml = future i18n fallback chain. */
+/**
+ * Hanken Grotesk (UI sans) + Newsreader (display serif for headings) — the
+ * heritage identity pair. ml = future i18n fallback chain.
+ */
 export const fontFamily = {
-  sans: 'Inter, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif',
-  ml: 'Inter, "Noto Sans Malayalam", sans-serif',
+  sans: '"Hanken Grotesk", system-ui, -apple-system, "Segoe UI", Roboto, sans-serif',
+  display: '"Newsreader", Georgia, "Times New Roman", serif',
+  ml: '"Hanken Grotesk", "Noto Sans Malayalam", sans-serif',
 } as const;
 
 /** Motion durations in ms (ADR-UX1 §4) — fast, subtle; low-end Android. */

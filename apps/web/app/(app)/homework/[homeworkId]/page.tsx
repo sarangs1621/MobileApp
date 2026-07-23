@@ -41,15 +41,18 @@ export default function HomeworkDetailPage() {
   const hw = trpc.homework.get.useQuery({ homeworkId }, { enabled: homeworkId !== "" });
 
   if (hw.isLoading) {
-    return <p className="text-neutral-500">Loading…</p>;
+    return <p className="text-sm text-ink-500">Loading…</p>;
   }
   if (hw.data === undefined) {
     return (
       <section className="flex flex-col gap-3">
-        <Link href="/homework" className="text-sm text-primary-700 hover:underline">
+        <Link
+          href="/homework"
+          className="text-sm font-semibold text-maroon-700 hover:text-maroon-800"
+        >
           ← All homework
         </Link>
-        <p className="text-neutral-500">Homework not found.</p>
+        <p className="text-ink-500">Homework not found.</p>
       </section>
     );
   }
@@ -61,14 +64,20 @@ export default function HomeworkDetailPage() {
         <PageHeader
           title={h.title}
           breadcrumb={
-            <Link href="/homework" className="text-primary-700 hover:underline">
+            <Link href="/homework" className="font-semibold text-maroon-700 hover:text-maroon-800">
               ← All homework
             </Link>
           }
-          action={<StatusChip status={h.status} label={HW_STATUS_LABEL[h.status]} />}
+          action={
+            <StatusChip
+              status={h.status}
+              label={HW_STATUS_LABEL[h.status]}
+              dot={h.status === "PUBLISHED"}
+            />
+          }
         />
-        <p className="text-sm text-neutral-500">Due {h.dueDate}</p>
-        {h.description ? <p className="text-neutral-800">{h.description}</p> : null}
+        <p className="text-sm text-ink-500">Due {h.dueDate}</p>
+        {h.description ? <p className="text-ink-800">{h.description}</p> : null}
       </div>
 
       <TeacherFiles homeworkId={homeworkId} status={h.status} canManage={!isParent} />

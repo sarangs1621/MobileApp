@@ -1,10 +1,13 @@
 import { useTranslation } from "@repo/i18n";
 import type { MessageThreadDto } from "@repo/types";
 import { useRouter } from "expo-router";
+import { Plus } from "phosphor-react-native";
 import { useMemo, useState } from "react";
 import { FlatList, Pressable, RefreshControl, ScrollView, Text, View } from "react-native";
 
 import { formatDate } from "../../../components/announcements-ui";
+import { Chip, Field, Header } from "../../../components/behaviour-ui";
+import { Avatar, Badge, Button } from "../../../components/ui";
 import { trpc } from "../../../lib/trpc";
 
 /**
@@ -29,7 +32,7 @@ export default function MessagesScreen() {
 
   if (composing) {
     return (
-      <View className="flex-1 bg-background">
+      <View className="flex-1 bg-neutral-50">
         <Header title={t.newMessage} onBack={() => setComposing(false)} />
         <Composer studentName={studentName} onClose={() => setComposing(false)} />
       </View>
@@ -49,25 +52,14 @@ export default function MessagesScreen() {
     });
 
   return (
-    <View className="flex-1 bg-background">
-      <View className="flex-row items-center gap-3 border-b border-border px-4 py-3">
-        <Pressable
-          accessibilityRole="button"
-          accessibilityLabel={t.goBack}
-          onPress={() => router.back()}
-          className="min-h-11 min-w-11 items-center justify-center rounded-md"
-        >
-          <Text className="text-lg text-foreground">←</Text>
-        </Pressable>
-        <Text className="flex-1 text-xl font-semibold text-foreground">{t.title}</Text>
-        <Pressable
-          accessibilityRole="button"
-          onPress={() => setComposing(true)}
-          className="min-h-11 justify-center rounded-md bg-primary px-3"
-        >
-          <Text className="font-medium text-primary-foreground">{t.newMessage}</Text>
-        </Pressable>
-      </View>
+    <View className="flex-1 bg-neutral-50">
+      <Header
+        title={t.title}
+        onBack={() => router.back()}
+        action={
+          <Button size="sm" Icon={Plus} label={t.newMessage} onPress={() => setComposing(true)} />
+        }
+      />
 
       <FlatList
         data={rows}
@@ -77,7 +69,9 @@ export default function MessagesScreen() {
           <RefreshControl refreshing={list.isRefetching} onRefresh={() => list.refetch()} />
         }
         ListEmptyComponent={
-          list.isLoading ? null : <Text className="text-muted-foreground">{t.noConversations}</Text>
+          list.isLoading ? null : (
+            <Text className="font-sans text-neutral-500">{t.noConversations}</Text>
+          )
         }
         renderItem={({ item }) => (
           <ThreadRow
@@ -119,20 +113,21 @@ function ThreadRow({
     <Pressable
       accessibilityRole="button"
       onPress={() => onOpen(name)}
-      className="flex-row items-center gap-3 rounded-md border border-border bg-card p-4"
+      className="flex-row items-center gap-3 rounded-card border border-subtle bg-card p-4 shadow-sm active:bg-neutral-50"
     >
+      <Avatar name={name} />
       <View className="min-w-0 flex-1">
-        <Text className="text-foreground" numberOfLines={1}>
+        <Text className="font-sans text-body text-neutral-900" numberOfLines={1}>
           <Text className="font-semibold">{name}</Text>
-          <Text className="text-muted-foreground"> · {studentLabel}</Text>
+          <Text className="text-neutral-500"> · {studentLabel}</Text>
         </Text>
         {thread.lastMessagePreview ? (
           <Text
             numberOfLines={1}
             className={
               thread.unreadCount > 0
-                ? "text-sm font-medium text-foreground"
-                : "text-sm text-muted-foreground"
+                ? "font-sans text-sm font-semibold text-neutral-800"
+                : "font-sans text-sm text-neutral-500"
             }
           >
             {thread.lastMessagePreview}
@@ -140,16 +135,13 @@ function ThreadRow({
         ) : null}
       </View>
       {thread.unreadCount > 0 ? (
-        <View
-          accessibilityLabel={t.unreadBadge(thread.unreadCount)}
-          className="rounded-full bg-primary px-2 py-0.5"
-        >
-          <Text className="text-xs font-semibold text-primary-foreground">
-            {thread.unreadCount}
-          </Text>
+        <View accessibilityLabel={t.unreadBadge(thread.unreadCount)}>
+          <Badge tone="brand" label={String(thread.unreadCount)} />
         </View>
       ) : null}
-      <Text className="text-xs text-muted-foreground">{formatDate(thread.lastMessageAt)}</Text>
+      <Text className="font-sans text-caption text-neutral-400">
+        {formatDate(thread.lastMessageAt)}
+      </Text>
     </Pressable>
   );
 }
@@ -192,8 +184,7 @@ function Composer({
 
   return (
     <ScrollView contentContainerClassName="p-4 gap-4">
-      <View className="gap-2">
-        <Text className="text-sm font-medium text-muted-foreground">{t.student}</Text>
+      <Field label={t.student}>
         <View className="flex-row flex-wrap gap-2">
           {students.map(([id, name]) => (
             <Chip
@@ -207,15 +198,14 @@ function Composer({
             />
           ))}
         </View>
-      </View>
+      </Field>
 
       {studentId ? (
-        <View className="gap-2">
-          <Text className="text-sm font-medium text-muted-foreground">{t.recipient}</Text>
+        <Field label={t.recipient}>
           {counterparties.isLoading ? (
-            <Text className="text-sm text-muted-foreground">{dict.common.loading}</Text>
+            <Text className="font-sans text-sm text-neutral-500">{dict.common.loading}</Text>
           ) : recipients.length === 0 ? (
-            <Text className="text-sm text-muted-foreground">{t.noRecipients}</Text>
+            <Text className="font-sans text-sm text-neutral-500">{t.noRecipients}</Text>
           ) : (
             <View className="flex-row flex-wrap gap-2">
               {recipients.map((c) => (
@@ -228,51 +218,15 @@ function Composer({
               ))}
             </View>
           )}
-        </View>
+        </Field>
       ) : null}
 
-      <Pressable
-        accessibilityRole="button"
-        disabled={!studentId || !otherUserId || create.isPending}
+      <Button
+        label={t.startConversation}
+        loading={create.isPending}
+        disabled={!studentId || !otherUserId}
         onPress={() => create.mutate({ studentId, otherUserId })}
-        className={`min-h-11 items-center justify-center rounded-md px-4 py-3 ${
-          studentId && otherUserId && !create.isPending ? "bg-primary" : "bg-muted"
-        }`}
-      >
-        <Text className="font-medium text-primary-foreground">{t.startConversation}</Text>
-      </Pressable>
+      />
     </ScrollView>
-  );
-}
-
-function Header({ title, onBack }: { title: string; onBack: () => void }) {
-  const { dict } = useTranslation();
-  return (
-    <View className="flex-row items-center gap-3 border-b border-border px-4 py-3">
-      <Pressable
-        accessibilityRole="button"
-        accessibilityLabel={dict.messages.goBack}
-        onPress={onBack}
-        className="min-h-11 min-w-11 items-center justify-center rounded-md"
-      >
-        <Text className="text-lg text-foreground">←</Text>
-      </Pressable>
-      <Text className="flex-1 text-xl font-semibold text-foreground">{title}</Text>
-    </View>
-  );
-}
-
-function Chip({ label, active, onPress }: { label: string; active: boolean; onPress: () => void }) {
-  return (
-    <Pressable
-      accessibilityRole="button"
-      accessibilityState={{ selected: active }}
-      onPress={onPress}
-      className={`min-h-11 justify-center rounded-md px-3 ${
-        active ? "bg-primary" : "border border-border bg-background"
-      }`}
-    >
-      <Text className={active ? "text-primary-foreground" : "text-foreground"}>{label}</Text>
-    </Pressable>
   );
 }

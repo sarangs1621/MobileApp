@@ -2,10 +2,13 @@ import { useTranslation } from "@repo/i18n";
 import type { AttendanceStatusKey } from "@repo/types";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import { useState } from "react";
-import { Pressable, Text, TextInput } from "react-native";
+import { Text, TextInput } from "react-native";
 
 import { ScreenScaffold, StatusPicker } from "../../../../components/attendance-ui";
+import { Button } from "../../../../components/ui";
 import { trpc } from "../../../../lib/trpc";
+
+const eyebrow = "font-sans text-caption font-semibold uppercase tracking-eyebrow text-neutral-500";
 
 /**
  * Submit an attendance correction request (ADR-011 §8 — immutable request; the
@@ -35,38 +38,38 @@ export default function SubmitCorrectionScreen() {
   return (
     <ScreenScaffold title={t.requestCorrection}>
       {currentStatus ? (
-        <Text className="text-sm text-muted-foreground">
+        <Text className="font-sans text-sm text-neutral-500">
           {t.current} {currentStatus}
         </Text>
       ) : null}
 
-      <Text className="text-sm font-medium text-muted-foreground">{t.requestedStatus}</Text>
+      <Text className={eyebrow}>{t.requestedStatus}</Text>
       <StatusPicker value={requestedStatus} onChange={setRequestedStatus} />
 
-      <Text className="text-sm font-medium text-muted-foreground">{t.reason}</Text>
+      <Text className={eyebrow}>{t.reason}</Text>
       <TextInput
         value={reason}
         onChangeText={setReason}
         placeholder={t.whyChange}
+        placeholderTextColor="#948676"
         multiline
-        className="min-h-11 rounded-md border border-border bg-card px-3 py-2 text-foreground"
+        textAlignVertical="top"
+        className="min-h-16 rounded-[10px] border border-subtle bg-white px-3 py-2.5 font-sans text-body text-neutral-900"
       />
 
-      <Pressable
-        accessibilityRole="button"
-        disabled={submit.isPending || reason.trim().length === 0 || recordId === undefined}
+      <Button
+        label={t.submitRequest}
+        loading={submit.isPending}
+        disabled={reason.trim().length === 0 || recordId === undefined}
         onPress={() => {
           if (recordId === undefined) {
             return;
           }
           submit.mutate({ attendanceRecordId: recordId, requestedStatus, reason: reason.trim() });
         }}
-        className="min-h-11 items-center justify-center rounded-md bg-primary px-4 py-3"
-      >
-        <Text className="font-medium text-primary-foreground">{t.submitRequest}</Text>
-      </Pressable>
+      />
       {submit.isError ? (
-        <Text className="text-sm text-destructive">{submit.error.message}</Text>
+        <Text className="font-sans text-sm text-danger-600">{submit.error.message}</Text>
       ) : null}
     </ScreenScaffold>
   );

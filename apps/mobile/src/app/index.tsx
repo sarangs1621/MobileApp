@@ -9,5 +9,5 @@ export default function Index() {
   if (status === "loading") {
     return null; // the root gate already shows the splash loader
   }
-  return <Redirect href={status === "signedIn" ? "/(app)" : "/(auth)/login"} />;
+  return <Redirect href={status === "signedIn" ? "/(app)/(tabs)" : "/(auth)"} />;
 }

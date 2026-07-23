@@ -43,34 +43,36 @@ export default function BehaviourDetailScreen() {
   const busy = resolve.isPending || close.isPending;
 
   return (
-    <View className="flex-1 bg-background">
+    <View className="flex-1 bg-neutral-50">
       <Header title="Incident" onBack={() => router.back()} />
       {incident.isLoading || !b ? (
         <Loading />
       ) : (
         <ScrollView contentContainerClassName="p-4 gap-4">
-          <View className="gap-2 rounded-md border border-border bg-card p-4">
+          <View className="gap-2 rounded-card border border-subtle bg-card p-4 shadow-sm">
             <View className="flex-row items-center justify-between gap-2">
-              <Text className="flex-1 text-lg font-semibold text-foreground">{b.title}</Text>
+              <Text className="flex-1 font-display text-title text-neutral-900">{b.title}</Text>
               <SeverityText severity={b.severity} />
             </View>
             <View className="flex-row items-center justify-between gap-2">
-              <Text className="text-sm text-muted-foreground">{CATEGORY_LABEL[b.category]}</Text>
+              <Text className="font-sans text-sm text-neutral-500">
+                {CATEGORY_LABEL[b.category]}
+              </Text>
               <StatusText status={b.status} />
             </View>
           </View>
 
           <Field label="Description">
-            <Text className="text-foreground">{b.description}</Text>
+            <Text className="font-sans text-body text-neutral-800">{b.description}</Text>
           </Field>
 
           {b.actionTaken ? (
             <Field label="Action taken">
-              <Text className="text-foreground">{b.actionTaken}</Text>
+              <Text className="font-sans text-body text-neutral-800">{b.actionTaken}</Text>
             </Field>
           ) : null}
 
-          <Text className="text-xs text-muted-foreground">
+          <Text className="font-sans text-caption text-neutral-400">
             {b.parentNotified ? "Parents were notified." : "Parents were not notified."}
           </Text>
 
@@ -81,20 +83,20 @@ export default function BehaviourDetailScreen() {
                   accessibilityRole="button"
                   disabled={busy}
                   onPress={() => resolve.mutate({ id: b.id })}
-                  className="min-h-11 items-center justify-center rounded-md border border-border px-4 py-3"
+                  className="min-h-12 items-center justify-center rounded-pill border border-strong bg-white px-4 active:bg-primary-50"
                 >
-                  <Text className="font-medium text-foreground">Mark resolved</Text>
+                  <Text className="font-sans font-semibold text-primary-700">Mark resolved</Text>
                 </Pressable>
               ) : null}
               <Pressable
                 accessibilityRole="button"
                 disabled={busy}
                 onPress={() => close.mutate({ id: b.id })}
-                className="min-h-11 items-center justify-center rounded-md bg-primary px-4 py-3"
+                className="min-h-12 items-center justify-center rounded-pill bg-primary-600 px-4 active:bg-primary-700"
               >
-                <Text className="font-medium text-primary-foreground">Close incident</Text>
+                <Text className="font-sans font-semibold text-neutral-50">Close incident</Text>
               </Pressable>
-              <Text className="px-1 text-xs text-muted-foreground">
+              <Text className="px-1 font-sans text-caption text-neutral-400">
                 A closed incident can no longer be edited.
               </Text>
             </View>

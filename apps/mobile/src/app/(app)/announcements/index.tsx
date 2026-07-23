@@ -3,6 +3,7 @@ import { can } from "@repo/core";
 import { useTranslation } from "@repo/i18n";
 import type { AnnouncementDto, AnnouncementStatusKey } from "@repo/types";
 import { useRouter } from "expo-router";
+import { Megaphone, Paperclip, Plus } from "phosphor-react-native";
 import { useState } from "react";
 import { FlatList, Pressable, RefreshControl, Text, View } from "react-native";
 
@@ -12,6 +13,8 @@ import {
   SCOPE_LABEL,
   STATUS_LABEL,
 } from "../../../components/announcements-ui";
+import { Header } from "../../../components/behaviour-ui";
+import { Button, SegmentedControl, StatusChip } from "../../../components/ui";
 import { trpc } from "../../../lib/trpc";
 
 /**
@@ -33,44 +36,32 @@ export default function AnnouncementsScreen() {
   const rows = list.data ?? [];
 
   return (
-    <View className="flex-1 bg-background">
-      <View className="flex-row items-center gap-3 border-b border-border px-4 py-3">
-        <Pressable
-          accessibilityRole="button"
-          accessibilityLabel={t.goBack}
-          onPress={() => router.back()}
-          className="min-h-11 min-w-11 items-center justify-center rounded-md"
-        >
-          <Text className="text-lg text-foreground">←</Text>
-        </Pressable>
-        <Text className="flex-1 text-xl font-semibold text-foreground">{t.title}</Text>
-        {isAuthor ? (
-          <Pressable
-            accessibilityRole="button"
-            onPress={() => router.push("/announcements/new")}
-            className="min-h-11 justify-center rounded-md bg-primary px-3"
-          >
-            <Text className="font-medium text-primary-foreground">{t.new}</Text>
-          </Pressable>
-        ) : null}
-      </View>
+    <View className="flex-1 bg-neutral-50">
+      <Header
+        title={t.title}
+        onBack={() => router.back()}
+        action={
+          isAuthor ? (
+            <Button
+              size="sm"
+              Icon={Plus}
+              label={t.new}
+              onPress={() => router.push("/announcements/new")}
+            />
+          ) : undefined
+        }
+      />
 
       {isAuthor ? (
-        <View className="flex-row gap-2 px-4 py-2">
-          {(["PUBLISHED", "DRAFT"] as const).map((t) => (
-            <Pressable
-              key={t}
-              accessibilityRole="button"
-              onPress={() => setTab(t)}
-              className={`min-h-11 justify-center rounded-md px-3 ${
-                tab === t ? "bg-primary" : "border border-border bg-background"
-              }`}
-            >
-              <Text className={tab === t ? "text-primary-foreground" : "text-foreground"}>
-                {STATUS_LABEL[t]}
-              </Text>
-            </Pressable>
-          ))}
+        <View className="px-4 pt-3">
+          <SegmentedControl
+            options={[
+              { key: "PUBLISHED", label: STATUS_LABEL.PUBLISHED },
+              { key: "DRAFT", label: STATUS_LABEL.DRAFT },
+            ]}
+            value={tab}
+            onChange={setTab}
+          />
         </View>
       ) : null}
 
@@ -85,7 +76,7 @@ export default function AnnouncementsScreen() {
             <RefreshControl refreshing={list.isRefetching} onRefresh={() => list.refetch()} />
           }
           ListEmptyComponent={
-            <Text className="text-muted-foreground">
+            <Text className="font-sans text-neutral-500">
               {tab === "DRAFT" ? t.noDrafts : t.noAnnouncements}
             </Text>
           }
@@ -112,23 +103,43 @@ function Row({
   onOpen: () => void;
 }) {
   const when = item.publishedAt ?? item.createdAt;
+  const published = item.status === "PUBLISHED";
   return (
     <Pressable
       accessibilityRole="button"
       onPress={onOpen}
-      className="gap-1 rounded-md border border-border bg-card p-4"
+      className="flex-row items-start gap-3 rounded-card border border-subtle bg-card p-4 shadow-sm active:bg-neutral-50"
     >
-      <View className="flex-row items-center gap-2">
-        <Text className="flex-1 font-semibold text-foreground">{item.title}</Text>
-        {item.attachments.length > 0 ? <Text className="text-xs">📎</Text> : null}
+      <View
+        className={`size-10 items-center justify-center rounded-xl ${
+          published ? "bg-primary-50" : "bg-neutral-100"
+        }`}
+      >
+        <Megaphone
+          size={19}
+          color={published ? "#7A3414" : "#6E6052"}
+          weight={published ? "bold" : "regular"}
+        />
       </View>
-      <Text className="text-sm text-muted-foreground" numberOfLines={2}>
-        {item.body}
-      </Text>
-      <Text className="text-xs text-muted-foreground">
-        {SCOPE_LABEL[item.scope]}
-        {showStatus ? ` · ${STATUS_LABEL[item.status]}` : ""} · {formatDate(when)}
-      </Text>
+      <View className="flex-1 gap-1">
+        <View className="flex-row items-center gap-2">
+          <Text className="flex-1 font-sans text-body font-semibold text-neutral-900">
+            {item.title}
+          </Text>
+          {item.attachments.length > 0 ? (
+            <Paperclip size={14} color="#948676" weight="bold" />
+          ) : null}
+          {showStatus ? (
+            <StatusChip status={item.status} label={STATUS_LABEL[item.status]} dot />
+          ) : null}
+        </View>
+        <Text className="font-sans text-sm text-neutral-700" numberOfLines={2}>
+          {item.body}
+        </Text>
+        <Text className="font-sans text-caption text-neutral-500">
+          {SCOPE_LABEL[item.scope]} · {formatDate(when)}
+        </Text>
+      </View>
     </Pressable>
   );
 }

@@ -10,19 +10,26 @@ import { useEffect, useMemo, useRef, useState, type ReactNode } from "react";
  */
 export * from "@/src/components/ui";
 
+// Legacy class constants, restyled to the design-handoff tokens so screens still
+// on them (attendance, marks grids, …) match the new look without a rewrite.
 export const inputClass =
-  "rounded-md border border-input px-3 py-2 text-foreground disabled:opacity-60";
+  "rounded-[10px] border border-subtle bg-white px-3 py-2 text-sm text-ink-900 placeholder:text-ink-400 " +
+  "focus:outline-none focus:border-gold-500 focus:ring-[3px] focus:ring-gold-100 " +
+  "disabled:cursor-not-allowed disabled:bg-cream-50 disabled:opacity-60";
 export const primaryBtn =
-  "min-h-11 rounded-md bg-primary px-4 py-2 font-medium text-primary-foreground disabled:opacity-60";
+  "min-h-11 cursor-pointer rounded-full border border-maroon-700 bg-maroon-700 px-5 py-2 text-sm font-semibold text-cream-50 shadow-sm " +
+  "transition-colors duration-fast hover:bg-maroon-800 disabled:cursor-not-allowed disabled:opacity-50";
 export const outlineBtn =
-  "min-h-11 rounded-md border border-border px-4 py-2 font-medium text-foreground disabled:opacity-60";
+  "min-h-11 cursor-pointer rounded-full border border-strong bg-transparent px-5 py-2 text-sm font-semibold text-maroon-700 " +
+  "transition-colors duration-fast hover:border-maroon-300 hover:bg-maroon-50 disabled:cursor-not-allowed disabled:opacity-50";
 export const destructiveBtn =
-  "min-h-11 rounded-md bg-destructive px-4 py-2 font-medium text-destructive-foreground disabled:opacity-60";
+  "min-h-11 cursor-pointer rounded-full border border-red-600 bg-red-600 px-5 py-2 text-sm font-semibold text-white shadow-sm " +
+  "transition-colors duration-fast hover:bg-danger-700 disabled:cursor-not-allowed disabled:opacity-50";
 export const smallGhostBtn =
-  "rounded-md px-2 py-1 text-sm font-medium text-primary hover:bg-accent disabled:opacity-60";
+  "cursor-pointer rounded-full px-3 py-1.5 text-[12.5px] font-semibold text-maroon-700 transition-colors duration-fast hover:bg-maroon-50 disabled:opacity-50";
 export const smallDangerBtn =
-  "rounded-md px-2 py-1 text-sm font-medium text-destructive hover:bg-accent disabled:opacity-60";
-export const labelClass = "flex flex-col gap-1 text-sm font-medium text-foreground";
+  "cursor-pointer rounded-full px-3 py-1.5 text-[12.5px] font-semibold text-red-600 transition-colors duration-fast hover:bg-red-100 disabled:opacity-50";
+export const labelClass = "flex flex-col gap-1.5 text-[13px] font-semibold text-ink-900";
 
 /** Modal dialog: overlay + Esc/backdrop close, initial focus inside. */
 export function Modal({
@@ -47,7 +54,7 @@ export function Modal({
 
   return (
     <div
-      className="fixed inset-0 z-50 flex items-center justify-center bg-foreground/40 p-4"
+      className="fixed inset-0 z-50 flex items-center justify-center bg-[rgba(36,26,17,0.55)] p-4"
       onMouseDown={(e) => {
         if (e.target === e.currentTarget) onClose();
       }}
@@ -57,9 +64,9 @@ export function Modal({
         role="dialog"
         aria-modal="true"
         aria-label={title}
-        className="w-full max-w-md rounded-lg border border-border bg-card p-6 shadow-lg"
+        className="max-h-[calc(100dvh-2rem)] w-full max-w-md animate-pop-in overflow-y-auto rounded-modal bg-white p-6 shadow-modal"
       >
-        <h2 className="mb-4 text-xl font-semibold text-foreground">{title}</h2>
+        <h2 className="mb-4 font-display text-2xl font-medium text-ink-900">{title}</h2>
         {children}
       </div>
     </div>
@@ -115,23 +122,26 @@ export function TableShell({
   children: ReactNode;
 }) {
   return (
-    <div className="overflow-x-auto rounded-md border border-border">
+    <div className="overflow-x-auto rounded-card border border-subtle bg-white shadow-sm">
       <table className="w-full text-left text-sm">
-        <thead className="border-b border-border bg-muted">
+        <thead className="border-b border-cream-100">
           <tr>
-            {head.map((h) => (
-              <th key={h} className="px-4 py-3 font-medium text-foreground">
+            {head.map((h, i) => (
+              <th
+                key={`${h}-${i}`}
+                className="px-4 py-2.5 text-[11px] font-bold uppercase tracking-[0.1em] text-ink-400"
+              >
                 {h}
               </th>
             ))}
           </tr>
         </thead>
-        <tbody>
+        <tbody className="divide-y divide-cream-100">
           {isLoading ? (
             <StateRow colSpan={head.length}>Loading…</StateRow>
           ) : isError ? (
             <StateRow colSpan={head.length}>
-              <span className="text-destructive">
+              <span className="text-red-600">
                 Couldn’t load this list. You may not have access, or the server is unreachable.
               </span>
             </StateRow>
@@ -149,7 +159,7 @@ export function TableShell({
 function StateRow({ colSpan, children }: { colSpan: number; children: ReactNode }) {
   return (
     <tr>
-      <td colSpan={colSpan} className="px-4 py-8 text-center text-muted-foreground">
+      <td colSpan={colSpan} className="px-4 py-8 text-center text-ink-500">
         {children}
       </td>
     </tr>
@@ -223,7 +233,10 @@ export function ListToolbar({
   );
 }
 
-/** Prev/next pager for client-side pages. */
+const pagerBtn =
+  "cursor-pointer rounded-full border border-subtle bg-white px-3.5 py-1.5 text-[12.5px] font-semibold text-maroon-700 transition-colors duration-fast hover:border-maroon-200 hover:bg-maroon-50 disabled:cursor-not-allowed disabled:opacity-40 disabled:hover:border-subtle disabled:hover:bg-white";
+
+/** Prev/next pager — renders inside the DataTable card footer (only when >1 page). */
 export function Paginator({
   page,
   pageCount,
@@ -235,9 +248,9 @@ export function Paginator({
   total: number;
   onPage: (page: number) => void;
 }) {
-  if (total === 0) return null;
+  if (total === 0 || pageCount <= 1) return null;
   return (
-    <div className="flex items-center justify-between text-sm text-muted-foreground">
+    <div className="flex items-center justify-between border-t border-cream-100 px-5 py-3 text-[12.5px] text-ink-400">
       <span>
         Page {page} of {pageCount} · {total} total
       </span>
@@ -246,7 +259,7 @@ export function Paginator({
           type="button"
           onClick={() => onPage(page - 1)}
           disabled={page <= 1}
-          className={outlineBtn}
+          className={pagerBtn}
         >
           Previous
         </button>
@@ -254,7 +267,7 @@ export function Paginator({
           type="button"
           onClick={() => onPage(page + 1)}
           disabled={page >= pageCount}
-          className={outlineBtn}
+          className={pagerBtn}
         >
           Next
         </button>

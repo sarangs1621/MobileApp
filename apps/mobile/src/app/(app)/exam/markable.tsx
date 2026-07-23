@@ -16,9 +16,9 @@ export default function MarkableAssessmentsScreen() {
   return (
     <ScreenScaffold title="Enter marks">
       {markable.isLoading ? (
-        <ActivityIndicator />
+        <ActivityIndicator color="#7A3414" />
       ) : rows.length === 0 ? (
-        <Text className="text-muted-foreground">
+        <Text className="font-sans text-neutral-500">
           No assessments are assigned to you in the active year yet.
         </Text>
       ) : (
@@ -33,12 +33,12 @@ export default function MarkableAssessmentsScreen() {
           >
             <Pressable
               accessibilityRole="button"
-              className="gap-1 rounded-md border border-border bg-card p-4"
+              className="gap-1 rounded-card border border-subtle bg-card p-4 shadow-sm active:bg-neutral-50"
             >
-              <Text className="font-medium text-foreground">
+              <Text className="font-sans text-body font-semibold text-neutral-900">
                 {a.examName} · {a.subjectName}
               </Text>
-              <Text className="text-sm text-muted-foreground">
+              <Text className="font-sans text-sm text-neutral-500">
                 Section {a.sectionName} ·{" "}
                 {a.registerStatus === "NONE" ? "Not started" : a.registerStatus}
               </Text>

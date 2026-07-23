@@ -3,7 +3,7 @@
  * `academic/ui.tsx` re-exports this so existing screens keep working while
  * Step 4 migrates them onto these components.
  */
-export { Button, type ButtonProps } from "./button";
+export { Button, IconButton, type ButtonProps } from "./button";
 export {
   Field,
   Input,

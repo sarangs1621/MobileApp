@@ -1,8 +1,10 @@
 "use client";
 
+import { Plus } from "@phosphor-icons/react";
 import type { PeriodDto, TimetableEntryDto, WeekdayKey } from "@repo/types";
+import { cn } from "@repo/ui";
 
-import { inputClass } from "@/src/components/academic/ui";
+import { Select } from "@/src/components/ui";
 import { trpc } from "@/src/trpc/react";
 
 /** Grid columns: Mon–Sat (Indian school norm; no working-days config in M9). */
@@ -15,6 +17,20 @@ export const WEEKDAYS: readonly { key: WeekdayKey; label: string; short: string 
   { key: "SAT", label: "Saturday", short: "Sat" },
 ];
 
+/** Index (0..5) of today in the Mon–Sat grid, in school time; −1 on Sunday. */
+export function todayWeekdayIndex(): number {
+  const dow = new Date().toLocaleDateString("en-US", {
+    timeZone: "Asia/Kolkata",
+    weekday: "short",
+  });
+  return WEEKDAYS.findIndex((d) => d.short === dow);
+}
+
+/** Periods sorted for display — by start time (the design's "order follows start time"). */
+export function periodsByTime(periods: PeriodDto[]): PeriodDto[] {
+  return [...periods].sort((a, b) => a.startTime.localeCompare(b.startTime) || a.order - b.order);
+}
+
 /** Year picker (admin builds any year — PLANNED/ACTIVE/CLOSED — so an explicit year is required). */
 export function YearSelect({
   value,
@@ -25,14 +41,8 @@ export function YearSelect({
 }) {
   const years = trpc.academicYear.list.useQuery();
   return (
-    <label className="flex items-center gap-2 text-sm font-medium text-foreground">
-      Academic year
-      <select
-        value={value ?? ""}
-        onChange={(e) => onChange(e.target.value)}
-        className={inputClass}
-        aria-label="Academic year"
-      >
+    <div className="min-w-[170px]">
+      <Select label="Academic year" value={value ?? ""} onChange={(e) => onChange(e.target.value)}>
         <option value="" disabled>
           Select a year…
         </option>
@@ -42,108 +52,145 @@ export function YearSelect({
             {y.status === "ACTIVE" ? " (active)" : ""}
           </option>
         ))}
-      </select>
-    </label>
+      </Select>
+    </div>
   );
 }
 
 /**
- * Weekly grid: periods (rows) × Mon–Sat (columns). Rows come from the bell
- * schedule's periods so empty and break slots render (break rows span, non-editable).
- * `onCell` (admin editor) makes empty teaching cells clickable "add" targets and
- * filled cells clickable to edit; omit it for a read-only grid.
+ * Weekly grid (design handoff §5): periods (rows) × Mon–Sat (columns), today's
+ * column highlighted in gold. Rows follow start time so empty and break slots
+ * render (break rows span, non-editable). `onCell` (admin editor) makes empty
+ * teaching cells clickable "add" targets and filled cells clickable to edit;
+ * omit it for the read-only teacher grid, which shows "Free" for empty slots.
+ * `secondary` picks the sub-line: the section grid shows the teacher, the
+ * teacher grid shows the section.
  */
 export function TimetableGrid({
   periods,
   entries,
   onCell,
+  secondary = "teacher",
 }: {
   periods: PeriodDto[];
   entries: TimetableEntryDto[];
   onCell?: (weekday: WeekdayKey, period: PeriodDto) => void;
+  secondary?: "teacher" | "section";
 }) {
   const byCell = new Map(entries.map((e) => [`${e.weekday}:${e.periodId}`, e]));
+  const rows = periodsByTime(periods);
+  const today = todayWeekdayIndex();
+  const editable = onCell !== undefined;
 
   return (
-    <div className="overflow-x-auto">
-      <table className="w-full min-w-[720px] border-collapse text-sm">
-        <thead>
-          <tr>
-            <th className="border border-border bg-muted px-3 py-2 text-left font-medium">
-              Period
-            </th>
-            {WEEKDAYS.map((d) => (
-              <th
-                key={d.key}
-                className="border border-border bg-muted px-3 py-2 text-left font-medium"
-              >
-                {d.short}
-              </th>
-            ))}
-          </tr>
-        </thead>
-        <tbody>
-          {periods.map((p) => (
-            <tr key={p.id}>
-              <th className="border border-border bg-muted/50 px-3 py-2 text-left font-medium">
-                <div className="text-foreground">{p.name}</div>
-                <div className="text-xs text-muted-foreground">
-                  {p.startTime}–{p.endTime}
-                </div>
-              </th>
-              {p.isBreak ? (
-                <td
-                  colSpan={WEEKDAYS.length}
-                  className="border border-border bg-muted/30 px-3 py-2 text-center text-muted-foreground"
-                >
-                  {p.name}
-                </td>
-              ) : (
-                WEEKDAYS.map((d) => {
-                  const entry = byCell.get(`${d.key}:${p.id}`);
-                  return (
-                    <td key={d.key} className="border border-border p-0 align-top">
-                      <Cell entry={entry} onClick={onCell ? () => onCell(d.key, p) : undefined} />
-                    </td>
-                  );
-                })
+    <div className="overflow-x-auto rounded-card border border-subtle bg-white shadow-sm">
+      <div className="min-w-[760px]">
+        {/* Header */}
+        <div className="grid grid-cols-[1.1fr_repeat(6,1fr)] border-b border-cream-100">
+          <span className="px-4 py-[11px] text-[11px] font-bold uppercase tracking-[0.1em] text-ink-400">
+            Period
+          </span>
+          {WEEKDAYS.map((d, i) => (
+            <span
+              key={d.key}
+              className={cn(
+                "border-l border-cream-100 px-3 py-[11px] text-[11px] font-bold uppercase tracking-[0.1em]",
+                i === today ? "bg-gold-100 text-gold-700" : "text-ink-400",
               )}
-            </tr>
+            >
+              {d.short}
+            </span>
           ))}
-        </tbody>
-      </table>
+        </div>
+
+        {/* Rows */}
+        {rows.map((p) => (
+          <div
+            key={p.id}
+            className="grid grid-cols-[1.1fr_repeat(6,1fr)] items-stretch border-b border-cream-100 last:border-0"
+          >
+            <span className="flex flex-col gap-0.5 bg-cream-50 px-4 py-3.5">
+              <span className="text-[13.5px] font-semibold text-ink-900">{p.name}</span>
+              <span className="text-xs text-ink-400">
+                {p.startTime} – {p.endTime}
+              </span>
+            </span>
+
+            {p.isBreak ? (
+              <span className="col-span-6 flex items-center justify-center border-l border-cream-100 bg-cream-50/60 px-3 py-3 text-xs font-semibold uppercase tracking-[0.08em] text-ink-400">
+                {p.name}
+              </span>
+            ) : (
+              WEEKDAYS.map((d, i) => {
+                const entry = byCell.get(`${d.key}:${p.id}`);
+                if (entry) {
+                  const sub = secondary === "teacher" ? entry.teacherName : entry.sectionName;
+                  const content = (
+                    <>
+                      <span className="truncate text-[13px] font-semibold text-maroon-800">
+                        {entry.subjectName}
+                      </span>
+                      <span className="truncate text-[11.5px] text-ink-500">
+                        {sub}
+                        {entry.room ? ` · ${entry.room}` : ""}
+                      </span>
+                    </>
+                  );
+                  return editable ? (
+                    <button
+                      key={d.key}
+                      type="button"
+                      onClick={() => onCell(d.key, p)}
+                      className={cn(
+                        "flex min-h-16 flex-col gap-0.5 border-l border-cream-100 p-3 text-left transition-colors duration-fast hover:bg-maroon-100",
+                        i === today ? "bg-maroon-100/60" : "bg-maroon-50",
+                      )}
+                    >
+                      {content}
+                    </button>
+                  ) : (
+                    <span
+                      key={d.key}
+                      className={cn(
+                        "flex min-h-16 flex-col gap-0.5 border-l border-cream-100 p-3",
+                        i === today ? "bg-maroon-100/60" : "bg-maroon-50",
+                      )}
+                    >
+                      {content}
+                    </span>
+                  );
+                }
+                // Empty slot
+                return editable ? (
+                  <button
+                    key={d.key}
+                    type="button"
+                    title="Add lesson"
+                    onClick={() => onCell(d.key, p)}
+                    className={cn(
+                      "flex min-h-16 items-center justify-center border-l border-cream-100 text-ink-300 transition-colors duration-fast hover:bg-gold-100 hover:text-gold-700",
+                      i === today ? "bg-gold-100/40" : "bg-white",
+                    )}
+                  >
+                    <Plus aria-hidden size={16} />
+                  </button>
+                ) : (
+                  <span
+                    key={d.key}
+                    className={cn(
+                      "flex min-h-16 items-center justify-center border-l border-cream-100 text-xs text-sand-300",
+                      i === today ? "bg-gold-100/40" : "bg-white",
+                    )}
+                  >
+                    Free
+                  </span>
+                );
+              })
+            )}
+          </div>
+        ))}
+      </div>
     </div>
-  );
-}
-
-function Cell({
-  entry,
-  onClick,
-}: {
-  entry?: TimetableEntryDto | undefined;
-  onClick?: (() => void) | undefined;
-}) {
-  const content = entry ? (
-    <>
-      <div className="font-medium text-foreground">{entry.subjectName}</div>
-      <div className="text-xs text-muted-foreground">{entry.teacherName}</div>
-      {entry.room ? <div className="text-xs text-muted-foreground">{entry.room}</div> : null}
-    </>
-  ) : (
-    <span className="text-muted-foreground">+</span>
-  );
-
-  if (!onClick) {
-    return <div className="min-h-14 px-3 py-2">{entry ? content : null}</div>;
-  }
-  return (
-    <button
-      type="button"
-      onClick={onClick}
-      className="min-h-14 w-full px-3 py-2 text-left hover:bg-accent"
-    >
-      {content}
-    </button>
   );
 }
 

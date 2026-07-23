@@ -22,17 +22,17 @@ export const INVOICE_STATUS_LABEL: Record<InvoiceStatusKey, string> = {
 };
 
 const INVOICE_STATUS_CLASS: Record<InvoiceStatusKey, string> = {
-  DRAFT: "text-muted-foreground",
-  ISSUED: "text-info",
-  PARTIAL: "text-primary",
-  PAID: "text-success",
-  OVERDUE: "text-destructive",
-  CANCELLED: "text-muted-foreground",
+  DRAFT: "text-neutral-500",
+  ISSUED: "text-info-600",
+  PARTIAL: "text-primary-700",
+  PAID: "text-success-600",
+  OVERDUE: "text-danger-600",
+  CANCELLED: "text-neutral-500",
 };
 
 export function InvoiceStatusText({ status }: { status: InvoiceStatusKey }) {
   return (
-    <Text className={`text-xs font-semibold ${INVOICE_STATUS_CLASS[status]}`}>
+    <Text className={`font-sans text-caption font-semibold ${INVOICE_STATUS_CLASS[status]}`}>
       {INVOICE_STATUS_LABEL[status]}
     </Text>
   );

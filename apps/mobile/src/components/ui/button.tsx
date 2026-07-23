@@ -1,23 +1,36 @@
 import { Feather } from "@expo/vector-icons";
 import { ActivityIndicator, Pressable, Text } from "react-native";
 
+import type { PhosphorIcon } from "./icon";
+
 /**
- * Button (ADR-UX1 §component-kit, mobile). Variants + sizes from tokens; loading
- * shows a spinner and disables; press feedback = opacity 0.7; ≥44pt tap target.
- * Takes a `label` (RN needs Text) + optional Feather icon.
+ * Button (design handoff, mobile). Pill radius, maroon primary, semibold label,
+ * >=44pt tap target; loading shows a spinner and disables. Prefer the Phosphor
+ * `Icon` component (matches web); the legacy Feather `icon` string stays for
+ * not-yet-migrated screens.
  */
 type Variant = "primary" | "secondary" | "ghost" | "destructive";
-type Size = "md" | "lg";
+type Size = "sm" | "md" | "lg";
 
-const VARIANT: Record<Variant, { box: string; text: string; spinner: string }> = {
-  primary: { box: "bg-primary-600 active:opacity-70", text: "text-white", spinner: "#FFFFFF" },
+const VARIANT: Record<Variant, { box: string; text: string; on: string }> = {
+  primary: { box: "bg-primary-600 active:bg-primary-700", text: "text-neutral-50", on: "#FCF9F3" },
   secondary: {
-    box: "border border-neutral-300 bg-white active:opacity-70",
-    text: "text-neutral-800",
-    spinner: "#292524",
+    box: "border border-strong bg-white active:bg-primary-50",
+    text: "text-primary-700",
+    on: "#642811",
   },
-  ghost: { box: "active:opacity-70", text: "text-primary-700", spinner: "#1D4ED8" },
-  destructive: { box: "bg-danger-600 active:opacity-70", text: "text-white", spinner: "#FFFFFF" },
+  ghost: { box: "active:bg-primary-50", text: "text-primary-700", on: "#642811" },
+  destructive: {
+    box: "bg-danger-600 active:bg-danger-700",
+    text: "text-neutral-50",
+    on: "#FCF9F3",
+  },
+};
+
+const SIZE: Record<Size, { box: string; text: string }> = {
+  sm: { box: "min-h-10 px-4", text: "text-sm" },
+  md: { box: "min-h-12 px-5", text: "text-body" },
+  lg: { box: "min-h-14 px-6", text: "text-body" },
 };
 
 export function Button({
@@ -28,6 +41,7 @@ export function Button({
   loading = false,
   disabled = false,
   icon,
+  Icon,
 }: {
   label: string;
   onPress: () => void;
@@ -35,27 +49,32 @@ export function Button({
   size?: Size;
   loading?: boolean;
   disabled?: boolean;
+  /** Preferred: a Phosphor icon component (matches web). */
+  Icon?: PhosphorIcon;
+  /** Legacy Feather glyph — kept for screens not yet on Phosphor. */
   icon?: keyof typeof Feather.glyphMap;
 }) {
   const v = VARIANT[variant];
+  const s = SIZE[size];
   const isOff = disabled || loading;
-  const height = size === "lg" ? "min-h-12" : "min-h-11";
   return (
     <Pressable
       accessibilityRole="button"
       accessibilityState={{ disabled: isOff }}
       disabled={isOff}
       onPress={onPress}
-      className={`${height} flex-row items-center justify-center gap-2 rounded-md px-4 ${v.box} ${
+      className={`${s.box} flex-row items-center justify-center gap-2 rounded-pill ${v.box} ${
         isOff ? "opacity-50" : ""
       }`}
     >
       {loading ? (
-        <ActivityIndicator size="small" color={v.spinner} />
-      ) : (
-        icon && <Feather name={icon} size={16} color={v.spinner} />
-      )}
-      <Text className={`font-sans text-body font-medium ${v.text}`}>{label}</Text>
+        <ActivityIndicator size="small" color={v.on} />
+      ) : Icon ? (
+        <Icon size={18} color={v.on} weight="bold" />
+      ) : icon ? (
+        <Feather name={icon} size={16} color={v.on} />
+      ) : null}
+      <Text className={`font-sans font-semibold ${s.text} ${v.text}`}>{label}</Text>
     </Pressable>
   );
 }

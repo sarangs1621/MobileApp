@@ -17,7 +17,7 @@ type AuthStatus = "loading" | "signedIn" | "signedOut";
 /** Why this device is (or isn't) receiving pushes — surfaced in Settings so an
  *  operator can tell Phase 1 isn't live instead of it silently no-oping. */
 export type PushRegistrationStatus =
-  "pending" | "registered" | "no-project-id" | "permission-denied" | "token-error";
+  "pending" | "registered" | "no-project-id" | "permission-denied" | "token-error" | "expo-go";
 
 interface AuthState {
   status: AuthStatus;

@@ -46,8 +46,8 @@ export default function AttendanceSectionsScreen() {
           <Link href={{ pathname: "/attendance/mark/[sectionId]", params: { sectionId } }} asChild>
             <Pressable accessibilityRole="button">
               <ListRow>
-                <Text className="font-medium text-foreground">{label}</Text>
-                <Text className="text-sm text-muted-foreground">{t.todaysDailyRegister}</Text>
+                <Text className="font-sans text-body font-semibold text-neutral-900">{label}</Text>
+                <Text className="font-sans text-sm text-neutral-500">{t.todaysDailyRegister}</Text>
               </ListRow>
             </Pressable>
           </Link>

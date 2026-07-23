@@ -2,7 +2,7 @@ import { PERMISSIONS } from "@repo/constants";
 import { can } from "@repo/core";
 import { useTranslation } from "@repo/i18n";
 import { useLocalSearchParams, useRouter } from "expo-router";
-import { Alert, Pressable, ScrollView, Text, View } from "react-native";
+import { Alert, ScrollView, Text, View } from "react-native";
 
 import {
   AttachmentList,
@@ -11,6 +11,8 @@ import {
   SCOPE_LABEL,
   STATUS_LABEL,
 } from "../../../components/announcements-ui";
+import { Header } from "../../../components/behaviour-ui";
+import { Button, StatusChip } from "../../../components/ui";
 import { trpc } from "../../../lib/trpc";
 
 /**
@@ -47,8 +49,8 @@ export default function AnnouncementDetailScreen() {
 
   if (query.isLoading || !a) {
     return (
-      <View className="flex-1 bg-background">
-        <Header onBack={() => router.back()} />
+      <View className="flex-1 bg-neutral-50">
+        <Header title={t.detailTitle} onBack={() => router.back()} />
         <Loading />
       </View>
     );
@@ -65,18 +67,20 @@ export default function AnnouncementDetailScreen() {
     ]);
 
   return (
-    <View className="flex-1 bg-background">
-      <Header onBack={() => router.back()} />
+    <View className="flex-1 bg-neutral-50">
+      <Header title={t.detailTitle} onBack={() => router.back()} />
       <ScrollView contentContainerClassName="p-4 gap-4">
-        <View className="gap-1">
-          <Text className="text-2xl font-semibold text-foreground">{a.title}</Text>
-          <Text className="text-xs text-muted-foreground">
-            {SCOPE_LABEL[a.scope]} · {STATUS_LABEL[a.status]} ·{" "}
-            {formatDate(a.publishedAt ?? a.createdAt)}
-          </Text>
+        <View className="gap-2">
+          <Text className="font-display text-display text-neutral-900">{a.title}</Text>
+          <View className="flex-row items-center gap-2">
+            <StatusChip status={a.status} label={STATUS_LABEL[a.status]} dot />
+            <Text className="font-sans text-caption text-neutral-500">
+              {SCOPE_LABEL[a.scope]} · {formatDate(a.publishedAt ?? a.createdAt)}
+            </Text>
+          </View>
         </View>
 
-        <Text className="text-base leading-6 text-foreground">{a.body}</Text>
+        <Text className="font-sans text-body leading-6 text-neutral-800">{a.body}</Text>
 
         <AttachmentList
           attachments={a.attachments}
@@ -85,71 +89,32 @@ export default function AnnouncementDetailScreen() {
 
         <View className="gap-2 pt-2">
           {canEdit ? (
-            <Action
+            <Button
+              variant="secondary"
               label={t.editDraft}
               onPress={() => router.push(`/announcements/new?id=${id}`)}
             />
           ) : null}
           {isDraft && canManage ? (
-            <Action label={t.publish} primary onPress={() => publish.mutate({ id })} />
+            <Button
+              label={t.publish}
+              loading={publish.isPending}
+              onPress={() => publish.mutate({ id })}
+            />
           ) : null}
           {isPublished && canManage ? (
-            <Action label={t.archive} onPress={() => archive.mutate({ id })} />
+            <Button
+              variant="secondary"
+              label={t.archive}
+              loading={archive.isPending}
+              onPress={() => archive.mutate({ id })}
+            />
           ) : null}
-          {canEdit ? <Action label={t.deleteDraft} destructive onPress={confirmDelete} /> : null}
+          {canEdit ? (
+            <Button variant="destructive" label={t.deleteDraft} onPress={confirmDelete} />
+          ) : null}
         </View>
       </ScrollView>
     </View>
-  );
-}
-
-function Header({ onBack }: { onBack: () => void }) {
-  const { dict } = useTranslation();
-  return (
-    <View className="flex-row items-center gap-3 border-b border-border px-4 py-3">
-      <Pressable
-        accessibilityRole="button"
-        accessibilityLabel={dict.announcements.goBack}
-        onPress={onBack}
-        className="min-h-11 min-w-11 items-center justify-center rounded-md"
-      >
-        <Text className="text-lg text-foreground">←</Text>
-      </Pressable>
-      <Text className="flex-1 text-xl font-semibold text-foreground">
-        {dict.announcements.detailTitle}
-      </Text>
-    </View>
-  );
-}
-
-function Action({
-  label,
-  onPress,
-  primary,
-  destructive,
-}: {
-  label: string;
-  onPress: () => void;
-  primary?: boolean;
-  destructive?: boolean;
-}) {
-  const tone = primary
-    ? "bg-primary"
-    : destructive
-      ? "border border-destructive bg-background"
-      : "border border-border bg-background";
-  const text = primary
-    ? "text-primary-foreground"
-    : destructive
-      ? "text-destructive"
-      : "text-foreground";
-  return (
-    <Pressable
-      accessibilityRole="button"
-      onPress={onPress}
-      className={`min-h-11 items-center justify-center rounded-md px-4 py-3 ${tone}`}
-    >
-      <Text className={`font-medium ${text}`}>{label}</Text>
-    </Pressable>
   );
 }

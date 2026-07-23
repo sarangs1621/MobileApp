@@ -1,19 +1,20 @@
 "use client";
 
+import { Plus, Trash, UserCheck } from "@phosphor-icons/react";
 import { PERMISSIONS } from "@repo/constants";
 import { can } from "@repo/core";
 import type { TeacherAssignmentDto } from "@repo/types";
-import { Plus, UserCheck } from "lucide-react";
 import { useMemo, useState } from "react";
 
 import {
+  Avatar,
   Button,
   type Column,
   ConfirmDialog,
   DataTable,
   Dialog,
   EmptyState,
-  Input,
+  IconButton,
   Select,
   TableToolbar,
   useToast,
@@ -23,8 +24,9 @@ import { trpc } from "@/src/trpc/react";
 /**
  * Teacher-assignments CRUD (assignments are immutable — create/delete only).
  * Filters are server-side (the list procedure accepts teacher/subject/section).
- * Teachers are referenced by user id: there is no people directory until M3,
- * and the M2 API surface is limited to the six academic routers by design.
+ * Teachers are picked BY NAME via the existing `teacherProfile.list` directory
+ * (design handoff: "no user ids to copy around") — managers see names
+ * everywhere; non-managers (who can't fetch the directory) still see raw ids.
  */
 export default function TeacherAssignmentsPage() {
   const { show } = useToast();
@@ -36,6 +38,12 @@ export default function TeacherAssignmentsPage() {
   const sectionLists = trpc.useQueries((t) =>
     (classes.data ?? []).map((item) => t.section.list({ classId: item.id })),
   );
+  // Name directory (admins only — same gating as the class-teachers screen).
+  const teachers = trpc.teacherProfile.list.useQuery(undefined, { enabled: canManage });
+  const teacherById = useMemo(
+    () => new Map((teachers.data ?? []).map((t) => [t.userId, t])),
+    [teachers.data],
+  );
 
   const [filterSubjectId, setFilterSubjectId] = useState("");
   const [filterClassId, setFilterClassId] = useState("");
@@ -45,7 +53,7 @@ export default function TeacherAssignmentsPage() {
   const assignments = trpc.teacherAssignment.list.useQuery({
     ...(filterSubjectId ? { subjectId: filterSubjectId } : {}),
     ...(filterSectionId ? { sectionId: filterSectionId } : {}),
-    ...(filterTeacherId.trim() ? { teacherId: filterTeacherId.trim() } : {}),
+    ...(filterTeacherId ? { teacherId: filterTeacherId } : {}),
   });
 
   const utils = trpc.useUtils();
@@ -99,31 +107,43 @@ export default function TeacherAssignmentsPage() {
       })
     : rows;
 
-  const columns: Column<TeacherAssignmentDto>[] = [
-    {
-      key: "teacher",
-      header: "Teacher",
-      render: (assignment) => (
-        <span className="font-mono text-xs text-neutral-800">
-          {assignment.teacherId === me.data?.userId ? "You" : assignment.teacherId}
+  const teacherCell = (teacherId: string) => {
+    const profile = teacherById.get(teacherId);
+    const isYou = teacherId === me.data?.userId;
+    if (!profile) {
+      return <span className="font-mono text-xs text-ink-800">{isYou ? "You" : teacherId}</span>;
+    }
+    return (
+      <span className="flex items-center gap-3">
+        <Avatar name={profile.name} size="sm" />
+        <span className="flex flex-col gap-px">
+          <span className="text-sm font-semibold text-ink-900">
+            {profile.name}
+            {isYou ? " (You)" : ""}
+          </span>
+          <span className="text-caption text-ink-400">{profile.employeeId} · Teacher</span>
         </span>
-      ),
-    },
+      </span>
+    );
+  };
+
+  const columns: Column<TeacherAssignmentDto>[] = [
+    { key: "teacher", header: "Teacher", render: (a) => teacherCell(a.teacherId) },
     {
       key: "subject",
       header: "Subject",
-      render: (assignment) => (
-        <span className="font-medium text-neutral-800">
-          {subjectName.get(assignment.subjectId) ?? assignment.subjectId}
+      render: (a) => (
+        <span className="text-[13.5px] font-semibold text-maroon-800">
+          {subjectName.get(a.subjectId) ?? a.subjectId}
         </span>
       ),
     },
     {
       key: "section",
       header: "Section",
-      render: (assignment) => (
-        <span className="text-neutral-500">
-          {sectionLabel.get(assignment.sectionId) ?? assignment.sectionId}
+      render: (a) => (
+        <span className="text-[13.5px] text-ink-500">
+          {sectionLabel.get(a.sectionId) ?? a.sectionId}
         </span>
       ),
     },
@@ -131,21 +151,21 @@ export default function TeacherAssignmentsPage() {
       key: "actions",
       header: "Actions",
       align: "right",
-      render: (assignment) =>
+      render: (a) =>
         canManage ? (
-          <Button
-            variant="ghost"
-            size="sm"
-            className="text-danger-600 hover:bg-danger-50"
-            onClick={() => {
-              remove.reset();
-              setDeleting(assignment);
-            }}
-          >
-            Delete
-          </Button>
+          <div className="flex justify-end">
+            <IconButton
+              label="Delete"
+              tone="danger"
+              icon={Trash}
+              onClick={() => {
+                remove.reset();
+                setDeleting(a);
+              }}
+            />
+          </div>
         ) : (
-          <span className="text-neutral-400">—</span>
+          <span className="text-ink-400">—</span>
         ),
     },
   ];
@@ -155,7 +175,7 @@ export default function TeacherAssignmentsPage() {
       <DataTable
         columns={columns}
         rows={visibleRows}
-        rowKey={(assignment) => assignment.id}
+        rowKey={(a) => a.id}
         loading={assignments.isLoading}
         error={assignments.isError}
         onRetry={() => assignments.refetch()}
@@ -167,6 +187,7 @@ export default function TeacherAssignmentsPage() {
                   label="Subject"
                   value={filterSubjectId}
                   onChange={(e) => setFilterSubjectId(e.target.value)}
+                  className="min-w-[150px]"
                 >
                   <option value="">All subjects</option>
                   {(subjects.data ?? []).map((subject) => (
@@ -182,6 +203,7 @@ export default function TeacherAssignmentsPage() {
                     setFilterClassId(e.target.value);
                     setFilterSectionId("");
                   }}
+                  className="min-w-[130px]"
                 >
                   <option value="">All classes</option>
                   {(classes.data ?? []).map((item) => (
@@ -194,6 +216,7 @@ export default function TeacherAssignmentsPage() {
                   label="Section"
                   value={filterSectionId}
                   onChange={(e) => setFilterSectionId(e.target.value)}
+                  className="min-w-[120px]"
                 >
                   <option value="">All sections</option>
                   {filterSections.map((s) => (
@@ -202,17 +225,27 @@ export default function TeacherAssignmentsPage() {
                     </option>
                   ))}
                 </Select>
-                <Input
-                  label="Teacher user id"
-                  value={filterTeacherId}
-                  onChange={(e) => setFilterTeacherId(e.target.value)}
-                  placeholder="All teachers"
-                />
+                {canManage ? (
+                  <Select
+                    label="Teacher"
+                    value={filterTeacherId}
+                    onChange={(e) => setFilterTeacherId(e.target.value)}
+                    className="min-w-[170px]"
+                  >
+                    <option value="">All teachers</option>
+                    {(teachers.data ?? []).map((t) => (
+                      <option key={t.userId} value={t.userId}>
+                        {t.name} · {t.employeeId}
+                      </option>
+                    ))}
+                  </Select>
+                ) : null}
               </>
             }
             actions={
               canManage ? (
                 <Button
+                  size="sm"
                   icon={Plus}
                   onClick={() => {
                     create.reset();
@@ -225,11 +258,28 @@ export default function TeacherAssignmentsPage() {
             }
           />
         }
-        empty={<EmptyState icon={UserCheck} title="No teacher assignments match." />}
+        empty={
+          <EmptyState
+            icon={UserCheck}
+            title="No teacher assignments match."
+            message="Assignments connect a teacher to a subject in one section — they power homework, marks and timetables."
+            action={
+              canManage ? (
+                <Button size="sm" icon={Plus} onClick={() => setCreating(true)}>
+                  New assignment
+                </Button>
+              ) : undefined
+            }
+          />
+        }
       />
 
       {creating ? (
         <AssignmentFormModal
+          teachers={(teachers.data ?? []).map((t) => ({
+            id: t.userId,
+            label: `${t.name} · ${t.employeeId}`,
+          }))}
           subjects={(subjects.data ?? []).map((s) => ({ id: s.id, label: s.name }))}
           classes={(classes.data ?? []).map((c) => ({ id: c.id, label: c.name }))}
           sectionsByClass={(classId) =>
@@ -246,10 +296,13 @@ export default function TeacherAssignmentsPage() {
 
       {deleting !== null ? (
         <ConfirmDialog
-          title="Delete assignment"
-          message={`Permanently remove ${
-            subjectName.get(deleting.subjectId) ?? "this subject"
-          } for ${sectionLabel.get(deleting.sectionId) ?? "this section"} from this teacher?`}
+          title="Remove assignment?"
+          message={`${
+            teacherById.get(deleting.teacherId)?.name ?? "This teacher"
+          } will no longer teach ${subjectName.get(deleting.subjectId) ?? "this subject"} for ${
+            sectionLabel.get(deleting.sectionId) ?? "this section"
+          }.`}
+          confirmLabel="Remove"
           busy={remove.isPending}
           error={remove.error?.message ?? null}
           onCancel={() => setDeleting(null)}
@@ -263,6 +316,7 @@ export default function TeacherAssignmentsPage() {
 }
 
 function AssignmentFormModal({
+  teachers,
   subjects,
   classes,
   sectionsByClass,
@@ -271,6 +325,7 @@ function AssignmentFormModal({
   onClose,
   onSubmit,
 }: {
+  teachers: readonly { id: string; label: string }[];
   subjects: readonly { id: string; label: string }[];
   classes: readonly { id: string; label: string }[];
   sectionsByClass: (classId: string) => readonly { id: string; label: string }[];
@@ -291,19 +346,24 @@ function AssignmentFormModal({
       <form
         onSubmit={(e) => {
           e.preventDefault();
-          onSubmit({ teacherId: teacherId.trim(), subjectId, sectionId });
+          onSubmit({ teacherId, subjectId, sectionId });
         }}
-        className="flex flex-col gap-4"
+        className="flex flex-col gap-[18px]"
       >
-        <Input
-          label="Teacher user id"
+        <Select
+          label="Teacher"
           value={teacherId}
           onChange={(e) => setTeacherId(e.target.value)}
-          className="font-mono"
-          placeholder="usr_…"
-          helper="The teacher’s user id (a teacher directory arrives with M3 people records). The teacher must be an ACTIVE user with the TEACHER role."
+          helper="Pick by name — no user ids to copy around. Only active users with the Teacher role appear."
           required
-        />
+        >
+          <option value="">Select a teacher…</option>
+          {teachers.map((t) => (
+            <option key={t.id} value={t.id}>
+              {t.label}
+            </option>
+          ))}
+        </Select>
         <Select
           label="Subject"
           value={subjectId}
@@ -317,45 +377,47 @@ function AssignmentFormModal({
             </option>
           ))}
         </Select>
-        <Select
-          label="Class"
-          value={classId}
-          onChange={(e) => {
-            setClassId(e.target.value);
-            setSectionId("");
-          }}
-          required
-        >
-          <option value="">Select a class…</option>
-          {classes.map((item) => (
-            <option key={item.id} value={item.id}>
-              {item.label}
-            </option>
-          ))}
-        </Select>
-        <Select
-          label="Section"
-          value={sectionId}
-          onChange={(e) => setSectionId(e.target.value)}
-          disabled={!classId}
-          required
-        >
-          <option value="">Select a section…</option>
-          {sections.map((s) => (
-            <option key={s.id} value={s.id}>
-              {s.label}
-            </option>
-          ))}
-        </Select>
+        <div className="grid grid-cols-2 gap-3.5">
+          <Select
+            label="Class"
+            value={classId}
+            onChange={(e) => {
+              setClassId(e.target.value);
+              setSectionId("");
+            }}
+            required
+          >
+            <option value="">Select a class…</option>
+            {classes.map((item) => (
+              <option key={item.id} value={item.id}>
+                {item.label}
+              </option>
+            ))}
+          </Select>
+          <Select
+            label="Section"
+            value={sectionId}
+            onChange={(e) => setSectionId(e.target.value)}
+            disabled={!classId}
+            required
+          >
+            <option value="">Select a section…</option>
+            {sections.map((s) => (
+              <option key={s.id} value={s.id}>
+                {s.label}
+              </option>
+            ))}
+          </Select>
+        </div>
 
-        {error ? <p className="text-sm text-danger-600">{error}</p> : null}
+        {error ? <p className="text-sm text-red-600">{error}</p> : null}
 
-        <div className="mt-1 flex justify-end gap-2">
+        <div className="mt-1 flex justify-end gap-2.5">
           <Button type="button" variant="secondary" onClick={onClose}>
             Cancel
           </Button>
           <Button type="submit" loading={busy}>
-            Create
+            Create assignment
           </Button>
         </div>
       </form>

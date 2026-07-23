@@ -4,7 +4,12 @@ import { ActivityIndicator, Pressable, Text, TextInput, View } from "react-nativ
 
 import { ListRow } from "../../../components/academic-list";
 import { LEAVE_STATUS_CLASS, ScreenScaffold, todayIst } from "../../../components/attendance-ui";
+import { Button } from "../../../components/ui";
 import { trpc } from "../../../lib/trpc";
+
+const eyebrow = "font-sans text-caption font-semibold uppercase tracking-eyebrow text-neutral-500";
+const inputClass =
+  "rounded-[10px] border border-subtle bg-white px-3 py-2.5 font-sans text-body text-neutral-900";
 
 /**
  * Parent leave: pick a child, see their leave requests + status, and apply for
@@ -19,11 +24,11 @@ export default function LeaveScreen() {
 
   return (
     <ScreenScaffold title={t.leaveRequests}>
-      <Text className="text-sm font-medium text-muted-foreground">{t.child}</Text>
+      <Text className={eyebrow}>{t.child}</Text>
       {children.isLoading ? (
-        <ActivityIndicator />
+        <ActivityIndicator color="#7A3414" />
       ) : (children.data ?? []).length === 0 ? (
-        <Text className="text-sm text-muted-foreground">{t.noChildrenLinked}</Text>
+        <Text className="font-sans text-sm text-neutral-500">{t.noChildrenLinked}</Text>
       ) : (
         (children.data ?? []).map((child) => {
           const selected = child.id === studentId;
@@ -35,11 +40,15 @@ export default function LeaveScreen() {
               onPress={() => {
                 setStudentId(child.id);
               }}
-              className={`min-h-11 justify-center rounded-md border px-4 py-3 ${
-                selected ? "border-primary bg-primary/10" : "border-border bg-card"
+              className={`min-h-12 justify-center rounded-xl border px-4 ${
+                selected ? "border-primary-600 bg-primary-50" : "border-subtle bg-card"
               }`}
             >
-              <Text className={`font-medium ${selected ? "text-primary" : "text-foreground"}`}>
+              <Text
+                className={`font-sans font-semibold ${
+                  selected ? "text-primary-800" : "text-neutral-900"
+                }`}
+              >
                 {child.firstName} {child.lastName}
               </Text>
             </Pressable>
@@ -83,53 +92,57 @@ function ChildLeave({ studentId }: { studentId: string }) {
   const cancel = trpc.leave.cancel.useMutation({ onSuccess: invalidate });
 
   if (enrollments.isLoading) {
-    return <ActivityIndicator />;
+    return <ActivityIndicator color="#7A3414" />;
   }
   if (enrollmentId === undefined) {
-    return <Text className="text-sm text-muted-foreground">{t.noActiveEnrollment}</Text>;
+    return <Text className="font-sans text-sm text-neutral-500">{t.noActiveEnrollment}</Text>;
   }
 
   return (
     <View className="gap-3">
-      <Text className="text-sm font-medium text-muted-foreground">{t.applyForLeave}</Text>
+      <Text className={eyebrow}>{t.applyForLeave}</Text>
       <DateField label={t.from} value={fromDate} onChange={setFromDate} />
       <DateField label={t.to} value={toDate} onChange={setToDate} />
       <TextInput
         value={reason}
         onChangeText={setReason}
         placeholder={t.reason}
+        placeholderTextColor="#948676"
         multiline
-        className="min-h-11 rounded-md border border-border bg-card px-3 py-2 text-foreground"
+        textAlignVertical="top"
+        className={`${inputClass} min-h-16`}
       />
-      <Pressable
-        accessibilityRole="button"
-        disabled={create.isPending || reason.trim().length === 0}
+      <Button
+        label={t.submitRequest}
+        loading={create.isPending}
+        disabled={reason.trim().length === 0}
         onPress={() => {
           create.mutate({ enrollmentId, fromDate, toDate, reason: reason.trim() });
         }}
-        className="min-h-11 items-center justify-center rounded-md bg-primary px-4 py-3"
-      >
-        <Text className="font-medium text-primary-foreground">{t.submitRequest}</Text>
-      </Pressable>
+      />
       {create.isError ? (
-        <Text className="text-sm text-destructive">{create.error.message}</Text>
+        <Text className="font-sans text-sm text-danger-600">{create.error.message}</Text>
       ) : null}
 
-      <Text className="text-sm font-medium text-muted-foreground">{t.requests}</Text>
+      <Text className={eyebrow}>{t.requests}</Text>
       {leaves.isLoading ? (
-        <ActivityIndicator />
+        <ActivityIndicator color="#7A3414" />
       ) : (leaves.data ?? []).length === 0 ? (
-        <Text className="text-sm text-muted-foreground">{t.noLeaveRequests}</Text>
+        <Text className="font-sans text-sm text-neutral-500">{t.noLeaveRequests}</Text>
       ) : (
         (leaves.data ?? []).map((leave) => (
           <ListRow key={leave.id}>
-            <Text className="font-medium text-foreground">
-              {leave.fromDate} → {leave.toDate}
-            </Text>
-            <Text className="text-sm text-muted-foreground">{leave.reason}</Text>
-            <Text className={`text-sm font-medium ${LEAVE_STATUS_CLASS[leave.status]}`}>
-              {leave.status}
-            </Text>
+            <View className="flex-row items-center justify-between gap-2">
+              <Text className="flex-1 font-sans text-body font-semibold text-neutral-900">
+                {leave.fromDate} → {leave.toDate}
+              </Text>
+              <Text
+                className={`font-sans text-sm font-semibold ${LEAVE_STATUS_CLASS[leave.status]}`}
+              >
+                {leave.status}
+              </Text>
+            </View>
+            <Text className="font-sans text-sm text-neutral-500">{leave.reason}</Text>
             {leave.status === "PENDING" ? (
               <Pressable
                 accessibilityRole="button"
@@ -138,7 +151,7 @@ function ChildLeave({ studentId }: { studentId: string }) {
                   cancel.mutate({ leaveId: leave.id });
                 }}
               >
-                <Text className="text-sm text-destructive">{t.cancel}</Text>
+                <Text className="font-sans text-sm font-semibold text-danger-600">{t.cancel}</Text>
               </Pressable>
             ) : null}
           </ListRow>
@@ -159,13 +172,14 @@ function DateField({
 }) {
   return (
     <View className="flex-row items-center gap-3">
-      <Text className="w-12 text-sm text-muted-foreground">{label}</Text>
+      <Text className="w-12 font-sans text-sm text-neutral-500">{label}</Text>
       <TextInput
         value={value}
         onChangeText={onChange}
         placeholder="YYYY-MM-DD"
+        placeholderTextColor="#948676"
         autoCapitalize="none"
-        className="min-h-11 flex-1 rounded-md border border-border bg-card px-3 py-2 text-foreground"
+        className={`${inputClass} flex-1`}
       />
     </View>
   );

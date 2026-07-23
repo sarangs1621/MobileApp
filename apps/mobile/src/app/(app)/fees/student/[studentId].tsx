@@ -26,7 +26,7 @@ export default function StudentFeesScreen() {
     .reduce((sum, i) => sum + i.balanceAmount, 0);
 
   return (
-    <View className="flex-1 bg-background">
+    <View className="flex-1 bg-neutral-50">
       <Header title={t.title} onBack={() => router.back()} />
       {list.isLoading ? (
         <Loading />
@@ -39,29 +39,33 @@ export default function StudentFeesScreen() {
             <RefreshControl refreshing={list.isRefetching} onRefresh={() => list.refetch()} />
           }
           ListHeaderComponent={
-            <View className="mb-1 gap-1 rounded-md border border-border bg-card p-4">
-              <Text className="text-sm text-muted-foreground">{t.outstandingDues}</Text>
-              <Text className="text-2xl font-semibold text-foreground">
+            <View className="mb-1 gap-1 rounded-card border border-subtle bg-card p-4 shadow-sm">
+              <Text className="font-sans text-caption font-semibold uppercase tracking-eyebrow text-neutral-500">
+                {t.outstandingDues}
+              </Text>
+              <Text className="font-display text-display text-neutral-900">
                 {formatPaise(outstanding)}
               </Text>
             </View>
           }
-          ListEmptyComponent={<Text className="text-muted-foreground">{t.noInvoices}</Text>}
+          ListEmptyComponent={<Text className="font-sans text-neutral-500">{t.noInvoices}</Text>}
           renderItem={({ item }) => (
             <Link href={{ pathname: "/fees/invoices/[id]", params: { id: item.id } }} asChild>
               <Pressable
                 accessibilityRole="button"
-                className="gap-1 rounded-md border border-border bg-card p-4"
+                className="gap-1.5 rounded-card border border-subtle bg-card p-4 shadow-sm active:bg-neutral-50"
               >
                 <View className="flex-row items-center justify-between gap-2">
-                  <Text className="flex-1 font-medium text-foreground">{item.invoiceNumber}</Text>
+                  <Text className="flex-1 font-sans text-body font-semibold text-neutral-900">
+                    {item.invoiceNumber}
+                  </Text>
                   <InvoiceStatusText status={item.status} />
                 </View>
                 <View className="flex-row items-center justify-between gap-2">
-                  <Text className="text-sm text-muted-foreground">
+                  <Text className="font-sans text-sm text-neutral-500">
                     {t.due} {item.dueDate}
                   </Text>
-                  <Text className="text-sm font-medium text-foreground">
+                  <Text className="font-sans text-sm font-semibold text-neutral-900">
                     {formatPaise(item.balanceAmount)} {t.dueSuffix}
                   </Text>
                 </View>

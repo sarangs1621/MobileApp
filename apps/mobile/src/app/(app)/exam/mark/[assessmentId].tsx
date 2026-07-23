@@ -67,14 +67,16 @@ export default function MarkEntryScreen() {
   if (years.isLoading || roster.isLoading || markable.isLoading) {
     return (
       <ScreenScaffold title="Enter marks">
-        <ActivityIndicator />
+        <ActivityIndicator color="#7A3414" />
       </ScreenScaffold>
     );
   }
   if (activeYearId === undefined || target === undefined) {
     return (
       <ScreenScaffold title="Enter marks">
-        <Text className="text-muted-foreground">This assessment is not available for marking.</Text>
+        <Text className="font-sans text-neutral-500">
+          This assessment is not available for marking.
+        </Text>
       </ScreenScaffold>
     );
   }
@@ -100,35 +102,39 @@ export default function MarkEntryScreen() {
 
   return (
     <ScreenScaffold title="Enter marks">
-      <Text className="text-sm text-muted-foreground">
+      <Text className="font-sans text-sm text-neutral-700">
         {target.examName} · {target.subjectName} · Sec {target.sectionName} ·{" "}
         {status === "NONE" ? "Not started" : status}
       </Text>
-      <Text className="text-xs text-muted-foreground">
+      <Text className="font-sans text-caption text-neutral-400">
         Max theory {target.maxTheory}
         {hasPractical ? ` · practical ${target.maxPractical}` : " · theory only"}
       </Text>
 
       {rows.length === 0 ? (
-        <Text className="text-muted-foreground">No active students in this section.</Text>
+        <Text className="font-sans text-neutral-500">No active students in this section.</Text>
       ) : (
         rows.map((e) => {
           const v = current(e.id);
           return (
-            <View key={e.id} className="gap-2 rounded-md border border-border bg-card p-4">
-              <Text className="font-medium text-foreground">
+            <View
+              key={e.id}
+              className="gap-2 rounded-card border border-subtle bg-card p-4 shadow-sm"
+            >
+              <Text className="font-sans text-body font-semibold text-neutral-900">
                 {studentName.get(e.studentId) ?? e.studentId}
                 {e.rollNo != null ? ` · Roll ${e.rollNo}` : ""}
               </Text>
               {editable ? (
-                <View className="flex-row items-center gap-3">
+                <View className="flex-row items-center gap-2.5">
                   <TextInput
                     editable={!v.isAbsent}
                     keyboardType="numeric"
                     value={v.theory}
                     placeholder="Theory"
+                    placeholderTextColor="#948676"
                     onChangeText={(t) => setEntry(e.id, { theory: t })}
-                    className="min-h-11 flex-1 rounded-md border border-border px-3 text-foreground"
+                    className="min-h-11 flex-1 rounded-[10px] border border-subtle bg-white px-3 font-sans text-body text-neutral-900"
                   />
                   {hasPractical ? (
                     <TextInput
@@ -136,24 +142,29 @@ export default function MarkEntryScreen() {
                       keyboardType="numeric"
                       value={v.practical}
                       placeholder="Practical"
+                      placeholderTextColor="#948676"
                       onChangeText={(t) => setEntry(e.id, { practical: t })}
-                      className="min-h-11 flex-1 rounded-md border border-border px-3 text-foreground"
+                      className="min-h-11 flex-1 rounded-[10px] border border-subtle bg-white px-3 font-sans text-body text-neutral-900"
                     />
                   ) : null}
                   <Pressable
                     accessibilityRole="button"
                     onPress={() => setEntry(e.id, { isAbsent: !v.isAbsent })}
-                    className={`min-h-11 justify-center rounded-md border px-3 ${
-                      v.isAbsent ? "border-destructive bg-destructive/10" : "border-border"
+                    className={`min-h-11 justify-center rounded-pill border px-3.5 ${
+                      v.isAbsent ? "border-danger-600 bg-danger-100" : "border-subtle bg-white"
                     }`}
                   >
-                    <Text className={v.isAbsent ? "text-destructive" : "text-muted-foreground"}>
+                    <Text
+                      className={`font-sans text-sm font-semibold ${
+                        v.isAbsent ? "text-danger-700" : "text-neutral-500"
+                      }`}
+                    >
                       Absent
                     </Text>
                   </Pressable>
                 </View>
               ) : (
-                <Text className="text-sm text-muted-foreground">
+                <Text className="font-sans text-sm text-neutral-500">
                   {v.isAbsent
                     ? "Absent"
                     : `Theory ${v.theory || "—"}${hasPractical ? ` · Practical ${v.practical || "—"}` : ""}`}
@@ -184,9 +195,9 @@ export default function MarkEntryScreen() {
                 }),
               });
             }}
-            className="min-h-11 items-center justify-center rounded-md bg-primary px-4 py-3"
+            className="min-h-12 items-center justify-center rounded-pill bg-primary-600 px-4 active:bg-primary-700"
           >
-            <Text className="font-medium text-primary-foreground">Save draft</Text>
+            <Text className="font-sans font-semibold text-neutral-50">Save draft</Text>
           </Pressable>
           {target.examSectionId != null && status === "DRAFT" ? (
             <Pressable
@@ -197,17 +208,19 @@ export default function MarkEntryScreen() {
                   submit.mutate({ examSectionId: target.examSectionId });
                 }
               }}
-              className="min-h-11 items-center justify-center rounded-md border border-border px-4 py-3"
+              className="min-h-12 items-center justify-center rounded-pill border border-strong bg-white px-4 active:bg-primary-50"
             >
-              <Text className="font-medium text-foreground">Submit for review</Text>
+              <Text className="font-sans font-semibold text-primary-700">Submit for review</Text>
             </Pressable>
           ) : null}
         </>
       ) : null}
 
-      {save.isError ? <Text className="text-sm text-destructive">{save.error.message}</Text> : null}
+      {save.isError ? (
+        <Text className="font-sans text-sm text-danger-600">{save.error.message}</Text>
+      ) : null}
       {submit.isError ? (
-        <Text className="text-sm text-destructive">{submit.error.message}</Text>
+        <Text className="font-sans text-sm text-danger-600">{submit.error.message}</Text>
       ) : null}
     </ScreenScaffold>
   );

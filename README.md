@@ -126,6 +126,16 @@ scripts, which read the repo-root `.env` (copy `.env.example`):
    `+919999900001` → `123456`) in Supabase per `docs/RUNBOOK_SUPABASE_SETUP.md`
    — test numbers receive no SMS; type the configured code.
 
+   **Dev bypass — "Unsupported phone provider":** if the Supabase project has
+   neither an SMS provider nor a test OTP number configured, every parent OTP
+   request fails with this error. Workaround until the dashboard is configured:
+   attach an email + password to the parent's auth user via the service-role
+   Admin API (`PUT /auth/v1/admin/users/{id}` with
+   `{ "email": …, "password": …, "email_confirm": true }`), then sign in on the
+   **Staff** tab with those credentials. The app resolves the role from the DB
+   by auth userId, so the account still lands in the parent experience. Record
+   the credentials in `LOGIN.local.md`, not here.
+
 Accounts are created `INVITED` and flip to `ACTIVE` on first sign-in. Roles and
 what each can see: `docs/PERMISSIONS_MATRIX.md`.
 

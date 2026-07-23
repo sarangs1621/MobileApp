@@ -2,6 +2,7 @@ import { PERMISSIONS } from "@repo/constants";
 import { can } from "@repo/core";
 import { Link, useLocalSearchParams, useRouter } from "expo-router";
 import { FlatList, Pressable, RefreshControl, Text, View } from "react-native";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 import {
   CATEGORY_LABEL,
@@ -19,6 +20,7 @@ import { trpc } from "../../../../lib/trpc";
  */
 export default function StudentBehaviourScreen() {
   const router = useRouter();
+  const insets = useSafeAreaInsets();
   const { studentId } = useLocalSearchParams<{ studentId: string }>();
   const enabled = !!studentId;
 
@@ -31,20 +33,20 @@ export default function StudentBehaviourScreen() {
   const rows = list.data ?? [];
 
   return (
-    <View className="flex-1 bg-background">
+    <View className="flex-1 bg-neutral-50">
       <Header title="Behaviour" onBack={() => router.back()} />
 
       {canRecord ? (
-        <View className="border-b border-border p-4">
+        <View className="border-b border-subtle bg-white p-4">
           <Link
             href={{ pathname: "/behaviour/new", params: { studentId: studentId ?? "" } }}
             asChild
           >
             <Pressable
               accessibilityRole="button"
-              className="min-h-11 items-center justify-center rounded-md bg-primary px-4 py-3"
+              className="min-h-12 items-center justify-center rounded-pill bg-primary-600 px-4 active:bg-primary-700"
             >
-              <Text className="font-medium text-primary-foreground">Record an incident</Text>
+              <Text className="font-sans font-semibold text-neutral-50">Record an incident</Text>
             </Pressable>
           </Link>
         </View>
@@ -57,27 +59,30 @@ export default function StudentBehaviourScreen() {
           data={rows}
           keyExtractor={(b) => b.id}
           contentContainerClassName="p-4 gap-3"
+          contentContainerStyle={{ paddingBottom: insets.bottom + 24 }}
           refreshControl={
             <RefreshControl refreshing={list.isRefetching} onRefresh={() => list.refetch()} />
           }
           ListEmptyComponent={
-            <Text className="text-muted-foreground">No behaviour incidents recorded.</Text>
+            <Text className="font-sans text-neutral-500">No behaviour incidents recorded.</Text>
           }
           renderItem={({ item }) => (
             <Link href={{ pathname: "/behaviour/[id]", params: { id: item.id } }} asChild>
               <Pressable
                 accessibilityRole="button"
-                className="gap-1 rounded-md border border-border bg-card p-4"
+                className="gap-1.5 rounded-card border border-subtle bg-card p-4 shadow-sm active:bg-neutral-50"
               >
                 <View className="flex-row items-center justify-between gap-2">
-                  <Text className="flex-1 font-medium text-foreground">{item.title}</Text>
+                  <Text className="flex-1 font-sans text-body font-semibold text-neutral-900">
+                    {item.title}
+                  </Text>
                   <SeverityText severity={item.severity} />
                 </View>
-                <Text className="text-sm text-muted-foreground" numberOfLines={2}>
+                <Text className="font-sans text-sm text-neutral-500" numberOfLines={2}>
                   {item.description}
                 </Text>
                 <View className="flex-row items-center justify-between gap-2">
-                  <Text className="text-xs text-muted-foreground">
+                  <Text className="font-sans text-caption text-neutral-500">
                     {CATEGORY_LABEL[item.category]}
                   </Text>
                   <StatusText status={item.status} />

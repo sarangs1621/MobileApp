@@ -1,10 +1,11 @@
-import type { ReactNode } from "react";
+import { useState, type ReactNode } from "react";
 import { Text, TextInput, View, type TextInputProps } from "react-native";
 
 /**
- * Form fields (ADR-UX1, mobile). Label above, required asterisk, helper/inline
- * error, ≥44pt height, correct keyboardType. `Field` gives every control the
- * same rhythm; FormRow/FormSection standardize form spacing.
+ * Form fields (design handoff, mobile). Label above, required asterisk, helper/
+ * inline error, >=44pt height, 10px radius, sand hairline that turns gold on
+ * focus. `Field` gives every control the same rhythm; FormRow/FormSection
+ * standardize form spacing.
  */
 export function Field({
   label,
@@ -20,8 +21,8 @@ export function Field({
   children: ReactNode;
 }) {
   return (
-    <View className="gap-1">
-      <Text className="font-sans text-sm font-medium text-neutral-800">
+    <View className="gap-1.5">
+      <Text className="font-sans text-sm font-semibold text-neutral-900">
         {label}
         {required ? <Text className="font-sans text-danger-600"> *</Text> : null}
       </Text>
@@ -42,14 +43,30 @@ export interface TextFieldProps extends TextInputProps {
   error?: string;
 }
 
-export function TextField({ label, required, helper, error, ...props }: TextFieldProps) {
+export function TextField({
+  label,
+  required,
+  helper,
+  error,
+  onFocus,
+  onBlur,
+  ...props
+}: TextFieldProps) {
+  const [focused, setFocused] = useState(false);
+  const border = error ? "border-danger-500" : focused ? "border-gold-500" : "border-subtle";
   return (
     <Field label={label} required={required} helper={helper} error={error}>
       <TextInput
-        placeholderTextColor="#A8A29E"
-        className={`min-h-11 rounded-md border bg-white px-3 text-body text-neutral-800 ${
-          error ? "border-danger-500" : "border-neutral-300"
-        }`}
+        placeholderTextColor="#948676"
+        onFocus={(e) => {
+          setFocused(true);
+          onFocus?.(e);
+        }}
+        onBlur={(e) => {
+          setFocused(false);
+          onBlur?.(e);
+        }}
+        className={`min-h-11 rounded-[10px] border bg-white px-3 font-sans text-body text-neutral-900 ${border}`}
         {...props}
       />
     </Field>
@@ -63,7 +80,7 @@ export function FormRow({ children }: { children: ReactNode }) {
 export function FormSection({ title, children }: { title?: string; children: ReactNode }) {
   return (
     <View className="gap-4">
-      {title ? <Text className="font-sans text-title text-neutral-800">{title}</Text> : null}
+      {title ? <Text className="font-display text-title text-neutral-900">{title}</Text> : null}
       {children}
     </View>
   );

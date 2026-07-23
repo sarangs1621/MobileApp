@@ -53,12 +53,14 @@ export default function ClassTeachersScreen() {
               : `${data.teacherName}${data.teacherId === me.data?.userId ? " (You)" : ""}`;
         return (
           <ListRow>
-            <Text className="font-medium text-foreground">
+            <Text className="font-sans text-body font-semibold text-neutral-900">
               {`${className.get(section.classId) ?? ""} ${section.name}`.trim()}
             </Text>
-            <Text className="text-sm text-muted-foreground">Class teacher: {teacherLabel}</Text>
+            <Text className="font-sans text-sm text-neutral-500">
+              Class teacher: {teacherLabel}
+            </Text>
             {data ? (
-              <Text className="text-xs text-muted-foreground">
+              <Text className="font-sans text-caption text-neutral-400">
                 Since {new Date(data.assignedAt).toLocaleDateString()}
               </Text>
             ) : null}

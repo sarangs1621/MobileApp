@@ -3,29 +3,30 @@
 @tailwind utilities;
 
 /* Design tokens (UI_DESIGN_SYSTEM.md). Names match @repo/ui's Tailwind preset.
-   Brand hues are placeholders pending §16.7. */
+   Values mirror @repo/ui colorTokens — the Sri Gujarati Vidyalaya heritage
+   identity (crest maroon, heritage gold, parchment neutrals). */
 @layer base {
   :root {
-    --background: 0 0% 100%;
-    --foreground: 222 47% 11%;
+    --background: 40 60% 97%;
+    --foreground: 28 36% 10%;
     --card: 0 0% 100%;
-    --card-foreground: 222 47% 11%;
-    --primary: 221 83% 53%;
-    --primary-foreground: 0 0% 100%;
-    --secondary: 210 40% 96%;
-    --secondary-foreground: 222 47% 11%;
-    --muted: 210 40% 96%;
-    --muted-foreground: 215 16% 47%;
-    --accent: 210 40% 96%;
-    --accent-foreground: 222 47% 11%;
-    --destructive: 0 84% 60%;
-    --destructive-foreground: 0 0% 100%;
-    --success: 142 71% 45%;
-    --warning: 38 92% 50%;
-    --info: 221 83% 53%;
-    --border: 214 32% 91%;
-    --input: 214 32% 91%;
-    --ring: 221 83% 53%;
+    --card-foreground: 28 36% 10%;
+    --primary: 19 72% 28%;
+    --primary-foreground: 40 60% 97%;
+    --secondary: 40 46% 94%;
+    --secondary-foreground: 28 36% 10%;
+    --muted: 40 46% 94%;
+    --muted-foreground: 30 15% 38%;
+    --accent: 43 67% 92%;
+    --accent-foreground: 38 71% 25%;
+    --destructive: 8 63% 43%;
+    --destructive-foreground: 40 60% 97%;
+    --success: 137 33% 36%;
+    --warning: 38 71% 40%;
+    --info: 209 51% 36%;
+    --border: 36 35% 81%;
+    --input: 36 35% 81%;
+    --ring: 41 51% 52%;
     --radius: 0.5rem;
   }
 
@@ -36,5 +37,59 @@
   body {
     background-color: hsl(var(--background));
     color: hsl(var(--foreground));
+  }
+
+  /* Heritage display serif for headings (Newsreader via next/font). */
+  h1,
+  h2,
+  h3 {
+    font-family: var(--font-display, Georgia, serif);
+    letter-spacing: -0.015em;
+  }
+
+  ::selection {
+    background: #f2e4c4; /* gold-200 */
+    color: #241a11; /* ink-900 */
+  }
+
+  /* Thin rounded sand scrollbars on parchment (design handoff, global shell). */
+  * {
+    scrollbar-width: thin;
+    scrollbar-color: #d8c6ae transparent;
+  }
+  ::-webkit-scrollbar {
+    width: 10px;
+    height: 10px;
+  }
+  ::-webkit-scrollbar-track {
+    background: transparent;
+  }
+  ::-webkit-scrollbar-thumb {
+    background: #d8c6ae;
+    border-radius: 8px;
+    border: 2.5px solid #fcf9f3;
+  }
+  ::-webkit-scrollbar-thumb:hover {
+    background: #c2a87f;
+  }
+  /* Translucent cream thumb inside the dark sidebar. */
+  aside[data-surface="dark"] * {
+    scrollbar-color: rgba(252, 249, 243, 0.25) transparent;
+  }
+  aside[data-surface="dark"] ::-webkit-scrollbar-thumb {
+    background: rgba(252, 249, 243, 0.22);
+    border: 2.5px solid #3a1607;
+  }
+  aside[data-surface="dark"] ::-webkit-scrollbar-thumb:hover {
+    background: rgba(252, 249, 243, 0.38);
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    *,
+    *::before,
+    *::after {
+      animation: none !important;
+      transition: none !important;
+    }
   }
 }

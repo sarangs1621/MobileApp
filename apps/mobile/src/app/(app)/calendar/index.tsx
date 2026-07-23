@@ -1,10 +1,13 @@
 import { useTranslation } from "@repo/i18n";
 import type { CalendarEventDto, CalendarEventTypeKey } from "@repo/types";
+import { CaretLeft, CaretRight } from "phosphor-react-native";
 import { useState } from "react";
 import { FlatList, Pressable, Text, View } from "react-native";
 
 import { EVENT_TYPE_LABEL, formatDate, Loading } from "../../../components/announcements-ui";
 import { ScreenScaffold } from "../../../components/attendance-ui";
+import { Chip } from "../../../components/behaviour-ui";
+import { StatusChip, type Tone } from "../../../components/ui";
 import { trpc } from "../../../lib/trpc";
 
 const MONTHS = [
@@ -28,6 +31,13 @@ const TYPE_FILTERS: (CalendarEventTypeKey | "ALL")[] = [
   "EVENT",
   "MEETING",
 ];
+const TYPE_TONE: Record<CalendarEventTypeKey, Tone> = {
+  HOLIDAY: "success",
+  EVENT: "neutral",
+  EXAM: "brand",
+  MEETING: "gold",
+  OTHER: "neutral",
+};
 
 /**
  * School calendar (M11 Step 6). Upcoming (soonest first) or a month view; a type
@@ -91,20 +101,20 @@ export default function CalendarScreen() {
             accessibilityRole="button"
             accessibilityLabel={t.previousMonth}
             onPress={() => stepMonth(-1)}
-            className="min-h-11 min-w-11 items-center justify-center rounded-md border border-border"
+            className="size-11 items-center justify-center rounded-xl border border-subtle bg-white active:bg-primary-50"
           >
-            <Text className="text-foreground">←</Text>
+            <CaretLeft size={18} color="#7A3414" weight="bold" />
           </Pressable>
-          <Text className="font-medium text-foreground">
+          <Text className="font-display text-title text-neutral-900">
             {MONTHS[month - 1]} {year}
           </Text>
           <Pressable
             accessibilityRole="button"
             accessibilityLabel={t.nextMonth}
             onPress={() => stepMonth(1)}
-            className="min-h-11 min-w-11 items-center justify-center rounded-md border border-border"
+            className="size-11 items-center justify-center rounded-xl border border-subtle bg-white active:bg-primary-50"
           >
-            <Text className="text-foreground">→</Text>
+            <CaretRight size={18} color="#7A3414" weight="bold" />
           </Pressable>
         </View>
       ) : null}
@@ -118,7 +128,7 @@ export default function CalendarScreen() {
           scrollEnabled={false}
           contentContainerClassName="gap-3"
           ListEmptyComponent={
-            <Text className="text-muted-foreground">
+            <Text className="font-sans text-neutral-500">
               {mode === "UPCOMING" ? t.noUpcomingEvents : t.noEventsThisMonth}
             </Text>
           }
@@ -135,31 +145,21 @@ function EventRow({ event }: { event: CalendarEventDto }) {
       ? formatDate(event.startDate)
       : `${formatDate(event.startDate)} – ${formatDate(event.endDate)}`;
   return (
-    <View className="gap-1 rounded-md border border-border bg-card p-4">
+    <View className="gap-1.5 rounded-card border border-subtle bg-card p-4 shadow-sm">
       <View className="flex-row items-center gap-2">
-        <Text className="flex-1 font-medium text-foreground">{event.title}</Text>
-        <Text className="rounded-md bg-muted px-2 py-0.5 text-xs text-muted-foreground">
-          {EVENT_TYPE_LABEL[event.eventType]}
+        <Text className="flex-1 font-sans text-body font-semibold text-neutral-900">
+          {event.title}
         </Text>
+        <StatusChip
+          tone={TYPE_TONE[event.eventType]}
+          label={EVENT_TYPE_LABEL[event.eventType]}
+          dot
+        />
       </View>
-      <Text className="text-sm text-muted-foreground">{range}</Text>
+      <Text className="font-sans text-sm text-neutral-500">{range}</Text>
       {event.description ? (
-        <Text className="text-sm text-muted-foreground">{event.description}</Text>
+        <Text className="font-sans text-sm text-neutral-500">{event.description}</Text>
       ) : null}
     </View>
-  );
-}
-
-function Chip({ label, active, onPress }: { label: string; active: boolean; onPress: () => void }) {
-  return (
-    <Pressable
-      accessibilityRole="button"
-      onPress={onPress}
-      className={`min-h-11 justify-center rounded-md px-3 ${
-        active ? "bg-primary" : "border border-border bg-background"
-      }`}
-    >
-      <Text className={active ? "text-primary-foreground" : "text-foreground"}>{label}</Text>
-    </Pressable>
   );
 }

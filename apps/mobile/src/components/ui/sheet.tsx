@@ -4,8 +4,8 @@ import { Modal, Pressable, Text, View } from "react-native";
 import { Button } from "./button";
 
 /**
- * BottomSheet (ADR-UX1, mobile) — the modal surface. Backdrop scrim (dismiss on
- * tap), slides from the trigger source, radius 16 top corners.
+ * BottomSheet (design handoff, mobile) — the modal surface. Ink scrim (dismiss on
+ * tap), slides up, 18px top corners, grab handle, serif title.
  */
 export function BottomSheet({
   visible,
@@ -20,9 +20,13 @@ export function BottomSheet({
 }) {
   return (
     <Modal visible={visible} transparent animationType="slide" onRequestClose={onClose}>
-      <Pressable className="flex-1 justify-end bg-neutral-900/50" onPress={onClose}>
-        <Pressable className="gap-4 rounded-t-xl bg-card p-6" onPress={(e) => e.stopPropagation()}>
-          {title ? <Text className="font-sans text-title text-neutral-900">{title}</Text> : null}
+      <Pressable className="flex-1 justify-end bg-neutral-900/55" onPress={onClose}>
+        <Pressable
+          className="gap-4 rounded-t-[18px] bg-card px-6 pb-8 pt-3"
+          onPress={(e) => e.stopPropagation()}
+        >
+          <View className="h-1 w-10 self-center rounded-full bg-sand-400" />
+          {title ? <Text className="font-display text-title text-neutral-900">{title}</Text> : null}
           {children}
         </Pressable>
       </Pressable>
@@ -30,7 +34,7 @@ export function BottomSheet({
   );
 }
 
-/** Destructive confirm — repeats the object's NAME (ADR-UX1 §component-kit). */
+/** Destructive confirm — repeats the object's NAME (design handoff). */
 export function ConfirmDialog({
   visible,
   title,

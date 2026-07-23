@@ -1,13 +1,14 @@
 "use client";
 
-import { cn } from "@repo/ui";
-import { CheckCircle2, Info, X, XCircle } from "lucide-react";
+import { CheckCircle, Info, X, XCircle } from "@phosphor-icons/react";
 import { createContext, useCallback, useContext, useRef, useState, type ReactNode } from "react";
 
 /**
- * Toast system (ADR-UX1 §component-kit / §8). One queue, one provider at the app
- * root; `useToast().show(...)` from any mutation. Auto-dismiss 4s; `aria-live`
- * polite so screen readers announce without stealing focus.
+ * Toast system (design handoff) — bottom-center dark pill (ink-900 bg, cream
+ * text, gold/status icon). One queue, one provider at the app root;
+ * `useToast().show(...)` from any mutation. Auto-dismiss ~2.4s per the handoff
+ * (errors stay 5s so they're not missed); `aria-live` polite so screen readers
+ * announce without stealing focus.
  */
 type ToastKind = "success" | "error" | "info";
 interface Toast {
@@ -20,11 +21,11 @@ const ToastContext = createContext<{ show: (kind: ToastKind, message: string) =>
   null,
 );
 
-const ICON = { success: CheckCircle2, error: XCircle, info: Info } as const;
-const STYLE: Record<ToastKind, string> = {
-  success: "border-success-200 text-success-700",
-  error: "border-danger-200 text-danger-700",
-  info: "border-info-200 text-info-700",
+const ICON = { success: CheckCircle, error: XCircle, info: Info } as const;
+const ICON_COLOR: Record<ToastKind, string> = {
+  success: "text-gold-400",
+  error: "text-red-100",
+  info: "text-gold-300",
 };
 
 export function ToastProvider({ children }: { children: ReactNode }) {
@@ -39,7 +40,7 @@ export function ToastProvider({ children }: { children: ReactNode }) {
     (kind: ToastKind, message: string) => {
       const id = nextId.current++;
       setToasts((t) => [...t, { id, kind, message }]);
-      setTimeout(() => dismiss(id), 4000);
+      setTimeout(() => dismiss(id), kind === "error" ? 5000 : 2400);
     },
     [dismiss],
   );
@@ -49,27 +50,28 @@ export function ToastProvider({ children }: { children: ReactNode }) {
       {children}
       <div
         aria-live="polite"
-        className="pointer-events-none fixed bottom-4 right-4 z-[100] flex w-full max-w-sm flex-col gap-2"
+        className="pointer-events-none fixed bottom-6 left-1/2 z-[100] flex w-full max-w-md -translate-x-1/2 flex-col items-center gap-2 px-4"
       >
         {toasts.map((t) => {
           const Icon = ICON[t.kind];
           return (
             <div
               key={t.id}
-              className={cn(
-                "pointer-events-auto flex items-start gap-2 rounded-lg border bg-card p-3 text-sm shadow-lg",
-                STYLE[t.kind],
-              )}
+              className="pointer-events-auto flex animate-pop-in items-center gap-2.5 rounded-full bg-ink-900 py-2.5 pl-4 pr-3 text-sm text-cream-50 shadow-lg"
             >
-              <Icon aria-hidden strokeWidth={1.75} className="mt-0.5 size-4 shrink-0" />
-              <p className="flex-1 text-neutral-800">{t.message}</p>
+              <Icon
+                aria-hidden
+                weight="fill"
+                className={`size-[18px] shrink-0 ${ICON_COLOR[t.kind]}`}
+              />
+              <p className="flex-1">{t.message}</p>
               <button
                 type="button"
                 aria-label="Dismiss"
                 onClick={() => dismiss(t.id)}
-                className="cursor-pointer text-neutral-400 hover:text-neutral-600"
+                className="cursor-pointer rounded-full p-1 text-cream-50/60 hover:bg-cream-50/10 hover:text-cream-50"
               >
-                <X aria-hidden strokeWidth={1.75} className="size-4" />
+                <X aria-hidden className="size-3.5" />
               </button>
             </div>
           );

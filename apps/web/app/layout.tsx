@@ -1,6 +1,6 @@
 import { ThemeProvider } from "@repo/ui";
 import type { Metadata } from "next";
-import { Inter } from "next/font/google";
+import { Hanken_Grotesk, IBM_Plex_Mono, Newsreader } from "next/font/google";
 import type { ReactNode } from "react";
 
 import { LocaleGate } from "@/src/i18n/locale-gate";
@@ -8,9 +8,23 @@ import { TRPCProvider } from "@/src/trpc/react";
 
 import "./globals.css";
 
-// Inter is the one typeface (ADR-UX1 §2). Exposed as `--font-sans`, which the
-// Tailwind `font-sans` family resolves to; `swap` avoids invisible text (FOIT).
-const inter = Inter({ subsets: ["latin"], variable: "--font-sans", display: "swap" });
+// Heritage identity pair: Hanken Grotesk for UI/body (`--font-sans`), Newsreader
+// for headings (`--font-display`, applied via globals.css base layer). `swap`
+// avoids invisible text (FOIT).
+const sans = Hanken_Grotesk({ subsets: ["latin"], variable: "--font-sans", display: "swap" });
+const displaySerif = Newsreader({
+  subsets: ["latin"],
+  style: ["normal", "italic"],
+  variable: "--font-display",
+  display: "swap",
+});
+// IBM Plex Mono — invoice/receipt/document numbers (design handoff §Design Tokens).
+const mono = IBM_Plex_Mono({
+  subsets: ["latin"],
+  weight: ["400", "500", "600"],
+  variable: "--font-mono",
+  display: "swap",
+});
 
 export const metadata: Metadata = {
   title: "School Portal",
@@ -19,7 +33,7 @@ export const metadata: Metadata = {
 
 export default function RootLayout({ children }: { children: ReactNode }) {
   return (
-    <html lang="en" className={inter.variable}>
+    <html lang="en" className={`${sans.variable} ${displaySerif.variable} ${mono.variable}`}>
       <body className="font-sans">
         <TRPCProvider>
           <ThemeProvider>

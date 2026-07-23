@@ -1,15 +1,16 @@
 import type { StudentStatusKey } from "@repo/types";
 import { Link } from "expo-router";
-import { Pressable, Text } from "react-native";
+import { Pressable, Text, View } from "react-native";
 
 import { AcademicListScreen, ListRow } from "../../../../components/academic-list";
+import { Avatar, StatusChip, titleCase, type Tone } from "../../../../components/ui";
 import { trpc } from "../../../../lib/trpc";
 
-const STATUS_CLASS: Record<StudentStatusKey, string> = {
-  ACTIVE: "text-success",
-  ARCHIVED: "text-muted-foreground",
-  GRADUATED: "text-info",
-  WITHDRAWN: "text-destructive",
+const STATUS_TONE: Record<StudentStatusKey, Tone> = {
+  ACTIVE: "success",
+  ARCHIVED: "neutral",
+  GRADUATED: "info",
+  WITHDRAWN: "danger",
 };
 
 /**
@@ -28,23 +29,35 @@ export default function StudentsScreen() {
       items={students.data}
       keyExtractor={(student) => student.id}
       emptyText="No students visible to you."
-      renderItem={(student) => (
-        <Link href={{ pathname: "/people/students/[id]", params: { id: student.id } }} asChild>
-          <Pressable accessibilityRole="button">
-            <ListRow>
-              <Text className="font-medium text-foreground">
-                {student.firstName} {student.lastName}
-              </Text>
-              <Text className="text-sm text-muted-foreground">
-                Admission no {student.admissionNo}
-              </Text>
-              <Text className={`text-sm font-medium ${STATUS_CLASS[student.status]}`}>
-                {student.status}
-              </Text>
-            </ListRow>
-          </Pressable>
-        </Link>
-      )}
+      renderItem={(student) => {
+        const name = `${student.firstName} ${student.lastName}`;
+        return (
+          <Link href={{ pathname: "/people/students/[id]", params: { id: student.id } }} asChild>
+            <Pressable accessibilityRole="button">
+              <ListRow>
+                <View className="flex-row items-center gap-3">
+                  <Avatar name={name} />
+                  <View className="flex-1 gap-0.5">
+                    <View className="flex-row items-center gap-2">
+                      <Text className="flex-1 font-sans text-body font-semibold text-neutral-900">
+                        {name}
+                      </Text>
+                      <StatusChip
+                        tone={STATUS_TONE[student.status]}
+                        label={titleCase(student.status)}
+                        dot
+                      />
+                    </View>
+                    <Text className="font-sans text-sm text-neutral-500">
+                      Admission no {student.admissionNo}
+                    </Text>
+                  </View>
+                </View>
+              </ListRow>
+            </Pressable>
+          </Link>
+        );
+      }}
     />
   );
 }

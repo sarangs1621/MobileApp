@@ -1,6 +1,7 @@
 import { useTranslation } from "@repo/i18n";
 import type { NotificationTypeKey } from "@repo/types";
 import { Link, type Href } from "expo-router";
+import { Bell } from "phosphor-react-native";
 import { Pressable, Text, View } from "react-native";
 
 import { trpc } from "../lib/trpc";
@@ -55,12 +56,12 @@ export function NotificationBell() {
         accessibilityLabel={
           count > 0 ? dict.notifications.bellUnread(count) : dict.notifications.title
         }
-        className="min-h-11 min-w-11 items-center justify-center"
+        className="size-11 items-center justify-center rounded-full border border-subtle bg-white active:bg-primary-50"
       >
-        <Text className="text-2xl">🔔</Text>
+        <Bell size={19} color="#7A3414" weight="regular" />
         {count > 0 ? (
-          <View className="absolute right-0 top-1 min-w-5 items-center justify-center rounded-full bg-destructive px-1">
-            <Text className="text-xs font-semibold text-destructive-foreground">
+          <View className="absolute -right-0.5 -top-0.5 min-w-5 items-center justify-center rounded-full bg-danger-600 px-1">
+            <Text className="font-sans text-caption font-bold text-neutral-50">
               {count > 99 ? "99+" : count}
             </Text>
           </View>

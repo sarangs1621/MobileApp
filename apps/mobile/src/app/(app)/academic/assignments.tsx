@@ -40,13 +40,13 @@ export default function TeacherAssignmentsScreen() {
       emptyText="No teacher assignments yet."
       renderItem={(assignment) => (
         <ListRow>
-          <Text className="font-medium text-foreground">
+          <Text className="font-sans text-body font-semibold text-neutral-900">
             {subjectName.get(assignment.subjectId) ?? assignment.subjectId}
           </Text>
-          <Text className="text-sm text-muted-foreground">
+          <Text className="font-sans text-sm text-neutral-500">
             {sectionLabel.get(assignment.sectionId) ?? assignment.sectionId}
           </Text>
-          <Text className="text-sm text-muted-foreground">
+          <Text className="font-sans text-sm text-neutral-500">
             Teacher: {assignment.teacherId === me.data?.userId ? "You" : assignment.teacherId}
           </Text>
         </ListRow>

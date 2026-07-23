@@ -1,7 +1,11 @@
 import type { BehaviourCategoryKey, BehaviourSeverityKey, BehaviourStatusKey } from "@repo/types";
+import { CaretLeft } from "phosphor-react-native";
 import { ActivityIndicator, Pressable, Text, View } from "react-native";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 
-/** Shared labels + presentational bits for the M12 discipline screens (ADR-020). */
+/** Shared labels + presentational bits for the M12 discipline screens (ADR-020),
+ *  on the design-handoff heritage look. Header/Field/Chip are reused across the
+ *  behaviour, documents and fees screens. */
 
 export const CATEGORY_LABEL: Record<BehaviourCategoryKey, string> = {
   DISCIPLINE: "Discipline",
@@ -28,22 +32,22 @@ export const STATUS_LABEL: Record<BehaviourStatusKey, string> = {
 };
 
 const SEVERITY_CLASS: Record<BehaviourSeverityKey, string> = {
-  LOW: "text-muted-foreground",
-  MEDIUM: "text-info",
-  HIGH: "text-primary",
-  CRITICAL: "text-destructive",
+  LOW: "text-neutral-500",
+  MEDIUM: "text-info-600",
+  HIGH: "text-primary-700",
+  CRITICAL: "text-danger-600",
 };
 
 const STATUS_CLASS: Record<BehaviourStatusKey, string> = {
-  OPEN: "text-info",
-  IN_PROGRESS: "text-primary",
-  RESOLVED: "text-success",
-  CLOSED: "text-muted-foreground",
+  OPEN: "text-info-600",
+  IN_PROGRESS: "text-primary-700",
+  RESOLVED: "text-success-600",
+  CLOSED: "text-neutral-500",
 };
 
 export function SeverityText({ severity }: { severity: BehaviourSeverityKey }) {
   return (
-    <Text className={`text-xs font-semibold ${SEVERITY_CLASS[severity]}`}>
+    <Text className={`font-sans text-caption font-semibold ${SEVERITY_CLASS[severity]}`}>
       {SEVERITY_LABEL[severity]}
     </Text>
   );
@@ -51,43 +55,71 @@ export function SeverityText({ severity }: { severity: BehaviourSeverityKey }) {
 
 export function StatusText({ status }: { status: BehaviourStatusKey }) {
   return (
-    <Text className={`text-xs font-medium ${STATUS_CLASS[status]}`}>{STATUS_LABEL[status]}</Text>
+    <Text className={`font-sans text-caption font-semibold ${STATUS_CLASS[status]}`}>
+      {STATUS_LABEL[status]}
+    </Text>
   );
 }
 
 export function Loading() {
   return (
     <View className="items-center py-8">
-      <ActivityIndicator />
+      <ActivityIndicator color="#7A3414" />
     </View>
   );
 }
 
-export function Header({ title, onBack }: { title: string; onBack: () => void }) {
+/** Screen top bar — white surface, sand hairline, Phosphor back caret, serif title. */
+export function Header({
+  title,
+  subtitle,
+  onBack,
+  action,
+}: {
+  title: string;
+  subtitle?: string;
+  onBack: () => void;
+  action?: React.ReactNode;
+}) {
+  const insets = useSafeAreaInsets();
   return (
-    <View className="flex-row items-center gap-3 border-b border-border px-4 py-3">
+    <View
+      style={{ paddingTop: insets.top + 12 }}
+      className="flex-row items-center gap-2 border-b border-subtle bg-white px-3 pb-3"
+    >
       <Pressable
         accessibilityRole="button"
         accessibilityLabel="Go back"
         onPress={onBack}
-        className="min-h-11 min-w-11 items-center justify-center rounded-md"
+        className="size-11 items-center justify-center rounded-xl active:bg-primary-50"
       >
-        <Text className="text-lg text-foreground">←</Text>
+        <CaretLeft size={22} color="#44382C" weight="bold" />
       </Pressable>
-      <Text className="flex-1 text-xl font-semibold text-foreground">{title}</Text>
+      <View className="flex-1">
+        <Text className="font-display text-title text-neutral-900" numberOfLines={1}>
+          {title}
+        </Text>
+        {subtitle ? (
+          <Text className="font-sans text-caption text-neutral-500" numberOfLines={1}>
+            {subtitle}
+          </Text>
+        ) : null}
+      </View>
+      {action}
     </View>
   );
 }
 
 export function Field({ label, children }: { label: string; children: React.ReactNode }) {
   return (
-    <View className="gap-2">
-      <Text className="text-sm font-medium text-muted-foreground">{label}</Text>
+    <View className="gap-1.5">
+      <Text className="font-sans text-sm font-semibold text-neutral-900">{label}</Text>
       {children}
     </View>
   );
 }
 
+/** Selectable pill (filters, category/severity choices). */
 export function Chip({
   label,
   active,
@@ -100,12 +132,19 @@ export function Chip({
   return (
     <Pressable
       accessibilityRole="button"
+      accessibilityState={{ selected: active }}
       onPress={onPress}
-      className={`min-h-11 justify-center rounded-md px-3 ${
-        active ? "bg-primary" : "border border-border bg-background"
+      className={`min-h-10 justify-center rounded-pill border px-4 ${
+        active ? "border-primary-600 bg-primary-50" : "border-subtle bg-white"
       }`}
     >
-      <Text className={active ? "text-primary-foreground" : "text-foreground"}>{label}</Text>
+      <Text
+        className={`font-sans text-sm font-semibold ${
+          active ? "text-primary-800" : "text-neutral-500"
+        }`}
+      >
+        {label}
+      </Text>
     </Pressable>
   );
 }

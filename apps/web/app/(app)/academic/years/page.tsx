@@ -1,9 +1,19 @@
 "use client";
 
+import {
+  Buildings,
+  CalendarBlank,
+  CheckCircle,
+  Hourglass,
+  LockSimple,
+  PencilSimple,
+  Plus,
+  Trash,
+} from "@phosphor-icons/react";
 import { PERMISSIONS } from "@repo/constants";
 import { can } from "@repo/core";
 import type { AcademicYearDto, AcademicYearStatusKey } from "@repo/types";
-import { Building2, Plus } from "lucide-react";
+import { cn } from "@repo/ui";
 import Link from "next/link";
 import { useCallback, useState } from "react";
 
@@ -16,8 +26,8 @@ import {
   DateField,
   Dialog,
   EmptyState,
+  IconButton,
   Input,
-  Select,
   SearchInput,
   StatusChip,
   TableToolbar,
@@ -25,7 +35,13 @@ import {
 } from "@/src/components/ui";
 import { trpc } from "@/src/trpc/react";
 
-const STATUS_OPTIONS: readonly AcademicYearStatusKey[] = ["PLANNED", "ACTIVE", "CLOSED"];
+/** "2026-06-01" → "1 Jun 2026". */
+function fmtDate(iso: string): string {
+  const d = new Date(iso + "T00:00:00");
+  return Number.isNaN(d.getTime())
+    ? iso
+    : d.toLocaleDateString("en-IN", { day: "numeric", month: "short", year: "numeric" });
+}
 
 /** Academic-years CRUD. Terms are managed on the year's detail page. */
 export default function AcademicYearsPage() {
@@ -67,32 +83,45 @@ export default function AcademicYearsPage() {
     useCallback((year: AcademicYearDto, q: string) => year.name.toLowerCase().includes(q), []),
   );
 
+  const activeYear = years.data?.find((y) => y.status === "ACTIVE");
+
   const columns: Column<AcademicYearDto>[] = [
     {
       key: "name",
       header: "Name",
-      render: (year) => <span className="font-medium text-neutral-800">{year.name}</span>,
+      render: (year) => (
+        <span className="flex items-center gap-2.5 text-[14.5px] font-semibold text-ink-900">
+          <CalendarBlank aria-hidden size={17} className="shrink-0 text-maroon-700" />
+          {year.name}
+        </span>
+      ),
     },
     {
       key: "start",
       header: "Start",
-      render: (year) => <span className="text-neutral-500">{year.startDate}</span>,
+      render: (year) => (
+        <span className="text-[13.5px] text-ink-500">{fmtDate(year.startDate)}</span>
+      ),
     },
     {
       key: "end",
       header: "End",
-      render: (year) => <span className="text-neutral-500">{year.endDate}</span>,
+      render: (year) => <span className="text-[13.5px] text-ink-500">{fmtDate(year.endDate)}</span>,
     },
-    { key: "status", header: "Status", render: (year) => <StatusChip status={year.status} /> },
+    {
+      key: "status",
+      header: "Status",
+      render: (year) => <StatusChip status={year.status} dot={year.status === "ACTIVE"} />,
+    },
     {
       key: "terms",
       header: "Terms",
       render: (year) => (
         <Link
           href={`/academic/years/${year.id}`}
-          className="font-medium text-primary-700 hover:underline"
+          className="text-[13px] font-semibold text-maroon-700 hover:text-maroon-800"
         >
-          Manage terms
+          Manage terms →
         </Link>
       ),
     },
@@ -102,32 +131,28 @@ export default function AcademicYearsPage() {
       align: "right",
       render: (year) =>
         canManage ? (
-          <div className="flex justify-end gap-1">
-            <Button
-              variant="ghost"
-              size="sm"
+          <div className="flex justify-end gap-1.5">
+            <IconButton
+              label="Edit"
+              icon={PencilSimple}
               onClick={() => {
                 create.reset();
                 update.reset();
                 setEditing(year);
               }}
-            >
-              Edit
-            </Button>
-            <Button
-              variant="ghost"
-              size="sm"
-              className="text-danger-600 hover:bg-danger-50"
+            />
+            <IconButton
+              label="Delete"
+              tone="danger"
+              icon={Trash}
               onClick={() => {
                 remove.reset();
                 setDeleting(year);
               }}
-            >
-              Delete
-            </Button>
+            />
           </div>
         ) : (
-          <span className="text-neutral-400">—</span>
+          <span className="text-ink-400">—</span>
         ),
     },
   ];
@@ -144,11 +169,17 @@ export default function AcademicYearsPage() {
         toolbar={
           <TableToolbar
             search={
-              <SearchInput value={paged.query} onChange={(e) => paged.setQuery(e.target.value)} />
+              <SearchInput
+                placeholder="Search years…"
+                value={paged.query}
+                onChange={(e) => paged.setQuery(e.target.value)}
+              />
             }
+            count={`${paged.total} academic year${paged.total === 1 ? "" : "s"}`}
             actions={
               canManage ? (
                 <Button
+                  size="sm"
                   icon={Plus}
                   onClick={() => {
                     create.reset();
@@ -162,7 +193,20 @@ export default function AcademicYearsPage() {
             }
           />
         }
-        empty={<EmptyState icon={Building2} title="No academic years yet." />}
+        empty={
+          <EmptyState
+            icon={Buildings}
+            title="No academic years yet."
+            message="Create the first session (e.g. 2026-27) to start setting up classes and terms."
+            action={
+              canManage ? (
+                <Button size="sm" icon={Plus} onClick={() => setEditing("new")}>
+                  New academic year
+                </Button>
+              ) : undefined
+            }
+          />
+        }
         footer={
           <Paginator
             page={paged.page}
@@ -176,6 +220,11 @@ export default function AcademicYearsPage() {
       {editing !== null ? (
         <YearFormModal
           year={editing === "new" ? null : editing}
+          activeYearName={
+            activeYear && activeYear.id !== (editing === "new" ? "" : editing.id)
+              ? activeYear.name
+              : null
+          }
           busy={create.isPending || update.isPending}
           error={create.error?.message ?? update.error?.message ?? null}
           onClose={() => setEditing(null)}
@@ -189,9 +238,10 @@ export default function AcademicYearsPage() {
 
       {deleting !== null ? (
         <ConfirmDialog
-          title="Delete academic year"
+          title="Delete academic year?"
           objectName={deleting.name}
           message="Permanently delete this year and its terms? This cannot be undone —"
+          confirmLabel="Delete year"
           busy={remove.isPending}
           error={remove.error?.message ?? null}
           onCancel={() => setDeleting(null)}
@@ -204,14 +254,28 @@ export default function AcademicYearsPage() {
   );
 }
 
+const STATUS_TILES: {
+  key: AcademicYearStatusKey;
+  label: string;
+  icon: typeof Hourglass;
+  activeWeight?: "bold";
+}[] = [
+  { key: "PLANNED", label: "Planned", icon: Hourglass },
+  { key: "ACTIVE", label: "Active", icon: CheckCircle, activeWeight: "bold" },
+  { key: "CLOSED", label: "Closed", icon: LockSimple },
+];
+
 function YearFormModal({
   year,
+  activeYearName,
   busy,
   error,
   onClose,
   onSubmit,
 }: {
   year: AcademicYearDto | null;
+  /** Name of the currently ACTIVE year (other than this one), for the hint. */
+  activeYearName: string | null;
   busy: boolean;
   error: string | null;
   onClose: () => void;
@@ -234,47 +298,75 @@ function YearFormModal({
           e.preventDefault();
           onSubmit({ name: name.trim(), startDate, endDate, status });
         }}
-        className="flex flex-col gap-4"
+        className="flex flex-col gap-[18px]"
       >
         <Input
           label="Name"
           value={name}
           onChange={(e) => setName(e.target.value)}
-          placeholder="2026–27"
+          placeholder="2026-27"
           required
         />
-        <DateField
-          label="Start date"
-          value={startDate}
-          onChange={(e) => setStartDate(e.target.value)}
-          required
-        />
-        <DateField
-          label="End date"
-          value={endDate}
-          onChange={(e) => setEndDate(e.target.value)}
-          required
-        />
-        <Select
-          label="Status"
-          value={status}
-          onChange={(e) => setStatus(e.target.value as AcademicYearStatusKey)}
-        >
-          {STATUS_OPTIONS.map((option) => (
-            <option key={option} value={option}>
-              {option}
-            </option>
-          ))}
-        </Select>
+        <div className="grid grid-cols-2 gap-3.5">
+          <DateField
+            label="Start date"
+            value={startDate}
+            onChange={(e) => setStartDate(e.target.value)}
+            required
+          />
+          <DateField
+            label="End date"
+            value={endDate}
+            onChange={(e) => setEndDate(e.target.value)}
+            required
+          />
+        </div>
 
-        {error ? <p className="text-sm text-danger-600">{error}</p> : null}
+        {/* Status choice tiles (design handoff §Choice pills) */}
+        <div className="flex flex-col gap-1.5">
+          <span className="text-[13px] font-semibold text-ink-900">Status</span>
+          <div className="flex gap-2">
+            {STATUS_TILES.map((tile) => {
+              const selected = status === tile.key;
+              const TileIcon = tile.icon;
+              return (
+                <button
+                  key={tile.key}
+                  type="button"
+                  aria-pressed={selected}
+                  onClick={() => setStatus(tile.key)}
+                  className={cn(
+                    "flex flex-1 cursor-pointer flex-col items-center gap-1 rounded-xl border px-2 py-[11px] text-[13px] font-semibold transition-colors duration-fast",
+                    selected
+                      ? "border-maroon-700 bg-maroon-50 text-maroon-800"
+                      : "border-subtle bg-white text-ink-500 hover:border-strong",
+                  )}
+                >
+                  <TileIcon
+                    aria-hidden
+                    size={18}
+                    weight={selected && tile.activeWeight ? "bold" : "regular"}
+                  />
+                  {tile.label}
+                </button>
+              );
+            })}
+          </div>
+          {status === "ACTIVE" && activeYearName ? (
+            <span className="text-caption text-ink-400">
+              Only one year can be active at a time — activating this one closes {activeYearName}.
+            </span>
+          ) : null}
+        </div>
 
-        <div className="mt-1 flex justify-end gap-2">
+        {error ? <p className="text-sm text-red-600">{error}</p> : null}
+
+        <div className="mt-1 flex justify-end gap-2.5">
           <Button type="button" variant="secondary" onClick={onClose}>
             Cancel
           </Button>
           <Button type="submit" loading={busy}>
-            Save
+            Save academic year
           </Button>
         </div>
       </form>

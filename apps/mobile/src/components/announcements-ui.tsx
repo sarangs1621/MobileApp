@@ -5,6 +5,7 @@ import type {
   AnnouncementStatusKey,
   CalendarEventTypeKey,
 } from "@repo/types";
+import { Paperclip } from "phosphor-react-native";
 import { ActivityIndicator, Linking, Pressable, Text, View } from "react-native";
 
 export const SCOPE_LABEL: Record<AnnouncementScopeKey, string> = {
@@ -53,7 +54,7 @@ export function AttachmentList({
   if (attachments.length === 0) return null;
   return (
     <View className="gap-2">
-      <Text className="text-sm font-medium text-muted-foreground">
+      <Text className="font-sans text-caption font-semibold uppercase tracking-eyebrow text-neutral-500">
         {dict.announcements.attachments}
       </Text>
       {attachments.map((a) => (
@@ -64,13 +65,13 @@ export function AttachmentList({
           onPress={() => {
             void onMint(a.id).then(({ url }) => Linking.openURL(url));
           }}
-          className="min-h-11 flex-row items-center gap-2 rounded-md border border-border bg-background px-3 py-2"
+          className="min-h-11 flex-row items-center gap-2 rounded-xl border border-subtle bg-neutral-50 px-3 py-2 active:bg-primary-50"
         >
-          <Text className="text-base">📎</Text>
-          <Text className="flex-1 text-foreground" numberOfLines={1}>
+          <Paperclip size={16} color="#7A3414" weight="bold" />
+          <Text className="flex-1 font-sans text-neutral-900" numberOfLines={1}>
             {a.fileName}
           </Text>
-          <Text className="text-xs text-muted-foreground">
+          <Text className="font-sans text-caption text-neutral-500">
             {Math.max(1, Math.round(a.sizeBytes / 1024))} KB
           </Text>
         </Pressable>

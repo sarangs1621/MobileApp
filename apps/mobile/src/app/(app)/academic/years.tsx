@@ -1,14 +1,8 @@
-import type { AcademicYearStatusKey } from "@repo/types";
-import { Text } from "react-native";
+import { Text, View } from "react-native";
 
 import { AcademicListScreen, ListRow } from "../../../components/academic-list";
+import { StatusChip } from "../../../components/ui";
 import { trpc } from "../../../lib/trpc";
-
-const STATUS_CLASS: Record<AcademicYearStatusKey, string> = {
-  ACTIVE: "text-success",
-  PLANNED: "text-info",
-  CLOSED: "text-muted-foreground",
-};
 
 /** Read-only academic-years list (M2 placeholder — manage on web). */
 export default function AcademicYearsScreen() {
@@ -24,11 +18,15 @@ export default function AcademicYearsScreen() {
       emptyText="No academic years yet."
       renderItem={(year) => (
         <ListRow>
-          <Text className="font-medium text-foreground">{year.name}</Text>
-          <Text className="text-sm text-muted-foreground">
+          <View className="flex-row items-center gap-2">
+            <Text className="flex-1 font-sans text-body font-semibold text-neutral-900">
+              {year.name}
+            </Text>
+            <StatusChip status={year.status} dot />
+          </View>
+          <Text className="font-sans text-sm text-neutral-500">
             {year.startDate} → {year.endDate}
           </Text>
-          <Text className={`text-sm font-medium ${STATUS_CLASS[year.status]}`}>{year.status}</Text>
         </ListRow>
       )}
     />

@@ -1,7 +1,8 @@
 import { Link } from "expo-router";
-import { ActivityIndicator, Pressable, Text } from "react-native";
+import { ActivityIndicator, Pressable, Text, View } from "react-native";
 
 import { ScreenScaffold } from "../../../components/attendance-ui";
+import { Avatar } from "../../../components/ui";
 import { trpc } from "../../../lib/trpc";
 
 /** Parent "Marks & grades": pick a child to view their published results (M5). */
@@ -12,9 +13,9 @@ export default function ChildrenResultsScreen() {
   return (
     <ScreenScaffold title="Marks & grades">
       {children.isLoading ? (
-        <ActivityIndicator />
+        <ActivityIndicator color="#7A3414" />
       ) : rows.length === 0 ? (
-        <Text className="text-muted-foreground">No children are linked to your account.</Text>
+        <Text className="font-sans text-neutral-500">No children are linked to your account.</Text>
       ) : (
         rows.map((s) => (
           <Link
@@ -24,12 +25,17 @@ export default function ChildrenResultsScreen() {
           >
             <Pressable
               accessibilityRole="button"
-              className="gap-1 rounded-md border border-border bg-card p-4"
+              className="flex-row items-center gap-3 rounded-card border border-subtle bg-card p-4 shadow-sm active:bg-neutral-50"
             >
-              <Text className="font-medium text-foreground">
-                {s.firstName} {s.lastName}
-              </Text>
-              <Text className="text-sm text-muted-foreground">Admission {s.admissionNo}</Text>
+              <Avatar name={`${s.firstName} ${s.lastName}`} />
+              <View className="flex-1">
+                <Text className="font-sans text-body font-semibold text-neutral-900">
+                  {s.firstName} {s.lastName}
+                </Text>
+                <Text className="font-sans text-sm text-neutral-500">
+                  Admission {s.admissionNo}
+                </Text>
+              </View>
             </Pressable>
           </Link>
         ))

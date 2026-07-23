@@ -1,5 +1,19 @@
 "use client";
 
+import {
+  ArrowLeft,
+  Flask,
+  GlobeHemisphereEast,
+  ListNumbers,
+  PencilLine,
+  Plus,
+  PlusMinus,
+  TextAa,
+  Translate,
+  Trash,
+  BookOpen,
+  type Icon,
+} from "@phosphor-icons/react";
 import type { AssessmentDto, ExamRegisterDto } from "@repo/types";
 import Link from "next/link";
 import { useParams } from "next/navigation";
@@ -13,12 +27,38 @@ import {
   TableShell,
 } from "@/src/components/academic/ui";
 import { downloadCsv, SectionPicker } from "@/src/components/attendance/ui";
-import { REGISTER_STATUS_LABEL } from "@/src/components/exam/ui";
-import { Button, PageHeader, StatusChip, useToast } from "@/src/components/ui";
+import { EXAM_TYPE_LABEL, REGISTER_STATUS_LABEL } from "@/src/components/exam/ui";
+import { Button, IconButton, StatusChip, useToast } from "@/src/components/ui";
 import { trpc } from "@/src/trpc/react";
 
 /** A picked (assessment × section) target for the marks grid. */
 type Target = { assessmentId: string; sectionId: string };
+
+/** Best-effort subject icon by name (design handoff §Subjects). */
+function subjectIcon(name: string): Icon {
+  const n = name.toLowerCase();
+  if (/english/.test(n)) return TextAa;
+  if (/gujarati|hindi|malayalam|sanskrit|language/.test(n)) return Translate;
+  if (/math/.test(n)) return PlusMinus;
+  if (/science|physics|chemistry|biology/.test(n)) return Flask;
+  if (/social|history|geography|civics/.test(n)) return GlobeHemisphereEast;
+  return BookOpen;
+}
+
+const fmt = (iso: string, opts: Intl.DateTimeFormatOptions) =>
+  new Date(iso + "T00:00:00").toLocaleDateString("en-IN", opts);
+
+/** "2026-07-20".."2026-07-24" → "20 – 24 Jul 2026". */
+function fmtRange(start: string | null, end: string | null): string | null {
+  if (!start && !end) return null;
+  if (start && end) {
+    if (start === end) return fmt(start, { day: "numeric", month: "short", year: "numeric" });
+    return start.slice(0, 7) === end.slice(0, 7)
+      ? `${Number(start.slice(8, 10))} – ${fmt(end, { day: "numeric", month: "short", year: "numeric" })}`
+      : `${fmt(start, { day: "numeric", month: "short" })} – ${fmt(end, { day: "numeric", month: "short", year: "numeric" })}`;
+  }
+  return fmt((start ?? end)!, { day: "numeric", month: "short", year: "numeric" });
+}
 
 /**
  * Exam detail (M5, ADR-012). Assessment CRUD, the register oversight list, and
@@ -32,6 +72,7 @@ export default function ExamDetailPage() {
   const assessments = trpc.assessment.list.useQuery({ examId }, { enabled: examId !== "" });
   const registers = trpc.exam.registers.useQuery({ examId }, { enabled: examId !== "" });
   const subjects = trpc.subject.list.useQuery();
+  const scales = trpc.gradeScale.list.useQuery();
 
   const subjectName = useMemo(
     () => new Map((subjects.data ?? []).map((s) => [s.id, s.name])),
@@ -46,24 +87,45 @@ export default function ExamDetailPage() {
   );
   const registerRows = registers.data ?? [];
 
+  // Meta line: "Unit test · 20 – 24 Jul 2026 · SCERT Standard grade scale"
+  const scaleName = exam.data
+    ? ((exam.data.gradeScaleId
+        ? scales.data?.find((s) => s.id === exam.data!.gradeScaleId)?.name
+        : scales.data?.find((s) => s.isDefault)?.name) ?? null)
+    : null;
+  const meta = exam.data
+    ? [
+        EXAM_TYPE_LABEL[exam.data.type],
+        fmtRange(exam.data.startDate, exam.data.endDate),
+        scaleName ? `${scaleName} grade scale` : null,
+      ]
+        .filter(Boolean)
+        .join(" · ")
+    : "";
+
   return (
-    <section className="flex flex-col gap-6">
-      <PageHeader
-        title={exam.data?.name ?? "Exam"}
-        breadcrumb={
-          <Link href="/exams" className="text-primary-700 hover:underline">
-            ← All exams
-          </Link>
-        }
-        action={
-          published ? (
-            <div className="flex items-center gap-2">
-              <StatusChip status="PUBLISHED" />
-              <span className="text-sm text-neutral-500">read only</span>
-            </div>
-          ) : undefined
-        }
-      />
+    <section className="flex flex-col gap-4">
+      <div className="flex flex-col gap-1.5">
+        <Link
+          href="/exams"
+          className="flex items-center gap-1.5 self-start text-[13px] font-semibold text-maroon-700 hover:text-maroon-800"
+        >
+          <ArrowLeft aria-hidden size={15} />
+          All exams
+        </Link>
+        <div className="flex flex-wrap items-center gap-3">
+          <h2 className="font-display text-[28px] font-medium leading-tight text-ink-900">
+            {exam.data?.name ?? "Exam"}
+          </h2>
+          {exam.data ? (
+            <>
+              <StatusChip status={published ? "PUBLISHED" : "DRAFT"} dot={published} />
+              {published ? <StatusChip tone="neutral" label="Read only" /> : null}
+            </>
+          ) : null}
+        </div>
+        {meta ? <span className="text-[13px] text-ink-500">{meta}</span> : null}
+      </div>
 
       <Assessments
         examId={examId}
@@ -75,36 +137,64 @@ export default function ExamDetailPage() {
         isError={assessments.isError}
       />
 
-      <div className="flex flex-col gap-3">
-        <h3 className="text-title text-neutral-800">Registers</h3>
-        <TableShell
-          head={["Subject", "Section", "Status", ""]}
-          isLoading={registers.isLoading}
-          isError={registers.isError}
-          isEmpty={registerRows.length === 0}
-          emptyText="No registers yet — start one below."
-        >
-          {registerRows.map((r) => (
-            <tr key={r.examSectionId} className="border-b border-border last:border-b-0">
-              <td className="px-4 py-3 font-medium text-foreground">{r.subjectName}</td>
-              <td className="px-4 py-3 text-muted-foreground">{r.sectionName}</td>
-              <td className="px-4 py-3">
-                <StatusChip status={r.status} label={REGISTER_STATUS_LABEL[r.status]} />
-              </td>
-              <td className="px-4 py-3">
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  onClick={() =>
-                    setTarget({ assessmentId: r.assessmentId, sectionId: r.sectionId })
-                  }
-                >
-                  Open
-                </Button>
-              </td>
-            </tr>
-          ))}
-        </TableShell>
+      <div className="overflow-hidden rounded-card border border-subtle bg-white shadow-sm">
+        <div className="flex flex-col gap-px border-b border-cream-100 px-5 py-4">
+          <span className="font-display text-[17px] font-semibold text-ink-900">
+            Marks registers
+          </span>
+          <span className="text-[12.5px] text-ink-500">
+            One register per assessment, class and section
+          </span>
+        </div>
+
+        {registers.isLoading ? (
+          <p className="px-5 py-8 text-center text-sm text-ink-500">Loading…</p>
+        ) : registers.isError ? (
+          <p className="px-5 py-8 text-center text-sm text-red-600">Couldn’t load the registers.</p>
+        ) : registerRows.length === 0 ? (
+          <div className="flex flex-col items-center gap-3 border-b border-cream-100 px-5 py-9">
+            <span className="flex size-[52px] items-center justify-center rounded-card bg-cream-100 text-ink-400">
+              <ListNumbers aria-hidden size={26} />
+            </span>
+            <span className="text-sm font-semibold text-ink-900">No registers yet</span>
+            <span className="max-w-[380px] text-center text-[13px] text-ink-500">
+              Pick the assessment, class and section below — the register opens ready for mark
+              entry.
+            </span>
+          </div>
+        ) : (
+          <div>
+            <div className="grid grid-cols-[1.4fr_1fr_1fr_auto] items-center gap-3 border-b border-cream-100 px-5 py-2.5 text-[11px] font-bold uppercase tracking-[0.1em] text-ink-400">
+              <span>Subject</span>
+              <span>Section</span>
+              <span>Status</span>
+              <span className="w-16 text-right">Open</span>
+            </div>
+            {registerRows.map((r) => (
+              <div
+                key={r.examSectionId}
+                className="grid grid-cols-[1.4fr_1fr_1fr_auto] items-center gap-3 border-b border-cream-100 px-5 py-3 transition-colors duration-fast hover:bg-cream-50"
+              >
+                <span className="text-sm font-semibold text-ink-900">{r.subjectName}</span>
+                <span className="text-[13.5px] text-ink-500">{r.sectionName}</span>
+                <span>
+                  <StatusChip status={r.status} label={REGISTER_STATUS_LABEL[r.status]} />
+                </span>
+                <span className="flex w-16 justify-end">
+                  <button
+                    type="button"
+                    onClick={() =>
+                      setTarget({ assessmentId: r.assessmentId, sectionId: r.sectionId })
+                    }
+                    className="cursor-pointer rounded-full border border-subtle bg-white px-3.5 py-[7px] text-[12.5px] font-semibold text-maroon-700 transition-colors duration-fast hover:border-maroon-200 hover:bg-maroon-50"
+                  >
+                    Open
+                  </button>
+                </span>
+              </div>
+            ))}
+          </div>
+        )}
 
         <StartRegister
           assessments={assessmentRows}
@@ -176,55 +266,94 @@ function Assessments({
   const [deleting, setDeleting] = useState<AssessmentDto | null>(null);
 
   return (
-    <div className="flex flex-col gap-3">
-      <div className="flex items-center justify-between">
-        <h3 className="text-title text-neutral-800">Assessments</h3>
+    <div className="overflow-hidden rounded-card border border-subtle bg-white shadow-sm">
+      <div className="flex flex-wrap items-center justify-between gap-3 border-b border-cream-100 px-5 py-4">
+        <span className="flex flex-col gap-px">
+          <span className="font-display text-[17px] font-semibold text-ink-900">Assessments</span>
+          <span className="text-[12.5px] text-ink-500">
+            What is being tested and how it is scored
+          </span>
+        </span>
         {published ? null : (
-          <Button
+          <button
+            type="button"
             onClick={() => {
               create.reset();
               setAdding(true);
             }}
+            className="flex cursor-pointer items-center gap-1.5 rounded-full border border-subtle bg-white px-3.5 py-[7px] text-[12.5px] font-semibold text-maroon-700 transition-colors duration-fast hover:border-maroon-200 hover:bg-maroon-50"
           >
+            <Plus aria-hidden size={14} />
             Add assessment
-          </Button>
+          </button>
         )}
       </div>
 
-      <TableShell
-        head={["Subject", "Max theory", "Max practical", "Pass mark", "Actions"]}
-        isLoading={isLoading}
-        isError={isError}
-        isEmpty={rows.length === 0}
-        emptyText="No assessments yet."
-      >
-        {rows.map((a) => (
-          <tr key={a.id} className="border-b border-border last:border-b-0">
-            <td className="px-4 py-3 font-medium text-foreground">
-              {subjectName.get(a.subjectId) ?? "—"}
-            </td>
-            <td className="px-4 py-3 text-muted-foreground">{a.maxTheory}</td>
-            <td className="px-4 py-3 text-muted-foreground">{a.maxPractical ?? "—"}</td>
-            <td className="px-4 py-3 text-muted-foreground">{a.passMark}</td>
-            <td className="px-4 py-3">
-              {published ? (
-                <span className="text-muted-foreground">—</span>
-              ) : (
-                <Button
-                  variant="destructive"
-                  size="sm"
-                  onClick={() => {
-                    remove.reset();
-                    setDeleting(a);
-                  }}
-                >
-                  Delete
-                </Button>
-              )}
-            </td>
-          </tr>
-        ))}
-      </TableShell>
+      <div className="grid grid-cols-[1.4fr_1fr_1fr_1fr_auto] items-center gap-3 border-b border-cream-100 px-5 py-2.5 text-[11px] font-bold uppercase tracking-[0.1em] text-ink-400">
+        <span>Subject</span>
+        <span>Max theory</span>
+        <span>Max practical</span>
+        <span>Pass mark</span>
+        <span className="w-11 text-right">{published ? "" : "Del"}</span>
+      </div>
+      {isLoading ? (
+        <p className="px-5 py-8 text-center text-sm text-ink-500">Loading…</p>
+      ) : isError ? (
+        <p className="px-5 py-8 text-center text-sm text-red-600">Couldn’t load the assessments.</p>
+      ) : rows.length === 0 ? (
+        <p className="px-5 py-8 text-center text-sm text-ink-500">
+          No assessments yet — add the subjects being tested.
+        </p>
+      ) : (
+        rows.map((a) => {
+          const name = subjectName.get(a.subjectId) ?? "—";
+          const SubjectIcon = subjectIcon(name);
+          const totalMax = a.maxTheory + (a.maxPractical ?? 0);
+          const passPct = totalMax > 0 ? Math.round((a.passMark / totalMax) * 100) : null;
+          return (
+            <div
+              key={a.id}
+              className="grid grid-cols-[1.4fr_1fr_1fr_1fr_auto] items-center gap-3 border-b border-cream-100 px-5 py-3.5 transition-colors duration-fast last:border-0 hover:bg-cream-50"
+            >
+              <span className="flex items-center gap-2.5 text-[14.5px] font-semibold text-ink-900">
+                <span className="flex size-8 shrink-0 items-center justify-center rounded-[10px] bg-maroon-50 text-maroon-700">
+                  <SubjectIcon aria-hidden size={16} />
+                </span>
+                {name}
+              </span>
+              <span className="text-[13.5px] text-ink-500">{a.maxTheory}</span>
+              <span
+                className={
+                  a.maxPractical == null
+                    ? "text-[13.5px] text-ink-300"
+                    : "text-[13.5px] text-ink-500"
+                }
+              >
+                {a.maxPractical ?? "—"}
+              </span>
+              <span className="text-[13.5px] text-ink-500">
+                {a.passMark}
+                {passPct !== null ? <span className="text-ink-400"> ({passPct}%)</span> : null}
+              </span>
+              <span className="flex w-11 justify-end">
+                {published ? (
+                  <span className="text-ink-400">—</span>
+                ) : (
+                  <IconButton
+                    label="Delete"
+                    tone="danger"
+                    icon={Trash}
+                    onClick={() => {
+                      remove.reset();
+                      setDeleting(a);
+                    }}
+                  />
+                )}
+              </span>
+            </div>
+          );
+        })
+      )}
 
       {adding ? (
         <AssessmentFormModal
@@ -343,7 +472,7 @@ function AssessmentFormModal({
           </label>
         </div>
 
-        {error ? <p className="text-sm text-destructive">{error}</p> : null}
+        {error ? <p className="text-sm text-red-600">{error}</p> : null}
 
         <div className="mt-2 flex justify-end gap-2">
           <Button type="button" variant="secondary" onClick={onClose}>
@@ -375,31 +504,33 @@ function StartRegister({
   const [sectionId, setSectionId] = useState("");
 
   return (
-    <div className="flex flex-wrap items-end gap-3 rounded-md border border-border p-3">
+    <div className="flex flex-wrap items-end gap-3 bg-cream-50 px-5 py-4">
       <label className={labelClass}>
         Assessment
         <select
           value={assessmentId}
           onChange={(e) => setAssessmentId(e.target.value)}
-          className={inputClass}
+          className={`${inputClass} min-w-[170px]`}
           disabled={disabled}
         >
           <option value="">Select…</option>
           {assessments.map((a) => (
             <option key={a.id} value={a.id}>
-              {subjectName.get(a.subjectId) ?? a.subjectId}
+              {subjectName.get(a.subjectId) ?? a.subjectId} — theory {a.maxTheory}
             </option>
           ))}
         </select>
       </label>
       <SectionPicker onSection={setSectionId} />
-      <Button
-        variant="secondary"
+      <button
+        type="button"
         disabled={assessmentId === "" || sectionId === ""}
         onClick={() => onOpen({ assessmentId, sectionId })}
+        className="flex cursor-pointer items-center gap-2 rounded-full bg-maroon-700 px-5 py-2.5 text-[13px] font-semibold text-cream-50 transition-colors duration-fast hover:bg-maroon-800 disabled:cursor-not-allowed disabled:opacity-50"
       >
-        Open marks
-      </Button>
+        <PencilLine aria-hidden size={15} weight="bold" />
+        Open marks register
+      </button>
     </div>
   );
 }
@@ -526,22 +657,26 @@ function MarksGrid({
     );
 
   return (
-    <div className="flex flex-col gap-3 rounded-md border border-border p-4">
-      <div className="flex flex-wrap items-center justify-between gap-2">
-        <div>
-          <p className="font-medium text-foreground">
+    <div className="flex flex-col gap-4 rounded-card border border-subtle bg-white p-5 shadow-sm">
+      <div className="flex flex-wrap items-center justify-between gap-3">
+        <div className="flex flex-col gap-1">
+          <p className="flex items-center gap-2.5 font-display text-[17px] font-semibold text-ink-900">
             {subjectLabel ?? "Assessment"} · Section {register?.sectionName ?? "—"}
+            <StatusChip
+              status={status === "NONE" ? undefined : status}
+              label={REGISTER_STATUS_LABEL[status]}
+            />
           </p>
-          <p className="text-sm text-muted-foreground">
-            {REGISTER_STATUS_LABEL[status]} · Max theory {assessment.maxTheory}
+          <p className="text-[12.5px] text-ink-500">
+            Max theory {assessment.maxTheory}
             {hasPractical ? ` · practical ${assessment.maxPractical}` : " · theory only"}
           </p>
         </div>
         <div className="flex gap-2">
-          <Button variant="secondary" onClick={exportCsv}>
+          <Button variant="secondary" size="sm" onClick={exportCsv}>
             Export CSV
           </Button>
-          <Button variant="secondary" onClick={onClose}>
+          <Button variant="secondary" size="sm" onClick={onClose}>
             Close
           </Button>
         </div>
@@ -562,11 +697,11 @@ function MarksGrid({
           const v = current(e.id);
           const m = existingByEnrollment.get(e.id);
           return (
-            <tr key={e.id} className="border-b border-border last:border-b-0">
-              <td className="px-4 py-2 font-medium text-foreground">
+            <tr key={e.id} className="transition-colors duration-fast hover:bg-cream-50">
+              <td className="px-4 py-2 text-sm font-semibold text-ink-900">
                 {studentName.get(e.studentId) ?? e.studentId}
               </td>
-              <td className="px-4 py-2 text-muted-foreground">{e.rollNo ?? "—"}</td>
+              <td className="px-4 py-2 text-ink-500">{e.rollNo ?? "—"}</td>
               <td className="px-4 py-2">
                 {editable ? (
                   <input
@@ -575,12 +710,10 @@ function MarksGrid({
                     disabled={v.isAbsent}
                     value={v.theory}
                     onChange={(ev) => setEntry(e.id, { theory: ev.target.value })}
-                    className={`${inputClass} w-20`}
+                    className={`${inputClass} w-20 tabular-nums`}
                   />
                 ) : (
-                  <span className="text-muted-foreground">
-                    {v.isAbsent ? "AB" : v.theory || "—"}
-                  </span>
+                  <span className="text-ink-500">{v.isAbsent ? "AB" : v.theory || "—"}</span>
                 )}
               </td>
               {hasPractical ? (
@@ -592,18 +725,16 @@ function MarksGrid({
                       disabled={v.isAbsent}
                       value={v.practical}
                       onChange={(ev) => setEntry(e.id, { practical: ev.target.value })}
-                      className={`${inputClass} w-20`}
+                      className={`${inputClass} w-20 tabular-nums`}
                     />
                   ) : (
-                    <span className="text-muted-foreground">
-                      {v.isAbsent ? "AB" : v.practical || "—"}
-                    </span>
+                    <span className="text-ink-500">{v.isAbsent ? "AB" : v.practical || "—"}</span>
                   )}
                 </td>
               ) : null}
-              <td className="px-4 py-2 text-muted-foreground">{m?.totalObtained ?? "—"}</td>
-              <td className="px-4 py-2 text-muted-foreground">{m?.percentage ?? "—"}</td>
-              <td className="px-4 py-2 text-muted-foreground">{m?.gradeLetter ?? "—"}</td>
+              <td className="px-4 py-2 tabular-nums text-ink-500">{m?.totalObtained ?? "—"}</td>
+              <td className="px-4 py-2 tabular-nums text-ink-500">{m?.percentage ?? "—"}</td>
+              <td className="px-4 py-2 font-semibold text-ink-800">{m?.gradeLetter ?? "—"}</td>
             </tr>
           );
         })}
@@ -658,9 +789,9 @@ function MarksGrid({
         </div>
       ) : null}
 
-      {save.error ? <p className="text-sm text-destructive">{save.error.message}</p> : null}
-      {submit.error ? <p className="text-sm text-destructive">{submit.error.message}</p> : null}
-      {lock.error ? <p className="text-sm text-destructive">{lock.error.message}</p> : null}
+      {save.error ? <p className="text-sm text-red-600">{save.error.message}</p> : null}
+      {submit.error ? <p className="text-sm text-red-600">{submit.error.message}</p> : null}
+      {lock.error ? <p className="text-sm text-red-600">{lock.error.message}</p> : null}
 
       {unlocking && register ? (
         <UnlockModal
@@ -700,7 +831,7 @@ function UnlockModal({
         }}
         className="flex flex-col gap-3"
       >
-        <p className="text-sm text-muted-foreground">
+        <p className="text-sm text-ink-500">
           Unlocking reopens the register for edits and clears its result snapshot. The reason is
           audited.
         </p>
@@ -714,7 +845,7 @@ function UnlockModal({
             required
           />
         </label>
-        {error ? <p className="text-sm text-destructive">{error}</p> : null}
+        {error ? <p className="text-sm text-red-600">{error}</p> : null}
         <div className="mt-2 flex justify-end gap-2">
           <Button type="button" variant="secondary" onClick={onClose}>
             Cancel

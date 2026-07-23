@@ -1,7 +1,7 @@
 "use client";
 
+import { DownloadSimple, Info } from "@phosphor-icons/react";
 import type { PeriodDto, TimetableEntryDto, WeekdayKey } from "@repo/types";
-import { Download } from "lucide-react";
 import { useMemo, useState } from "react";
 
 import {
@@ -11,10 +11,10 @@ import {
   WEEKDAYS,
   YearSelect,
 } from "@/src/components/timetable/ui";
-import { Button, Dialog, Input, Select, useToast } from "@/src/components/ui";
+import { Button, Dialog, EmptyState, Input, Select, useToast } from "@/src/components/ui";
 import { trpc } from "@/src/trpc/react";
 
-/** Section weekly grid — click a cell to add/edit an entry. Conflicts surface on save. */
+/** Section weekly grid (design handoff §5) — click a cell to add/edit a lesson. */
 export default function GridPage() {
   const { show } = useToast();
   const [yearId, setYearId] = useState<string>();
@@ -36,25 +36,29 @@ export default function GridPage() {
     { enabled: !!yearId && !!sectionId },
   );
 
+  const className = (classes.data ?? []).find((c) => c.id === classId)?.name ?? "";
+  const sectionLabel = (sections.data ?? []).find((s) => s.id === sectionId)?.name ?? "";
+  const fullSection = `${className} ${sectionLabel}`.trim();
+
   const utils = trpc.useUtils();
   const invalidate = () => utils.timetable.bySection.invalidate();
   const createEntry = trpc.timetable.createEntry.useMutation({
     onSuccess: () => {
-      show("success", "Timetable entry added");
+      show("success", "Lesson saved");
       return invalidate();
     },
     onError: (e) => show("error", e.message),
   });
   const updateEntry = trpc.timetable.updateEntry.useMutation({
     onSuccess: () => {
-      show("success", "Timetable entry updated");
+      show("success", "Lesson saved");
       return invalidate();
     },
     onError: (e) => show("error", e.message),
   });
   const removeEntry = trpc.timetable.deleteEntry.useMutation({
     onSuccess: () => {
-      show("success", "Timetable entry removed");
+      show("success", "Lesson removed");
       return invalidate();
     },
     onError: (e) => show("error", e.message),
@@ -67,70 +71,101 @@ export default function GridPage() {
   const ready = !!yearId && !!sectionId && !!schedule.data;
 
   return (
-    <section className="flex flex-col gap-4">
+    <section className="flex flex-col gap-3.5">
+      {/* Filters */}
       <div className="flex flex-wrap items-end gap-3">
         <YearSelect value={yearId} onChange={setYearId} />
-        <Select
-          label="Class"
-          value={classId ?? ""}
-          onChange={(e) => {
-            setClassId(e.target.value || undefined);
-            setSectionId(undefined);
-          }}
-        >
-          <option value="">Select…</option>
-          {(classes.data ?? []).map((c) => (
-            <option key={c.id} value={c.id}>
-              {c.name}
-            </option>
-          ))}
-        </Select>
-        <Select
-          label="Section"
-          value={sectionId ?? ""}
-          onChange={(e) => setSectionId(e.target.value || undefined)}
-          disabled={!classId}
-        >
-          <option value="">Select…</option>
-          {(sections.data ?? []).map((s) => (
-            <option key={s.id} value={s.id}>
-              {s.name}
-            </option>
-          ))}
-        </Select>
-        {ready && entryRows.length > 0 ? (
-          <Button
-            variant="secondary"
-            icon={Download}
-            onClick={() => {
-              const { headers, rows: r } = entriesToCsv(entryRows);
-              downloadCsv(`timetable-${sectionId}.csv`, headers, r);
+        <div className="min-w-[120px]">
+          <Select
+            label="Class"
+            value={classId ?? ""}
+            onChange={(e) => {
+              setClassId(e.target.value || undefined);
+              setSectionId(undefined);
             }}
           >
+            <option value="">Select…</option>
+            {(classes.data ?? []).map((c) => (
+              <option key={c.id} value={c.id}>
+                {c.name}
+              </option>
+            ))}
+          </Select>
+        </div>
+        <div className="min-w-[90px]">
+          <Select
+            label="Section"
+            value={sectionId ?? ""}
+            onChange={(e) => setSectionId(e.target.value || undefined)}
+            disabled={!classId}
+          >
+            <option value="">Select…</option>
+            {(sections.data ?? []).map((s) => (
+              <option key={s.id} value={s.id}>
+                {s.name}
+              </option>
+            ))}
+          </Select>
+        </div>
+        <div className="flex-1" />
+        {ready && entryRows.length > 0 ? (
+          <button
+            type="button"
+            onClick={() => {
+              const { headers, rows: r } = entriesToCsv(entryRows);
+              downloadCsv(`timetable-${fullSection || sectionId}.csv`, headers, r);
+            }}
+            className="flex cursor-pointer items-center gap-1.5 rounded-full border border-subtle bg-white px-4 py-2.5 text-[12.5px] font-semibold text-maroon-700 transition-colors duration-fast hover:border-maroon-200 hover:bg-maroon-50"
+          >
+            <DownloadSimple aria-hidden size={15} />
             Export CSV
-          </Button>
+          </button>
         ) : null}
       </div>
 
       {!yearId || !sectionId ? (
-        <p className="text-neutral-500">Pick a year, class, and section to view the timetable.</p>
+        <div className="rounded-card border border-subtle bg-white shadow-sm">
+          <EmptyState
+            title="Pick a section"
+            message="Choose a year, class, and section to view and edit its weekly timetable."
+          />
+        </div>
       ) : !schedule.data ? (
-        <p className="text-neutral-500">
-          This year has no bell schedule yet. Set it up under “Bell schedule &amp; periods” first.
-        </p>
+        <div className="rounded-card border border-subtle bg-white shadow-sm">
+          <EmptyState
+            title="No bell schedule yet"
+            message="Set up the bell schedule and periods first, under “Bell schedule & periods”."
+          />
+        </div>
       ) : rows.length === 0 ? (
-        <p className="text-neutral-500">The bell schedule has no periods yet. Add periods first.</p>
+        <div className="rounded-card border border-subtle bg-white shadow-sm">
+          <EmptyState
+            title="No periods yet"
+            message="Add periods to the bell schedule first — they form the rows of every timetable."
+          />
+        </div>
       ) : (
-        <TimetableGrid
-          periods={rows}
-          entries={entryRows}
-          onCell={(weekday, period) => setCell({ weekday, period })}
-        />
+        <>
+          <TimetableGrid
+            periods={rows}
+            entries={entryRows}
+            secondary="teacher"
+            onCell={(weekday, period) => setCell({ weekday, period })}
+          />
+          <p className="flex items-center gap-1.5 text-[12.5px] text-ink-400">
+            <Info aria-hidden size={15} />
+            Click any cell to add or change the lesson — only teachers assigned to {
+              fullSection
+            }{" "}
+            appear.
+          </p>
+        </>
       )}
 
       {cell && yearId && sectionId ? (
         <EntryModal
           sectionId={sectionId}
+          sectionLabel={fullSection}
           weekday={cell.weekday}
           period={cell.period}
           existing={entryRows.find(
@@ -172,6 +207,7 @@ interface EntryValues {
 
 function EntryModal({
   sectionId,
+  sectionLabel,
   weekday,
   period,
   existing,
@@ -183,6 +219,7 @@ function EntryModal({
   onDelete,
 }: {
   sectionId: string;
+  sectionLabel: string;
   weekday: WeekdayKey;
   period: PeriodDto;
   existing?: TimetableEntryDto | undefined;
@@ -226,7 +263,8 @@ function EntryModal({
 
   return (
     <Dialog
-      title={`${dayLabel} · ${period.name} (${period.startTime}–${period.endTime})`}
+      title={existing ? `Edit lesson — ${dayLabel}` : `Add lesson — ${dayLabel}`}
+      description={`${period.name} · ${period.startTime} – ${period.endTime}${sectionLabel ? ` · ${sectionLabel}` : ""}`}
       onClose={onClose}
     >
       <form
@@ -234,7 +272,7 @@ function EntryModal({
           e.preventDefault();
           submit();
         }}
-        className="flex flex-col gap-4"
+        className="flex flex-col gap-[18px]"
       >
         <Select
           label="Subject — Teacher"
@@ -243,7 +281,7 @@ function EntryModal({
           helper={
             options.length === 0
               ? "No teacher assignments in this section yet — add one under Academic → Teacher assignments."
-              : undefined
+              : "Only assignments for this section are listed; clashes with the teacher’s other lessons are flagged on save."
           }
           required
         >
@@ -263,28 +301,27 @@ function EntryModal({
           placeholder="Room 12"
         />
 
-        {error ? <p className="text-sm text-danger-600">{error}</p> : null}
+        {error ? <p className="text-sm text-red-600">{error}</p> : null}
 
-        <div className="mt-1 flex justify-between gap-2">
+        <div className="mt-1 flex items-center justify-between gap-2.5">
           <div>
             {existing ? (
-              <Button
+              <button
                 type="button"
-                variant="ghost"
-                className="text-danger-600 hover:bg-danger-50"
                 disabled={busy}
                 onClick={() => onDelete(existing.id)}
+                className="cursor-pointer px-1 py-2 text-[13px] font-semibold text-red-600 transition-colors duration-fast hover:text-maroon-900 disabled:opacity-50"
               >
-                Delete
-              </Button>
+                Remove lesson
+              </button>
             ) : null}
           </div>
-          <div className="flex gap-2">
+          <div className="flex gap-2.5">
             <Button type="button" variant="secondary" onClick={onClose}>
               Cancel
             </Button>
             <Button type="submit" loading={busy} disabled={busy || !pair}>
-              Save
+              Save lesson
             </Button>
           </div>
         </div>

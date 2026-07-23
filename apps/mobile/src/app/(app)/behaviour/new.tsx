@@ -1,7 +1,7 @@
 import type { BehaviourCategoryKey, BehaviourSeverityKey } from "@repo/types";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import { useState } from "react";
-import { Pressable, ScrollView, Text, TextInput, View } from "react-native";
+import { ScrollView, Text, TextInput, View } from "react-native";
 
 import {
   CATEGORY_LABEL,
@@ -10,10 +10,13 @@ import {
   Header,
   SEVERITY_LABEL,
 } from "../../../components/behaviour-ui";
+import { Button } from "../../../components/ui";
 import { trpc } from "../../../lib/trpc";
 
 const CATEGORIES = Object.keys(CATEGORY_LABEL) as BehaviourCategoryKey[];
 const SEVERITIES = Object.keys(SEVERITY_LABEL) as BehaviourSeverityKey[];
+const inputClass =
+  "rounded-[10px] border border-subtle bg-white px-3 py-2.5 font-sans text-body text-neutral-900";
 
 /**
  * Record a behaviour incident for a student (M12 Step 6). Teacher path — `teacherId`
@@ -54,7 +57,7 @@ export default function NewBehaviourScreen() {
   };
 
   return (
-    <View className="flex-1 bg-background">
+    <View className="flex-1 bg-neutral-50">
       <Header title="New incident" onBack={() => router.back()} />
       <ScrollView contentContainerClassName="p-4 gap-4">
         <Field label="Category">
@@ -88,7 +91,8 @@ export default function NewBehaviourScreen() {
             value={title}
             onChangeText={setTitle}
             placeholder="Short summary"
-            className="min-h-11 rounded-md border border-border bg-background px-3 py-2 text-foreground"
+            placeholderTextColor="#948676"
+            className={inputClass}
           />
         </Field>
 
@@ -97,8 +101,9 @@ export default function NewBehaviourScreen() {
             value={description}
             onChangeText={setDescription}
             placeholder="What happened…"
+            placeholderTextColor="#948676"
             multiline
-            className="min-h-32 rounded-md border border-border bg-background px-3 py-2 text-foreground"
+            className={`${inputClass} min-h-32`}
             textAlignVertical="top"
           />
         </Field>
@@ -108,25 +113,20 @@ export default function NewBehaviourScreen() {
             value={actionTaken}
             onChangeText={setActionTaken}
             placeholder="Any action already taken"
+            placeholderTextColor="#948676"
             multiline
-            className="min-h-20 rounded-md border border-border bg-background px-3 py-2 text-foreground"
+            className={`${inputClass} min-h-20`}
             textAlignVertical="top"
           />
         </Field>
 
-        <Pressable
-          accessibilityRole="button"
-          disabled={!valid || saving}
+        <Button
+          label={saving ? "Saving…" : "Record incident"}
+          loading={saving}
+          disabled={!valid}
           onPress={save}
-          className={`min-h-11 items-center justify-center rounded-md px-4 py-3 ${
-            valid && !saving ? "bg-primary" : "bg-muted"
-          }`}
-        >
-          <Text className="font-medium text-primary-foreground">
-            {saving ? "Saving…" : "Record incident"}
-          </Text>
-        </Pressable>
-        <Text className="px-1 text-xs text-muted-foreground">
+        />
+        <Text className="px-1 font-sans text-caption text-neutral-400">
           The student’s parents are notified when the incident is recorded.
         </Text>
       </ScrollView>

@@ -39,14 +39,14 @@ export default function StudentReportCardsScreen() {
   if (enrollments.isLoading) {
     return (
       <ScreenScaffold title={t.title}>
-        <ActivityIndicator />
+        <ActivityIndicator color="#7A3414" />
       </ScreenScaffold>
     );
   }
   if (active == null) {
     return (
       <ScreenScaffold title={t.title}>
-        <Text className="text-muted-foreground">{t.noCurrentEnrollment}</Text>
+        <Text className="font-sans text-neutral-500">{t.noCurrentEnrollment}</Text>
       </ScreenScaffold>
     );
   }
@@ -55,9 +55,9 @@ export default function StudentReportCardsScreen() {
   return (
     <ScreenScaffold title={t.title}>
       {cards.isLoading ? (
-        <ActivityIndicator />
+        <ActivityIndicator color="#7A3414" />
       ) : rows.length === 0 ? (
-        <Text className="text-muted-foreground">{t.noPublished}</Text>
+        <Text className="font-sans text-neutral-500">{t.noPublished}</Text>
       ) : (
         rows.map((c) => <ReportCardView key={c.id} card={c} />)
       )}
@@ -76,12 +76,12 @@ function ReportCardView({ card }: { card: ReportCardDto }) {
   const scopeName = card.examName ?? card.termName; // null for ANNUAL (no exam/term scope)
 
   return (
-    <View className="gap-2 rounded-md border border-border bg-card p-4">
+    <View className="gap-3 rounded-card border border-subtle bg-card p-4 shadow-sm">
       <View>
-        <Text className="font-medium text-foreground">{KIND_LABEL[card.kind]}</Text>
-        {scopeName ? <Text className="text-sm text-muted-foreground">{scopeName}</Text> : null}
+        <Text className="font-display text-title text-neutral-900">{KIND_LABEL[card.kind]}</Text>
+        {scopeName ? <Text className="font-sans text-sm text-neutral-500">{scopeName}</Text> : null}
       </View>
-      <View className="flex-row flex-wrap gap-x-6 gap-y-1">
+      <View className="flex-row flex-wrap gap-x-6 gap-y-2">
         <Stat label={t.rank} value={rank} />
         <Stat label={t.attendance} value={attendance} />
         <Stat label={t.gpa} value={gpa} />
@@ -103,8 +103,10 @@ function ReportCardView({ card }: { card: ReportCardDto }) {
 function Stat({ label, value }: { label: string; value: string }) {
   return (
     <View className="gap-0.5">
-      <Text className="text-xs text-muted-foreground">{label}</Text>
-      <Text className="font-medium text-foreground">{value}</Text>
+      <Text className="font-sans text-caption font-semibold uppercase tracking-eyebrow text-neutral-500">
+        {label}
+      </Text>
+      <Text className="font-display text-title text-neutral-900">{value}</Text>
     </View>
   );
 }
@@ -112,11 +114,11 @@ function Stat({ label, value }: { label: string; value: string }) {
 function Remark({ label, body }: { label: string; body: string }) {
   const { dict } = useTranslation();
   return (
-    <View className="gap-0.5">
-      <Text className="text-xs text-muted-foreground">
+    <View className="gap-0.5 border-t border-subtle pt-2">
+      <Text className="font-sans text-caption font-semibold text-neutral-500">
         {label} {dict.reportCards.remarkSuffix}
       </Text>
-      <Text className="text-sm text-foreground">{body}</Text>
+      <Text className="font-sans text-sm text-neutral-800">{body}</Text>
     </View>
   );
 }

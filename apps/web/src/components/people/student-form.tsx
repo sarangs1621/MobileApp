@@ -3,13 +3,7 @@
 import type { GenderKey, StudentDto } from "@repo/types";
 import { useState } from "react";
 
-import {
-  inputClass,
-  labelClass,
-  Modal,
-  outlineBtn,
-  primaryBtn,
-} from "@/src/components/academic/ui";
+import { Button, Dialog, Input, Select } from "@/src/components/ui";
 
 /** Values the form emits; the page maps them onto create vs update inputs. */
 export interface StudentFormValues {
@@ -25,10 +19,24 @@ export interface StudentFormValues {
   address: string | null;
 }
 
+/** Gold uppercase section label inside the modal (design handoff §Student record). */
+function SectionLabel({ children, note }: { children: string; note?: string }) {
+  return (
+    <div className="text-[11px] font-bold uppercase tracking-[0.14em] text-gold-700">
+      {children}
+      {note ? (
+        <span className="font-normal normal-case tracking-normal text-ink-400"> — {note}</span>
+      ) : null}
+    </div>
+  );
+}
+
 /**
  * Create/edit form for the student IDENTITY (never class/section/year — those
- * live on Enrollment, ADR-010). Admission number is set at admission and
- * immutable afterwards. Cross-field rules (uniqueness) stay in the service.
+ * live on Enrollment, ADR-010, and are managed on the student detail page).
+ * Admission number is set at admission and immutable afterwards. Cross-field
+ * rules (uniqueness) stay in the service. Fields are grouped per the design:
+ * Identity · Personal · Documents & address.
  */
 export function StudentFormModal({
   student,
@@ -55,7 +63,7 @@ export function StudentFormModal({
   const [address, setAddress] = useState(student?.address ?? "");
 
   return (
-    <Modal title={student ? "Edit student" : "New student"} onClose={onClose}>
+    <Dialog title="Student record" onClose={onClose} size="lg">
       <form
         onSubmit={(e) => {
           e.preventDefault();
@@ -72,124 +80,98 @@ export function StudentFormModal({
             address: address.trim() || null,
           });
         }}
-        className="flex max-h-[70vh] flex-col gap-3 overflow-y-auto pr-1"
+        className="flex flex-col gap-[18px]"
       >
-        <label className={labelClass}>
-          Admission number
-          <input
+        <SectionLabel>Identity</SectionLabel>
+        <div className="grid grid-cols-1 gap-3.5 sm:grid-cols-2">
+          <Input
+            label="Admission number"
             value={admissionNo}
             onChange={(e) => setAdmissionNo(e.target.value)}
-            className={inputClass}
-            placeholder="ADM-2026-001"
+            placeholder="SGV-2026-016"
+            helper={student ? "Fixed once set." : "Set at admission — cannot be changed later."}
             required
             disabled={student !== null}
           />
-        </label>
-        <div className="grid grid-cols-2 gap-3">
-          <label className={labelClass}>
-            First name
-            <input
-              value={firstName}
-              onChange={(e) => setFirstName(e.target.value)}
-              className={inputClass}
-              required
-            />
-          </label>
-          <label className={labelClass}>
-            Last name
-            <input
-              value={lastName}
-              onChange={(e) => setLastName(e.target.value)}
-              className={inputClass}
-              required
-            />
-          </label>
+          <div className="hidden sm:block" />
+          <Input
+            label="First name"
+            value={firstName}
+            onChange={(e) => setFirstName(e.target.value)}
+            required
+          />
+          <Input
+            label="Last name"
+            value={lastName}
+            onChange={(e) => setLastName(e.target.value)}
+            required
+          />
         </div>
-        <div className="grid grid-cols-2 gap-3">
-          <label className={labelClass}>
-            Date of birth
-            <input
-              type="date"
-              value={dob}
-              onChange={(e) => setDob(e.target.value)}
-              className={inputClass}
-            />
-          </label>
-          <label className={labelClass}>
-            Gender
-            <select
-              value={gender}
-              onChange={(e) => setGender(e.target.value as GenderKey | "")}
-              className={inputClass}
-            >
-              <option value="">Not recorded</option>
-              <option value="MALE">Male</option>
-              <option value="FEMALE">Female</option>
-              <option value="OTHER">Other</option>
-            </select>
-          </label>
+
+        <SectionLabel>Personal</SectionLabel>
+        <div className="grid grid-cols-1 gap-3.5 sm:grid-cols-2">
+          <Input
+            label="Date of birth"
+            type="date"
+            value={dob}
+            onChange={(e) => setDob(e.target.value)}
+          />
+          <Select
+            label="Gender"
+            value={gender}
+            onChange={(e) => setGender(e.target.value as GenderKey | "")}
+          >
+            <option value="">Not recorded</option>
+            <option value="MALE">Male</option>
+            <option value="FEMALE">Female</option>
+            <option value="OTHER">Other</option>
+          </Select>
+          <Input
+            label="Blood group"
+            value={bloodGroup}
+            onChange={(e) => setBloodGroup(e.target.value)}
+            placeholder="O+"
+          />
+          <Input
+            label="Nationality"
+            value={nationality}
+            onChange={(e) => setNationality(e.target.value)}
+            placeholder="Indian"
+          />
         </div>
-        <div className="grid grid-cols-2 gap-3">
-          <label className={labelClass}>
-            Blood group
-            <input
-              value={bloodGroup}
-              onChange={(e) => setBloodGroup(e.target.value)}
-              className={inputClass}
-              placeholder="O+"
-            />
-          </label>
-          <label className={labelClass}>
-            Nationality
-            <input
-              value={nationality}
-              onChange={(e) => setNationality(e.target.value)}
-              className={inputClass}
-              placeholder="Indian"
-            />
-          </label>
+
+        <SectionLabel note="optional, can be added later">Documents &amp; address</SectionLabel>
+        <div className="grid grid-cols-1 gap-3.5 sm:grid-cols-2">
+          <Input
+            label="Aadhaar (12 digits)"
+            value={aadhaar}
+            onChange={(e) => setAadhaar(e.target.value)}
+            inputMode="numeric"
+            maxLength={12}
+          />
+          <Input label="Passport" value={passport} onChange={(e) => setPassport(e.target.value)} />
         </div>
-        <div className="grid grid-cols-2 gap-3">
-          <label className={labelClass}>
-            Aadhaar (12 digits)
-            <input
-              value={aadhaar}
-              onChange={(e) => setAadhaar(e.target.value)}
-              className={inputClass}
-              inputMode="numeric"
-              maxLength={12}
-            />
-          </label>
-          <label className={labelClass}>
-            Passport
-            <input
-              value={passport}
-              onChange={(e) => setPassport(e.target.value)}
-              className={inputClass}
-            />
-          </label>
-        </div>
-        <label className={labelClass}>
-          Address
+        <div className="flex flex-col gap-1.5">
+          <span className="text-[13px] font-semibold text-ink-900">Address</span>
           <textarea
             value={address}
             onChange={(e) => setAddress(e.target.value)}
-            className={`${inputClass} min-h-20`}
-            rows={3}
+            rows={2}
+            className="resize-y rounded-xl border border-subtle bg-white px-3 py-2.5 text-sm text-ink-900 outline-none placeholder:text-ink-400 focus:border-gold-500 focus:ring-[3px] focus:ring-gold-100"
           />
-        </label>
+        </div>
 
-        {error ? <p className="text-sm text-destructive">{error}</p> : null}
+        {error ? <p className="text-sm text-red-600">{error}</p> : null}
 
-        <div className="mt-2 flex justify-end gap-2">
-          <button type="button" onClick={onClose} className={outlineBtn}>
+        <div className="mt-1 flex justify-end gap-2.5">
+          <Button type="button" variant="secondary" onClick={onClose}>
             Cancel
-          </button>
-          <button type="submit" disabled={busy} className={primaryBtn}>
-            {busy ? "Saving…" : "Save"}
-          </button>
+          </Button>
+          <Button type="submit" loading={busy}>
+            Save student
+          </Button>
         </div>
       </form>
-    </Modal>
+    </Dialog>
   );
 }

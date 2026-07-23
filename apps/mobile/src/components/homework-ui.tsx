@@ -1,5 +1,6 @@
 import { useTranslation } from "@repo/i18n";
 import type { HomeworkStatusKey, SubmissionStatusKey } from "@repo/types";
+import { Paperclip } from "phosphor-react-native";
 import { ActivityIndicator, Linking, Pressable, Text, View } from "react-native";
 
 export const HW_STATUS_LABEL: Record<HomeworkStatusKey, string> = {
@@ -15,9 +16,9 @@ export const SUB_STATUS_LABEL: Record<SubmissionStatusKey, string> = {
 };
 
 export const SUB_STATUS_CLASS: Record<SubmissionStatusKey, string> = {
-  SUBMITTED: "text-info",
-  RETURNED: "text-destructive",
-  REVIEWED: "text-success",
+  SUBMITTED: "text-info-600",
+  RETURNED: "text-danger-600",
+  REVIEWED: "text-success-600",
 };
 
 type Attachment = { id: string; fileName: string };
@@ -50,21 +51,28 @@ export function AttachmentList({
           onPress={() => {
             void onMint(a.id).then(({ url }) => Linking.openURL(url));
           }}
-          className="min-h-11 flex-row items-center justify-between rounded-md border border-border bg-card px-3 py-2"
+          className="min-h-11 flex-row items-center gap-2 rounded-xl border border-subtle bg-white px-3 py-2 active:bg-primary-50"
         >
-          <Text className="flex-1 text-foreground" numberOfLines={1}>
-            📎 {a.fileName}
+          <Paperclip size={16} color="#7A3414" weight="bold" />
+          <Text className="flex-1 font-sans text-neutral-900" numberOfLines={1}>
+            {a.fileName}
           </Text>
-          <Text className="text-sm text-primary">{dict.homework.open}</Text>
+          <Text className="font-sans text-sm font-semibold text-primary-700">
+            {dict.homework.open}
+          </Text>
         </Pressable>
       ))}
     </View>
   );
 }
 
-/** Small inline loading/label helper for a section header. */
+/** Small inline label helper for a section header. */
 export function SectionLabel({ children }: { children: string }) {
-  return <Text className="text-sm font-medium text-muted-foreground">{children}</Text>;
+  return (
+    <Text className="font-sans text-caption font-semibold uppercase tracking-eyebrow text-neutral-500">
+      {children}
+    </Text>
+  );
 }
 
 export function Loading() {

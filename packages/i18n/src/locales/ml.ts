@@ -22,6 +22,47 @@ export const ml: Dictionary = {
     verificationCode: "പരിശോധനാ കോഡ്", // TODO(verify-ml)
     verifyCode: "കോഡ് പരിശോധിക്കുക", // TODO(verify-ml)
     sendCode: "കോഡ് അയയ്ക്കുക", // TODO(verify-ml)
+    // Portal chooser + role-based sign-in (mobile redesign). English fallback pending
+    // Malayalam translation — TODO(translate-ml).
+    welcome: "സ്വാഗതം", // TODO(verify-ml)
+    howSignIn: "നിങ്ങൾ എങ്ങനെ സൈൻ ഇൻ ചെയ്യാൻ ആഗ്രഹിക്കുന്നു?", // TODO(verify-ml)
+    imParent: "ഞാൻ ഒരു രക്ഷിതാവാണ്", // TODO(verify-ml)
+    parentEntrySubtitle: "നിങ്ങളുടെ ഫോൺ നമ്പർ ഉപയോഗിച്ച് സൈൻ ഇൻ ചെയ്യുക", // TODO(verify-ml)
+    staffPortal: "സ്റ്റാഫ് പോർട്ടൽ", // TODO(verify-ml)
+    staffEntrySubtitle: "അധ്യാപകർ & ഓഫീസ് · ഇമെയിൽ ലോഗിൻ", // TODO(verify-ml)
+    notRegistered:
+      "രജിസ്റ്റർ ചെയ്തിട്ടില്ലേ? കുട്ടിയെ ചേർക്കുമ്പോൾ സ്കൂൾ ഓഫീസ് നിങ്ങളുടെ നമ്പർ ചേർക്കും.", // TODO(verify-ml)
+    parentSignInTitle: "രക്ഷിതാവ് സൈൻ ഇൻ", // TODO(verify-ml)
+    parentPhoneHint:
+      "സ്കൂളിൽ രജിസ്റ്റർ ചെയ്ത ഫോൺ നമ്പർ നൽകുക. ഞങ്ങൾ നിങ്ങൾക്ക് ഒരു കോഡ് അയയ്ക്കും.", // TODO(verify-ml)
+    sendOtp: "OTP അയയ്ക്കുക", // TODO(verify-ml)
+    smsConsent:
+      "തുടരുന്നതിലൂടെ നിങ്ങൾ ഒരു SMS സ്വീകരിക്കാൻ സമ്മതിക്കുന്നു. സാധാരണ നിരക്കുകൾ ബാധകമായേക്കാം.", // TODO(verify-ml)
+    enterCode: "കോഡ് നൽകുക", // TODO(verify-ml)
+    codeSentTo: (phone: string) => `ഞങ്ങൾ ${phone} എന്ന നമ്പറിലേക്ക് 6 അക്ക കോഡ് അയച്ചു.`, // TODO(verify-ml)
+    change: "മാറ്റുക", // TODO(verify-ml)
+    verifyContinue: "പരിശോധിച്ച് തുടരുക", // TODO(verify-ml)
+    resend: "കോഡ് വീണ്ടും അയയ്ക്കുക", // TODO(verify-ml)
+    resendIn: (seconds: string) => `${seconds}-ൽ വീണ്ടും അയയ്ക്കുക`, // TODO(verify-ml)
+    didntGetIt: "കിട്ടിയില്ലേ?", // TODO(verify-ml)
+    staffPortalSubtitle: "അധ്യാപകർക്കും ഓഫീസ് ജീവനക്കാർക്കും.", // TODO(verify-ml)
+    staffEmail: "സ്റ്റാഫ് ഇമെയിൽ", // TODO(verify-ml)
+    forgotPassword: "പാസ്‌വേഡ് മറന്നോ?", // TODO(verify-ml)
+    accountsByAdmin: "അക്കൗണ്ടുകൾ സ്കൂൾ അഡ്മിനിസ്ട്രേറ്റർ സൃഷ്ടിക്കുന്നു.", // TODO(verify-ml)
+    resetSent: "ആ ഇമെയിൽ രജിസ്റ്റർ ചെയ്തിട്ടുണ്ടെങ്കിൽ, ഒരു റീസെറ്റ് ലിങ്ക് അയയ്ക്കുന്നു.", // TODO(verify-ml)
+    invalidPhone: "സാധുവായ ഫോൺ നമ്പർ നൽകുക.", // TODO(verify-ml)
+  },
+  tabs: {
+    home: "ഹോം", // TODO(verify-ml)
+    today: "ഇന്ന്", // TODO(verify-ml)
+    overview: "അവലോകനം", // TODO(verify-ml)
+    attendance: "ഹാജർ", // TODO(verify-ml)
+    fees: "ഫീസ്", // TODO(verify-ml)
+    classes: "ക്ലാസുകൾ", // TODO(verify-ml)
+    modules: "മൊഡ്യൂളുകൾ", // TODO(verify-ml)
+    alerts: "അലേർട്ടുകൾ", // TODO(verify-ml)
+    more: "കൂടുതൽ", // TODO(verify-ml)
+    profile: "പ്രൊഫൈൽ", // TODO(verify-ml)
   },
   home: {
     signedIn: "സൈൻ ഇൻ ചെയ്തു", // TODO(verify-ml)
@@ -46,6 +87,9 @@ export const ml: Dictionary = {
     noChildrenLinked: "നിങ്ങളുടെ അക്കൗണ്ടുമായി കുട്ടികളാരും ബന്ധിപ്പിച്ചിട്ടില്ല.", // TODO(verify-ml)
     yourSections: "നിങ്ങളുടെ വിഭാഗങ്ങൾ", // TODO(verify-ml)
     todaysSchedule: "ഇന്നത്തെ ഷെഡ്യൂൾ", // TODO(verify-ml)
+    quickActions: "പെട്ടെന്നുള്ള പ്രവർത്തനങ്ങൾ", // TODO(verify-ml)
+    needsAttention: "ശ്രദ്ധ വേണ്ടവ", // TODO(verify-ml)
+    manageEveryPart: "സ്കൂളിന്റെ എല്ലാ ഭാഗവും കൈകാര്യം ചെയ്യുക", // TODO(verify-ml)
     noClassesToday: "ഇന്ന് ക്ലാസുകളൊന്നും ഷെഡ്യൂൾ ചെയ്തിട്ടില്ല.", // TODO(verify-ml)
     academicStructure: "അക്കാദമിക് ഘടന", // TODO(verify-ml)
     academicYears: "അക്കാദമിക് വർഷങ്ങൾ", // TODO(verify-ml)

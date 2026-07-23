@@ -1,14 +1,15 @@
 import { useTranslation } from "@repo/i18n";
 import type { CorrectionStatusKey } from "@repo/types";
-import { Text } from "react-native";
+import { Text, View } from "react-native";
 
 import { AcademicListScreen, ListRow } from "../../../components/academic-list";
+import { StatusChip, titleCase, type Tone } from "../../../components/ui";
 import { trpc } from "../../../lib/trpc";
 
-const STATUS_CLASS: Record<CorrectionStatusKey, string> = {
-  PENDING: "text-info",
-  APPROVED: "text-success",
-  REJECTED: "text-destructive",
+const STATUS_TONE: Record<CorrectionStatusKey, Tone> = {
+  PENDING: "info",
+  APPROVED: "success",
+  REJECTED: "danger",
 };
 
 /**
@@ -30,11 +31,13 @@ export default function MyCorrectionsScreen() {
       emptyText={t.noCorrections}
       renderItem={(c) => (
         <ListRow>
-          <Text className="font-medium text-foreground">
-            {c.previousStatus} → {c.requestedStatus}
-          </Text>
-          <Text className="text-sm text-muted-foreground">{c.reason}</Text>
-          <Text className={`text-sm font-medium ${STATUS_CLASS[c.status]}`}>{c.status}</Text>
+          <View className="flex-row items-center gap-2">
+            <Text className="flex-1 font-sans text-body font-semibold text-neutral-900">
+              {c.previousStatus} → {c.requestedStatus}
+            </Text>
+            <StatusChip tone={STATUS_TONE[c.status]} label={titleCase(c.status)} dot />
+          </View>
+          <Text className="font-sans text-sm text-neutral-500">{c.reason}</Text>
         </ListRow>
       )}
     />

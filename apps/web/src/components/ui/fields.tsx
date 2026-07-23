@@ -1,7 +1,7 @@
 "use client";
 
+import { MagnifyingGlass } from "@phosphor-icons/react";
 import { cn } from "@repo/ui";
-import { Search } from "lucide-react";
 import {
   forwardRef,
   useId,
@@ -11,18 +11,18 @@ import {
 } from "react";
 
 /**
- * Form fields (ADR-UX1 §component-kit / §8 forms). Label above the control,
- * required asterisk, helper text, inline error + danger border, disabled. One
- * `Field` wrapper gives every input the same rhythm; `FormRow`/`FormSection`
- * standardize form spacing (16px field gap, 24px section gap).
+ * Form fields (design handoff §inputs). 10px radius, sand hairline border, gold
+ * focus ring. Label above the control, required asterisk, helper text, inline
+ * error + danger border, disabled. One `Field` wrapper gives every input the
+ * same rhythm; `FormRow`/`FormSection` standardize form spacing.
  */
 const controlBase =
-  "w-full rounded-md border bg-white px-3 text-body text-neutral-800 placeholder:text-neutral-400 " +
-  "focus:outline-none focus:ring-2 focus:ring-primary-600 focus:border-primary-600 " +
-  "disabled:cursor-not-allowed disabled:bg-neutral-50 disabled:opacity-60";
+  "w-full rounded-[10px] border bg-white px-3 text-sm text-ink-900 placeholder:text-ink-400 " +
+  "focus:outline-none focus:border-gold-500 focus:ring-[3px] focus:ring-gold-100 " +
+  "disabled:cursor-not-allowed disabled:bg-cream-50 disabled:opacity-60";
 
 function borderClass(error?: string) {
-  return error ? "border-danger-500" : "border-neutral-300";
+  return error ? "border-red-600" : "border-subtle";
 }
 
 export function Field({
@@ -41,18 +41,18 @@ export function Field({
   children: ReactNode;
 }) {
   return (
-    <div className="flex flex-col gap-1">
-      <label htmlFor={htmlFor} className="text-sm font-medium text-neutral-800">
+    <div className="flex flex-col gap-1.5">
+      <label htmlFor={htmlFor} className="text-[13px] font-semibold text-ink-900">
         {label}
-        {required && <span className="ml-0.5 text-danger-600">*</span>}
+        {required && <span className="ml-0.5 text-red-600">*</span>}
       </label>
       {children}
       {error ? (
-        <p className="text-caption text-danger-600" role="alert">
+        <p className="text-caption text-red-600" role="alert">
           {error}
         </p>
       ) : helper ? (
-        <p className="text-caption text-neutral-500">{helper}</p>
+        <p className="text-caption text-ink-400">{helper}</p>
       ) : null}
     </div>
   );
@@ -118,20 +118,21 @@ export const Select = forwardRef<HTMLSelectElement, SelectProps>(function Select
   );
 });
 
-/** Search box with a leading icon — the standard list/toolbar search control. */
+/** Search box with a leading icon — the pill toolbar search (design handoff). */
 export const SearchInput = forwardRef<HTMLInputElement, InputHTMLAttributes<HTMLInputElement>>(
   function SearchInput({ className, ...props }, ref) {
     return (
-      <div className="relative">
-        <Search
-          aria-hidden
-          strokeWidth={1.75}
-          className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-neutral-400"
-        />
+      <div
+        className={cn(
+          "flex w-full max-w-[320px] items-center gap-2 rounded-full border border-subtle bg-cream-50 px-3.5 py-2 transition-colors duration-fast focus-within:border-gold-500 focus-within:ring-[3px] focus-within:ring-gold-100",
+          className,
+        )}
+      >
+        <MagnifyingGlass aria-hidden size={15} className="shrink-0 text-ink-400" />
         <input
           ref={ref}
           type="search"
-          className={cn(controlBase, borderClass(), "h-11 pl-9", className)}
+          className="w-full border-none bg-transparent text-[13px] text-ink-900 outline-none placeholder:text-ink-400"
           placeholder="Search…"
           {...props}
         />
@@ -148,7 +149,7 @@ export function FormRow({ children, className }: { children: ReactNode; classNam
 export function FormSection({ title, children }: { title?: string; children: ReactNode }) {
   return (
     <section className="flex flex-col gap-4 [&:not(:first-child)]:mt-6">
-      {title && <h3 className="text-title text-neutral-800">{title}</h3>}
+      {title && <h3 className="font-display text-title text-ink-800">{title}</h3>}
       {children}
     </section>
   );

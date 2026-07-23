@@ -34,11 +34,11 @@ export function Dialog({
     return () => document.removeEventListener("keydown", onKey);
   }, [onClose]);
 
-  const width = { sm: "max-w-sm", md: "max-w-md", lg: "max-w-lg" }[size];
+  const width = { sm: "max-w-[440px]", md: "max-w-[500px]", lg: "max-w-[540px]" }[size];
 
   return (
     <div
-      className="fixed inset-0 z-50 flex items-center justify-center bg-neutral-900/50 p-4"
+      className="fixed inset-0 z-50 flex items-center justify-center bg-[rgba(36,26,17,0.55)] p-4"
       onMouseDown={(e) => {
         if (e.target === e.currentTarget) onClose();
       }}
@@ -48,10 +48,13 @@ export function Dialog({
         role="dialog"
         aria-modal="true"
         aria-label={title}
-        className={cn("w-full rounded-xl border border-neutral-200 bg-card p-6 shadow-lg", width)}
+        className={cn(
+          "max-h-[calc(100dvh-2rem)] w-full animate-pop-in overflow-y-auto rounded-modal bg-white p-6 shadow-modal",
+          width,
+        )}
       >
-        <h2 className="text-title text-neutral-900">{title}</h2>
-        {description && <p className="mt-1 text-sm text-neutral-500">{description}</p>}
+        <h2 className="font-display text-2xl font-medium text-ink-900">{title}</h2>
+        {description && <p className="mt-1 text-sm text-ink-500">{description}</p>}
         <div className="mt-4">{children}</div>
       </div>
     </div>

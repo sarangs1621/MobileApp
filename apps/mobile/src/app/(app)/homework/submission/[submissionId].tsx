@@ -46,55 +46,64 @@ export default function SubmissionDetailScreen() {
   if (sub.isLoading) {
     return (
       <ScreenScaffold title={tr.submission}>
-        <ActivityIndicator />
+        <ActivityIndicator color="#7A3414" />
       </ScreenScaffold>
     );
   }
   if (sub.data === undefined) {
     return (
       <ScreenScaffold title={tr.submission}>
-        <Text className="text-muted-foreground">{tr.submissionNotFound}</Text>
+        <Text className="font-sans text-neutral-500">{tr.submissionNotFound}</Text>
       </ScreenScaffold>
     );
   }
   const s = sub.data;
   const canReview = !isParent && s.status === "SUBMITTED";
+  const eyebrow =
+    "font-sans text-caption font-semibold uppercase tracking-eyebrow text-neutral-500";
+  const inputClass =
+    "rounded-[10px] border border-subtle bg-white px-3 py-2.5 font-sans text-body text-neutral-900";
 
   return (
     <ScreenScaffold title={tr.submission}>
-      <View className="gap-1 rounded-md border border-border bg-card p-4">
-        <Text className="font-medium text-foreground">
+      <View className="gap-1 rounded-card border border-subtle bg-card p-4 shadow-sm">
+        <Text className="font-sans text-body font-semibold text-neutral-900">
           {tr.attempt(s.attempt)} ·{" "}
           <Text className={SUB_STATUS_CLASS[s.status]}>{SUB_STATUS_LABEL[s.status]}</Text>
           {s.isLate ? tr.lateSuffix : ""}
         </Text>
-        {s.note ? <Text className="mt-1 text-foreground">{s.note}</Text> : null}
+        {s.note ? (
+          <Text className="mt-1 font-sans text-body text-neutral-800">{s.note}</Text>
+        ) : null}
       </View>
 
-      <Text className="text-sm font-medium text-muted-foreground">{tr.files}</Text>
+      <Text className={eyebrow}>{tr.files}</Text>
       <AttachmentList
         attachments={files.data ?? []}
         onMint={(attachmentId) => dl.mutateAsync({ attachmentId })}
         emptyHint={tr.noFiles}
       />
 
-      <Text className="text-sm font-medium text-muted-foreground">{tr.feedback}</Text>
+      <Text className={eyebrow}>{tr.feedback}</Text>
       {(feedback.data ?? []).length === 0 ? (
-        <Text className="text-sm text-muted-foreground">{tr.noFeedback}</Text>
+        <Text className="font-sans text-sm text-neutral-500">{tr.noFeedback}</Text>
       ) : (
         (feedback.data ?? []).map((f) => (
-          <View key={f.id} className="gap-1 rounded-md border border-border bg-card p-3">
-            <Text className="text-xs text-muted-foreground">
+          <View
+            key={f.id}
+            className="gap-1 rounded-card border border-subtle bg-card p-3 shadow-sm"
+          >
+            <Text className="font-sans text-caption text-neutral-500">
               {tr.attempt(f.attempt)} · {SUB_STATUS_LABEL[f.decision]}
             </Text>
-            <Text className="text-foreground">{f.body}</Text>
+            <Text className="font-sans text-body text-neutral-800">{f.body}</Text>
           </View>
         ))
       )}
 
       {canReview ? (
         <View className="gap-2">
-          <Text className="text-sm font-medium text-muted-foreground">{tr.review}</Text>
+          <Text className={eyebrow}>{tr.review}</Text>
           <View className="flex-row gap-2">
             {(["RETURNED", "REVIEWED"] as const).map((d) => {
               const on = d === decision;
@@ -104,12 +113,14 @@ export default function SubmissionDetailScreen() {
                   accessibilityRole="button"
                   accessibilityState={{ selected: on }}
                   onPress={() => setDecision(d)}
-                  className={`min-h-11 flex-1 items-center justify-center rounded-md border px-3 py-2 ${
-                    on ? "border-primary bg-primary/10" : "border-border bg-card"
+                  className={`min-h-11 flex-1 items-center justify-center rounded-pill border px-3 ${
+                    on ? "border-primary-600 bg-primary-50" : "border-subtle bg-white"
                   }`}
                 >
                   <Text
-                    className={`text-sm font-medium ${on ? "text-primary" : "text-foreground"}`}
+                    className={`font-sans text-sm font-semibold ${
+                      on ? "text-primary-800" : "text-neutral-500"
+                    }`}
                   >
                     {d === "RETURNED" ? tr.requestChanges : tr.accept}
                   </Text>
@@ -121,21 +132,31 @@ export default function SubmissionDetailScreen() {
             value={body}
             onChangeText={setBody}
             placeholder={tr.feedback}
+            placeholderTextColor="#948676"
             multiline
-            className="min-h-20 rounded-md border border-border px-3 py-2 text-foreground"
+            textAlignVertical="top"
+            className={`${inputClass} min-h-20`}
           />
           <Pressable
             accessibilityRole="button"
             disabled={review.isPending || body.trim() === ""}
             onPress={() => review.mutate({ submissionId: id, decision, body: body.trim() })}
-            className={`min-h-11 items-center justify-center rounded-md px-4 py-3 ${
-              review.isPending || body.trim() === "" ? "bg-primary/40" : "bg-primary"
+            className={`min-h-12 items-center justify-center rounded-pill px-4 ${
+              review.isPending || body.trim() === ""
+                ? "bg-neutral-200"
+                : "bg-primary-600 active:bg-primary-700"
             }`}
           >
-            <Text className="font-medium text-primary-foreground">{tr.submitReview}</Text>
+            <Text
+              className={`font-sans font-semibold ${
+                review.isPending || body.trim() === "" ? "text-neutral-400" : "text-neutral-50"
+              }`}
+            >
+              {tr.submitReview}
+            </Text>
           </Pressable>
           {review.isError ? (
-            <Text className="text-sm text-destructive">{review.error.message}</Text>
+            <Text className="font-sans text-sm text-danger-600">{review.error.message}</Text>
           ) : null}
         </View>
       ) : null}

@@ -4,23 +4,37 @@ import { cn } from "@repo/ui";
 import type { ReactNode } from "react";
 
 /**
- * Layout primitives (ADR-UX1 §component-kit): PageHeader, Tabs, Avatar.
+ * Layout primitives (design handoff): PageHeader (gold eyebrow + serif H1 +
+ * subtitle), Tabs (pill group in a cream container), Avatar.
  */
 
 export function PageHeader({
   title,
+  eyebrow,
+  subtitle,
   breadcrumb,
   action,
 }: {
   title: string;
+  /** Gold uppercase kicker above the H1 (with the 28px gold rule). */
+  eyebrow?: string | undefined;
+  /** One-line grey subtitle under the H1. */
+  subtitle?: string | undefined;
   breadcrumb?: ReactNode;
   action?: ReactNode;
 }) {
   return (
-    <div className="flex flex-wrap items-start justify-between gap-3 border-b border-neutral-200 pb-4">
-      <div className="flex flex-col gap-1">
-        {breadcrumb && <div className="text-caption text-neutral-500">{breadcrumb}</div>}
-        <h1 className="text-display font-semibold text-neutral-900">{title}</h1>
+    <div className="flex flex-wrap items-end justify-between gap-4">
+      <div className="flex min-w-0 flex-col gap-1.5">
+        {breadcrumb && <div className="text-caption text-ink-500">{breadcrumb}</div>}
+        {eyebrow && (
+          <div className="flex items-center gap-2.5 text-[11px] font-semibold uppercase tracking-eyebrow text-gold-700">
+            <span aria-hidden className="h-0.5 w-7 bg-gold-500" />
+            {eyebrow}
+          </div>
+        )}
+        <h1 className="font-display text-[34px] font-medium leading-tight text-ink-900">{title}</h1>
+        {subtitle && <p className="text-sm text-ink-500">{subtitle}</p>}
       </div>
       {action}
     </div>
@@ -30,6 +44,8 @@ export function PageHeader({
 export interface Tab {
   key: string;
   label: string;
+  /** Optional count rendered as a small badge in the pill. */
+  count?: number | undefined;
 }
 
 export function Tabs({
@@ -42,7 +58,10 @@ export function Tabs({
   onChange: (key: string) => void;
 }) {
   return (
-    <div role="tablist" className="flex gap-1 border-b border-neutral-200">
+    <div
+      role="tablist"
+      className="inline-flex max-w-full flex-wrap items-center gap-1 self-start rounded-[24px] bg-cream-100 p-[5px]"
+    >
       {tabs.map((tab) => {
         const selected = tab.key === active;
         return (
@@ -52,13 +71,23 @@ export function Tabs({
             aria-selected={selected}
             onClick={() => onChange(tab.key)}
             className={cn(
-              "cursor-pointer border-b-2 px-3 py-2 text-sm font-medium transition-colors duration-fast",
+              "flex cursor-pointer items-center gap-2 rounded-full px-4 py-2 text-sm font-semibold transition-colors duration-fast",
               selected
-                ? "border-primary-600 text-primary-700"
-                : "border-transparent text-neutral-500 hover:text-neutral-800",
+                ? "bg-maroon-700 text-cream-50 shadow-sm"
+                : "text-ink-500 hover:text-ink-800",
             )}
           >
             {tab.label}
+            {tab.count !== undefined && tab.count > 0 ? (
+              <span
+                className={cn(
+                  "inline-flex min-w-[20px] items-center justify-center rounded-full px-1.5 py-px text-caption font-bold",
+                  selected ? "bg-cream-50/20 text-cream-50" : "bg-cream-200 text-ink-700",
+                )}
+              >
+                {tab.count}
+              </span>
+            ) : null}
           </button>
         );
       })}
@@ -66,14 +95,14 @@ export function Tabs({
   );
 }
 
-// Deterministic accent per person, from the domain-accent palette.
+// Deterministic heritage accent per person.
 const AVATAR_BG = [
-  "bg-attendance",
-  "bg-exams",
-  "bg-homework",
-  "bg-fees",
-  "bg-calendar",
-  "bg-messages",
+  "bg-maroon-700",
+  "bg-gold-600",
+  "bg-green-600",
+  "bg-blue-600",
+  "bg-maroon-500",
+  "bg-amber-600",
 ] as const;
 
 function initials(name: string): string {
@@ -94,7 +123,7 @@ export function Avatar({ name, size = "md" }: { name: string; size?: "sm" | "md"
     <span
       aria-hidden
       className={cn(
-        "inline-flex shrink-0 items-center justify-center rounded-full font-semibold text-white",
+        "inline-flex shrink-0 items-center justify-center rounded-full font-semibold text-cream-50",
         AVATAR_BG[hashIndex(name, AVATAR_BG.length)],
         dim,
       )}

@@ -1,12 +1,15 @@
 import {
-  Inter_400Regular,
-  Inter_500Medium,
-  Inter_600SemiBold,
+  HankenGrotesk_400Regular,
+  HankenGrotesk_500Medium,
+  HankenGrotesk_600SemiBold,
   useFonts,
-} from "@expo-google-fonts/inter";
+} from "@expo-google-fonts/hanken-grotesk";
+import { Newsreader_500Medium, Newsreader_600SemiBold } from "@expo-google-fonts/newsreader";
 import { Stack, type ErrorBoundaryProps } from "expo-router";
-import { ActivityIndicator, Pressable, Text, View } from "react-native";
+import { StatusBar } from "expo-status-bar";
+import { Pressable, Text, View } from "react-native";
 
+import { Splash } from "../components/splash";
 import { ToastProvider } from "../components/ui";
 import { Providers } from "../providers";
 import { useAuthStore } from "../stores/auth-store";
@@ -38,32 +41,33 @@ function RootGate() {
   const status = useAuthStore((state) => state.status);
 
   if (status === "loading") {
-    return (
-      <View className="flex-1 items-center justify-center bg-background">
-        <ActivityIndicator />
-      </View>
-    );
+    return <Splash />;
   }
 
   return <Stack screenOptions={{ headerShown: false }} />;
 }
 
 export default function RootLayout() {
-  // Inter is the one typeface (ADR-UX1 §2). Gate render until the font is loaded
-  // so text doesn't flash the system font. Screens apply `font-sans` in Step 4.
-  const [fontsLoaded] = useFonts({ Inter_400Regular, Inter_500Medium, Inter_600SemiBold });
+  // Hanken Grotesk (UI sans) + Newsreader (serif display for headings) — the
+  // heritage identity. Gate render until fonts load so text doesn't flash the
+  // system font. Screens apply `font-sans` / `font-display`.
+  const [fontsLoaded] = useFonts({
+    HankenGrotesk_400Regular,
+    HankenGrotesk_500Medium,
+    HankenGrotesk_600SemiBold,
+    Newsreader_500Medium,
+    Newsreader_600SemiBold,
+  });
 
   if (!fontsLoaded) {
-    return (
-      <View className="flex-1 items-center justify-center bg-background">
-        <ActivityIndicator />
-      </View>
-    );
+    return <Splash />;
   }
 
   return (
     <Providers>
       <ToastProvider>
+        {/* Dark status-bar glyphs — every screen sits on a light parchment/white header. */}
+        <StatusBar style="dark" />
         <RootGate />
       </ToastProvider>
     </Providers>

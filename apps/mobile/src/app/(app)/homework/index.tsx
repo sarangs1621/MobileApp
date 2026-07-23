@@ -1,9 +1,11 @@
 import { useTranslation } from "@repo/i18n";
 import { Link } from "expo-router";
-import { ActivityIndicator, Pressable, Text } from "react-native";
+import { Plus } from "phosphor-react-native";
+import { ActivityIndicator, Pressable, Text, View } from "react-native";
 
 import { ScreenScaffold } from "../../../components/attendance-ui";
 import { HW_STATUS_LABEL } from "../../../components/homework-ui";
+import { StatusChip } from "../../../components/ui";
 import { trpc } from "../../../lib/trpc";
 
 /**
@@ -35,17 +37,18 @@ export default function HomeworkListScreen() {
         <Link href="/homework/new" asChild>
           <Pressable
             accessibilityRole="button"
-            className="min-h-11 items-center justify-center rounded-md bg-primary px-4 py-3"
+            className="min-h-12 flex-row items-center justify-center gap-2 rounded-pill bg-primary-600 px-5 active:bg-primary-700"
           >
-            <Text className="font-medium text-primary-foreground">{tr.newHomework}</Text>
+            <Plus size={18} color="#FCF9F3" weight="bold" />
+            <Text className="font-sans font-semibold text-neutral-50">{tr.newHomework}</Text>
           </Pressable>
         </Link>
       ) : null}
 
       {homework.isLoading ? (
-        <ActivityIndicator />
+        <ActivityIndicator color="#7A3414" />
       ) : rows.length === 0 ? (
-        <Text className="text-muted-foreground">
+        <Text className="font-sans text-neutral-500">
           {isParent ? tr.noHomeworkParent : tr.noHomework}
         </Text>
       ) : (
@@ -57,13 +60,18 @@ export default function HomeworkListScreen() {
           >
             <Pressable
               accessibilityRole="button"
-              className="gap-1 rounded-md border border-border bg-card p-4"
+              className="gap-1.5 rounded-card border border-subtle bg-card p-4 shadow-sm active:bg-neutral-50"
             >
-              <Text className="font-medium text-foreground">{h.title}</Text>
-              <Text className="text-sm text-muted-foreground">
+              <View className="flex-row items-center gap-2">
+                <Text className="flex-1 font-sans text-body font-semibold text-neutral-900">
+                  {h.title}
+                </Text>
+                <StatusChip status={h.status} label={HW_STATUS_LABEL[h.status]} dot />
+              </View>
+              <Text className="font-sans text-sm text-neutral-500">
                 {isParent
-                  ? `${tr.due} ${h.dueDate} · ${HW_STATUS_LABEL[h.status]}`
-                  : `${label.get(`${h.subjectId}:${h.sectionId}`) ?? "—"} · ${tr.due} ${h.dueDate} · ${HW_STATUS_LABEL[h.status]}`}
+                  ? `${tr.due} ${h.dueDate}`
+                  : `${label.get(`${h.subjectId}:${h.sectionId}`) ?? "—"} · ${tr.due} ${h.dueDate}`}
               </Text>
             </Pressable>
           </Link>

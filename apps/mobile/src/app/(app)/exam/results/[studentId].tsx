@@ -31,14 +31,14 @@ export default function ResultsScreen() {
   if (enrollments.isLoading) {
     return (
       <ScreenScaffold title="Results">
-        <ActivityIndicator />
+        <ActivityIndicator color="#7A3414" />
       </ScreenScaffold>
     );
   }
   if (active == null) {
     return (
       <ScreenScaffold title="Results">
-        <Text className="text-muted-foreground">No current enrollment for this student.</Text>
+        <Text className="font-sans text-neutral-500">No current enrollment for this student.</Text>
       </ScreenScaffold>
     );
   }
@@ -46,24 +46,29 @@ export default function ResultsScreen() {
   const rows = marks.data ?? [];
   return (
     <ScreenScaffold title="Results">
-      <View className="rounded-md border border-border bg-card p-4">
-        <Text className="text-sm text-muted-foreground">Overall GPA</Text>
-        <Text className="text-2xl font-semibold text-foreground">
+      <View className="rounded-card border border-subtle bg-card p-4 shadow-sm">
+        <Text className="font-sans text-caption font-semibold uppercase tracking-eyebrow text-neutral-500">
+          Overall GPA
+        </Text>
+        <Text className="font-display text-display text-neutral-900">
           {typeof gpa.data === "number" ? gpa.data.toFixed(2) : "Not available"}
         </Text>
       </View>
 
       {marks.isLoading ? (
-        <ActivityIndicator />
+        <ActivityIndicator color="#7A3414" />
       ) : rows.length === 0 ? (
-        <Text className="text-muted-foreground">No published results yet.</Text>
+        <Text className="font-sans text-neutral-500">No published results yet.</Text>
       ) : (
         rows.map((m) => (
-          <View key={m.id} className="gap-1 rounded-md border border-border bg-card p-4">
-            <Text className="font-medium text-foreground">
+          <View
+            key={m.id}
+            className="gap-1 rounded-card border border-subtle bg-card p-4 shadow-sm"
+          >
+            <Text className="font-sans text-body font-semibold text-neutral-900">
               {m.examName ?? "Exam"} · {m.subjectName ?? "Subject"}
             </Text>
-            <Text className="text-sm text-muted-foreground">
+            <Text className="font-sans text-sm text-neutral-500">
               {m.isAbsent
                 ? "Absent"
                 : `${m.totalObtained ?? "—"} marks · ${m.percentage != null ? `${m.percentage}%` : "—"} · Grade ${m.gradeLetter ?? "—"}`}

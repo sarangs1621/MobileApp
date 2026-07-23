@@ -23,6 +23,24 @@ export const STATUS_LABEL: Record<AttendanceStatusKey, string> = {
   LEAVE: "Leave",
 };
 
+/** Short pill glyphs for the tap-to-mark register (design handoff §7). */
+export const STATUS_SHORT: Record<AttendanceStatusKey, string> = {
+  PRESENT: "P",
+  ABSENT: "A",
+  LATE: "L",
+  HALF_DAY: "H",
+  LEAVE: "LV",
+};
+
+/** Selected-pill colours per status (unselected is a plain sand-outline pill). */
+export const STATUS_PILL_ON: Record<AttendanceStatusKey, string> = {
+  PRESENT: "border-green-600 bg-green-600 text-white",
+  ABSENT: "border-red-600 bg-red-600 text-white",
+  LATE: "border-gold-500 bg-gold-500 text-white",
+  HALF_DAY: "border-sand-400 bg-sand-400 text-white",
+  LEAVE: "border-maroon-700 bg-maroon-700 text-cream-50",
+};
+
 /** Class → section cascading picker. Emits the chosen sectionId (or "" when cleared). */
 export function SectionPicker({ onSection }: { onSection: (sectionId: string) => void }) {
   const classes = trpc.class.list.useQuery();

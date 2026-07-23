@@ -1,32 +1,33 @@
-import { PERMISSIONS, type Permission, type RoleKey } from "@repo/constants";
-import { can } from "@repo/core";
+import { type Icon } from "@phosphor-icons/react";
 import {
   BookOpen,
-  Building2,
+  Buildings,
+  CalendarBlank,
   CalendarCheck,
-  CalendarDays,
+  ChatCircleText,
   Clock,
+  CreditCard,
   FileText,
+  Gear,
   GraduationCap,
-  LayoutDashboard,
   Megaphone,
-  MessageSquare,
-  Settings,
-  ShieldAlert,
+  ShieldCheck,
+  SquaresFour,
   Users,
-  Wallet,
-  type LucideIcon,
-} from "lucide-react";
+} from "@phosphor-icons/react";
+import { PERMISSIONS, type Permission, type RoleKey } from "@repo/constants";
+import { can } from "@repo/core";
 
 /**
- * Sidebar navigation config (ADR-UX1 §3). The `permission` gate on each item is
- * the EXACT same `can(role, …)` check the dashboard used — presentation moves to
- * the sidebar, the gating is unchanged. `href` is the module landing route.
+ * Sidebar navigation config (ADR-UX1 §3, restyled per the design handoff —
+ * Phosphor icons, handoff nav order/labels). The `permission` gate on each item
+ * is the EXACT same `can(role, …)` check the dashboard used — presentation moves
+ * to the sidebar, the gating is unchanged. `href` is the module landing route.
  */
 export interface NavItem {
   href: string;
   label: string;
-  icon: LucideIcon;
+  icon: Icon;
   /** Omitted = always visible (Dashboard). */
   permission?: Permission;
 }
@@ -39,7 +40,7 @@ export interface NavGroup {
 const GROUPS: NavGroup[] = [
   {
     label: "",
-    items: [{ href: "/dashboard", label: "Dashboard", icon: LayoutDashboard }],
+    items: [{ href: "/dashboard", label: "Dashboard", icon: SquaresFour }],
   },
   {
     label: "Academics",
@@ -47,7 +48,7 @@ const GROUPS: NavGroup[] = [
       {
         href: "/academic/years",
         label: "Academic structure",
-        icon: Building2,
+        icon: Buildings,
         permission: PERMISSIONS.ACADEMIC_READ,
       },
       {
@@ -93,10 +94,15 @@ const GROUPS: NavGroup[] = [
       {
         href: "/behaviour",
         label: "Behaviour & discipline",
-        icon: ShieldAlert,
+        icon: ShieldCheck,
         permission: PERMISSIONS.BEHAVIOUR_MANAGE,
       },
-      { href: "/fees", label: "Fees & payments", icon: Wallet, permission: PERMISSIONS.FEE_MANAGE },
+      {
+        href: "/fees",
+        label: "Fees & payments",
+        icon: CreditCard,
+        permission: PERMISSIONS.FEE_MANAGE,
+      },
       {
         href: "/documents",
         label: "Documents & certificates",
@@ -106,7 +112,7 @@ const GROUPS: NavGroup[] = [
       {
         href: "/settings",
         label: "Administration",
-        icon: Settings,
+        icon: Gear,
         permission: PERMISSIONS.SETTINGS_MANAGE,
       },
     ],
@@ -117,7 +123,7 @@ const GROUPS: NavGroup[] = [
       {
         href: "/messages",
         label: "Messages",
-        icon: MessageSquare,
+        icon: ChatCircleText,
         permission: PERMISSIONS.MESSAGE_READ,
       },
       {
@@ -129,7 +135,7 @@ const GROUPS: NavGroup[] = [
       {
         href: "/calendar",
         label: "School calendar",
-        icon: CalendarDays,
+        icon: CalendarBlank,
         permission: PERMISSIONS.CALENDAR_READ,
       },
     ],
@@ -142,4 +148,18 @@ export function visibleNavGroups(role: RoleKey): NavGroup[] {
     label: g.label,
     items: g.items.filter((i) => !i.permission || can(role, i.permission)),
   })).filter((g) => g.items.length > 0);
+}
+
+/** Best-match page label for the breadcrumb ("School portal / {Page}"). */
+export function pageLabelFor(pathname: string): string {
+  const all = GROUPS.flatMap((g) => g.items);
+  const hit = all.find((i) => pathname === i.href || pathname.startsWith(i.href + "/"));
+  if (hit) return hit.label;
+  // Routes reachable outside the nav config.
+  if (pathname.startsWith("/report-cards")) return "Report cards";
+  if (pathname.startsWith("/notifications")) return "Notifications";
+  if (pathname.startsWith("/academic")) return "Academic structure";
+  if (pathname.startsWith("/attendance")) return "Attendance";
+  if (pathname.startsWith("/people")) return "People";
+  return "Dashboard";
 }

@@ -1,16 +1,17 @@
 "use client";
 
+import { CaretDown, CaretUp, CaretUpDown } from "@phosphor-icons/react";
 import { cn } from "@repo/ui";
-import { ChevronDown, ChevronsUpDown, ChevronUp } from "lucide-react";
 import type { ReactNode } from "react";
 
 import { ErrorState, Skeleton } from "./feedback";
 
 /**
- * DataTable (ADR-UX1 §component-kit) — sticky header, hover rows, right-aligned
- * numerics (tabular-nums), optional sortable headers, and built-in skeleton /
- * empty / error states so no consumer re-implements them. Hand-rolled (no table
- * lib): a styled wrapper over a column config.
+ * DataTable (design handoff §Tables) — one white 16px-radius card holding the
+ * toolbar (search/filters/actions), an 11px uppercase header row, cream-hover
+ * body rows, and the footer/paginator, separated by cream hairlines. Built-in
+ * skeleton / empty / error states so no consumer re-implements them.
+ * Hand-rolled (no table lib): a styled wrapper over a column config.
  */
 export interface Column<T> {
   key: string;
@@ -52,11 +53,11 @@ export function DataTable<T>({
   footer?: ReactNode;
 }) {
   return (
-    <div className="flex flex-col gap-3">
-      {toolbar}
-      <div className="overflow-x-auto rounded-card border border-neutral-200">
+    <div className="overflow-hidden rounded-card border border-subtle bg-white shadow-sm">
+      {toolbar ? <div className="border-b border-cream-100 px-5 py-4">{toolbar}</div> : null}
+      <div className="overflow-x-auto">
         <table className="w-full text-left text-sm">
-          <thead className="sticky top-0 z-10 border-b border-neutral-200 bg-neutral-50">
+          <thead className="border-b border-cream-100">
             <tr>
               {columns.map((col) => {
                 const active = sort?.key === col.key;
@@ -68,7 +69,7 @@ export function DataTable<T>({
                       active ? (sort.dir === "asc" ? "ascending" : "descending") : undefined
                     }
                     className={cn(
-                      "px-4 py-3 text-caption font-semibold uppercase tracking-wide text-neutral-500",
+                      "px-5 py-2.5 text-[11px] font-bold uppercase tracking-[0.1em] text-ink-400",
                       col.align === "right" && "text-right",
                     )}
                   >
@@ -77,17 +78,17 @@ export function DataTable<T>({
                         type="button"
                         onClick={() => onSort(col.key)}
                         className={cn(
-                          "inline-flex cursor-pointer items-center gap-1 hover:text-neutral-800",
+                          "inline-flex cursor-pointer items-center gap-1 uppercase tracking-[0.1em] hover:text-ink-700",
                           col.align === "right" && "flex-row-reverse",
                         )}
                       >
                         {col.header}
                         {!active ? (
-                          <ChevronsUpDown aria-hidden className="size-3.5" />
+                          <CaretUpDown aria-hidden className="size-3.5" />
                         ) : sort.dir === "asc" ? (
-                          <ChevronUp aria-hidden className="size-3.5" />
+                          <CaretUp aria-hidden className="size-3.5" />
                         ) : (
-                          <ChevronDown aria-hidden className="size-3.5" />
+                          <CaretDown aria-hidden className="size-3.5" />
                         )}
                       </button>
                     ) : (
@@ -98,12 +99,12 @@ export function DataTable<T>({
               })}
             </tr>
           </thead>
-          <tbody className="divide-y divide-neutral-100">
+          <tbody className="divide-y divide-cream-100">
             {loading ? (
               Array.from({ length: 5 }).map((_, r) => (
                 <tr key={r}>
                   {columns.map((col) => (
-                    <td key={col.key} className="px-4 py-3">
+                    <td key={col.key} className="px-5 py-4">
                       <Skeleton className="h-4 w-24" />
                     </td>
                   ))}
@@ -123,12 +124,12 @@ export function DataTable<T>({
               </tr>
             ) : (
               rows.map((row) => (
-                <tr key={rowKey(row)} className="transition-colors hover:bg-neutral-50">
+                <tr key={rowKey(row)} className="transition-colors duration-fast hover:bg-cream-50">
                   {columns.map((col) => (
                     <td
                       key={col.key}
                       className={cn(
-                        "px-4 py-3 text-neutral-800",
+                        "px-5 py-3.5 text-ink-800",
                         col.align === "right" && "text-right tabular-nums",
                       )}
                     >
@@ -141,27 +142,32 @@ export function DataTable<T>({
           </tbody>
         </table>
       </div>
+      {/* Footer components (e.g. Paginator) carry their own padding + top hairline
+          so an empty footer renders nothing. */}
       {footer}
     </div>
   );
 }
 
-/** Standard toolbar row: filters (left) · search + actions (right). */
+/** Standard toolbar row: filters (left) · search + count + actions (right). */
 export function TableToolbar({
   filters,
   search,
+  count,
   actions,
 }: {
   filters?: ReactNode;
   search?: ReactNode;
+  /** e.g. "3 classes" — muted count text before the primary action. */
+  count?: ReactNode;
   actions?: ReactNode;
 }) {
-  // ReactNode already includes undefined; no exactOptional concern.
   return (
-    <div className="flex flex-wrap items-center justify-between gap-3">
-      <div className="flex flex-wrap items-center gap-2">{filters}</div>
-      <div className="flex items-center gap-2">
-        {search}
+    <div className="flex flex-wrap items-center gap-3.5">
+      {search}
+      {filters ? <div className="flex flex-wrap items-end gap-2.5">{filters}</div> : null}
+      <div className="ml-auto flex items-center gap-3.5">
+        {count ? <span className="text-[12.5px] text-ink-400">{count}</span> : null}
         {actions}
       </div>
     </div>

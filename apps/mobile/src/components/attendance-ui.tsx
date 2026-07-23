@@ -1,8 +1,10 @@
 import { useTranslation } from "@repo/i18n";
 import type { AttendanceStatusKey, LeaveStatusKey } from "@repo/types";
 import { useRouter } from "expo-router";
+import { CaretLeft } from "phosphor-react-native";
 import type { ReactNode } from "react";
 import { Pressable, ScrollView, Text, View } from "react-native";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 /** The five marks, in register display order (ADR-011). */
 export const ATTENDANCE_STATUSES: readonly AttendanceStatusKey[] = [
@@ -22,18 +24,18 @@ export const STATUS_LABEL: Record<AttendanceStatusKey, string> = {
 };
 
 export const STATUS_CLASS: Record<AttendanceStatusKey, string> = {
-  PRESENT: "text-success",
-  ABSENT: "text-destructive",
-  LATE: "text-info",
-  HALF_DAY: "text-muted-foreground",
-  LEAVE: "text-muted-foreground",
+  PRESENT: "text-success-600",
+  ABSENT: "text-danger-600",
+  LATE: "text-info-600",
+  HALF_DAY: "text-neutral-500",
+  LEAVE: "text-neutral-500",
 };
 
 export const LEAVE_STATUS_CLASS: Record<LeaveStatusKey, string> = {
-  PENDING: "text-info",
-  APPROVED: "text-success",
-  REJECTED: "text-destructive",
-  CANCELLED: "text-muted-foreground",
+  PENDING: "text-info-600",
+  APPROVED: "text-success-600",
+  REJECTED: "text-danger-600",
+  CANCELLED: "text-neutral-500",
 };
 
 /** Today as an IST calendar date (YYYY-MM-DD) using the device locale (en-CA = ISO). */
@@ -50,22 +52,33 @@ export function monthStartIst(): string {
 export function ScreenScaffold({ title, children }: { title: string; children: ReactNode }) {
   const { dict } = useTranslation();
   const router = useRouter();
+  const insets = useSafeAreaInsets();
   return (
-    <View className="flex-1 bg-background">
-      <View className="flex-row items-center gap-3 border-b border-border px-4 py-3">
+    <View className="flex-1 bg-neutral-50">
+      <View
+        style={{ paddingTop: insets.top + 12 }}
+        className="flex-row items-center gap-2 border-b border-subtle bg-white px-3 pb-3"
+      >
         <Pressable
           accessibilityRole="button"
           accessibilityLabel={dict.attendance.goBack}
           onPress={() => {
             router.back();
           }}
-          className="min-h-11 min-w-11 items-center justify-center rounded-md"
+          className="size-11 items-center justify-center rounded-xl active:bg-primary-50"
         >
-          <Text className="text-lg text-foreground">←</Text>
+          <CaretLeft size={22} color="#44382C" weight="bold" />
         </Pressable>
-        <Text className="text-xl font-semibold text-foreground">{title}</Text>
+        <Text className="flex-1 font-display text-title text-neutral-900" numberOfLines={1}>
+          {title}
+        </Text>
       </View>
-      <ScrollView contentContainerClassName="p-4 gap-3">{children}</ScrollView>
+      <ScrollView
+        contentContainerClassName="p-4 gap-3"
+        contentContainerStyle={{ paddingBottom: insets.bottom + 24 }}
+      >
+        {children}
+      </ScrollView>
     </View>
   );
 }
@@ -90,12 +103,14 @@ export function StatusPicker({
             onPress={() => {
               onChange(status);
             }}
-            className={`min-h-11 justify-center rounded-md border px-3 py-2 ${
-              selected ? "border-primary bg-primary/10" : "border-border bg-card"
+            className={`min-h-11 justify-center rounded-pill border px-4 py-2 ${
+              selected ? "border-primary-600 bg-primary-50" : "border-subtle bg-white"
             }`}
           >
             <Text
-              className={`text-sm font-medium ${selected ? "text-primary" : "text-foreground"}`}
+              className={`font-sans text-sm font-semibold ${
+                selected ? "text-primary-800" : "text-neutral-500"
+              }`}
             >
               {STATUS_LABEL[status]}
             </Text>

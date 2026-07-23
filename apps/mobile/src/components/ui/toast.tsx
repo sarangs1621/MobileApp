@@ -1,10 +1,13 @@
-import { Feather } from "@expo/vector-icons";
+import { CheckCircle, Info, XCircle } from "phosphor-react-native";
 import { createContext, useCallback, useContext, useRef, useState, type ReactNode } from "react";
 import { Text, View } from "react-native";
 
+import type { PhosphorIcon } from "./icon";
+
 /**
- * Toast (ADR-UX1 §component-kit, mobile). One queue; `useToast().show(...)` from
- * any mutation. Auto-dismiss 4s. Rendered above the app via a root provider.
+ * Toast (design handoff, mobile) — a dark ink pill, bottom-centre, gold glyph.
+ * One queue; `useToast().show(...)` from any mutation. Auto-dismiss 4s. Rendered
+ * above the app via a root provider.
  */
 type ToastKind = "success" | "error" | "info";
 interface Toast {
@@ -17,16 +20,15 @@ const ToastContext = createContext<{ show: (kind: ToastKind, message: string) =>
   null,
 );
 
-const ICON: Record<ToastKind, keyof typeof Feather.glyphMap> = {
-  success: "check-circle",
-  error: "x-circle",
-  info: "info",
+const ICON: Record<ToastKind, PhosphorIcon> = {
+  success: CheckCircle,
+  error: XCircle,
+  info: Info,
 };
-const COLOR: Record<ToastKind, string> = { success: "#15803D", error: "#B91C1C", info: "#1D4ED8" };
-const BORDER: Record<ToastKind, string> = {
-  success: "border-success-200",
-  error: "border-danger-200",
-  info: "border-info-200",
+const ICON_COLOR: Record<ToastKind, string> = {
+  success: "#D6B36A",
+  error: "#E7A79A",
+  info: "#BFD5E6",
 };
 
 export function ToastProvider({ children }: { children: ReactNode }) {
@@ -43,16 +45,19 @@ export function ToastProvider({ children }: { children: ReactNode }) {
     <ToastContext.Provider value={{ show }}>
       {children}
       {toasts.length > 0 ? (
-        <View className="absolute inset-x-4 bottom-10 gap-2" pointerEvents="none">
-          {toasts.map((t) => (
-            <View
-              key={t.id}
-              className={`flex-row items-center gap-2 rounded-lg border bg-card p-3 shadow-lg ${BORDER[t.kind]}`}
-            >
-              <Feather name={ICON[t.kind]} size={16} color={COLOR[t.kind]} />
-              <Text className="font-sans flex-1 text-sm text-neutral-800">{t.message}</Text>
-            </View>
-          ))}
+        <View className="absolute inset-x-4 bottom-10 items-center gap-2" pointerEvents="none">
+          {toasts.map((t) => {
+            const Glyph = ICON[t.kind];
+            return (
+              <View
+                key={t.id}
+                className="max-w-full flex-row items-center gap-2 self-center rounded-pill bg-neutral-900 px-4 py-3 shadow-md"
+              >
+                <Glyph size={17} color={ICON_COLOR[t.kind]} weight="fill" />
+                <Text className="font-sans text-sm font-semibold text-neutral-50">{t.message}</Text>
+              </View>
+            );
+          })}
         </View>
       ) : null}
     </ToastContext.Provider>

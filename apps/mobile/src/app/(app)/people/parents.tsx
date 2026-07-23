@@ -1,7 +1,8 @@
 import type { PreferredContactKey } from "@repo/types";
-import { Text } from "react-native";
+import { Text, View } from "react-native";
 
 import { AcademicListScreen, ListRow } from "../../../components/academic-list";
+import { Avatar } from "../../../components/ui";
 import { trpc } from "../../../lib/trpc";
 
 const CONTACT_LABEL: Record<PreferredContactKey, string> = {
@@ -27,14 +28,21 @@ export default function ParentsScreen() {
       emptyText="No parents visible to you."
       renderItem={(parent) => (
         <ListRow>
-          <Text className="font-medium text-foreground">{parent.name}</Text>
-          <Text className="text-sm text-muted-foreground">
-            {parent.phone}
-            {parent.email ? ` · ${parent.email}` : ""}
-          </Text>
-          <Text className="text-sm text-muted-foreground">
-            {parent.occupation ?? "—"} · Prefers {CONTACT_LABEL[parent.preferredContact]}
-          </Text>
+          <View className="flex-row items-center gap-3">
+            <Avatar name={parent.name} />
+            <View className="flex-1 gap-0.5">
+              <Text className="font-sans text-body font-semibold text-neutral-900">
+                {parent.name}
+              </Text>
+              <Text className="font-sans text-sm text-neutral-500">
+                {parent.phone}
+                {parent.email ? ` · ${parent.email}` : ""}
+              </Text>
+              <Text className="font-sans text-caption text-neutral-400">
+                {parent.occupation ?? "—"} · Prefers {CONTACT_LABEL[parent.preferredContact]}
+              </Text>
+            </View>
+          </View>
         </ListRow>
       )}
     />

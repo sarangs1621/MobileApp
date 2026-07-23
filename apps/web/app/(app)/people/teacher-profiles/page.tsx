@@ -1,54 +1,97 @@
 "use client";
 
+import { GraduationCap, Plus } from "@phosphor-icons/react";
 import { PERMISSIONS } from "@repo/constants";
 import { can } from "@repo/core";
 import type { StaffDto } from "@repo/types";
-import { GraduationCap } from "lucide-react";
-import { useCallback, useState } from "react";
+import Link from "next/link";
+import { useCallback, useMemo, useState } from "react";
 
 import { Paginator, usePagedSearch } from "@/src/components/academic/ui";
 import {
   Avatar,
   Button,
   ConfirmDialog,
-  DataTable,
   Dialog,
   EmptyState,
+  ErrorState,
   Input,
-  PageHeader,
   SearchInput,
-  TableToolbar,
+  Skeleton,
+  StatusChip,
   useToast,
-  type Column,
 } from "@/src/components/ui";
 import { trpc } from "@/src/trpc/react";
 
+/** "2020-06-01" → "Jun 2020". */
+function fmtJoined(iso: string): string {
+  return new Date(iso + "T00:00:00").toLocaleDateString("en-IN", {
+    month: "short",
+    year: "numeric",
+  });
+}
+
 /**
- * Teacher (staff) profiles CRUD — the employment profile EXTENDING a User
- * (one-to-one; authentication stays on User). Creation takes the user id, like
- * the M2 teacher-assignment form — a user directory picker can replace it
- * later. A TEACHER sees only their own profile (service row scope), no actions.
+ * Teacher (staff) profiles (M3; design handoff §6 — Teacher profiles tab). A
+ * responsive card grid: each card shows the employment profile extending a User
+ * (one-to-one; auth stays on User), the class-teacher badge (joined from the
+ * active year's class-teacher assignments), and quick links. A TEACHER sees only
+ * their own profile (service row scope), with no actions.
  */
 export default function TeacherProfilesPage() {
   const me = trpc.auth.me.useQuery();
   const canManage = me.data !== undefined && can(me.data.role, PERMISSIONS.STAFF_MANAGE);
+  const canReadSections = me.data !== undefined && can(me.data.role, PERMISSIONS.ACADEMIC_READ);
   const { show } = useToast();
 
   const profiles = trpc.teacherProfile.list.useQuery();
   const utils = trpc.useUtils();
   const invalidate = () => utils.teacherProfile.list.invalidate();
 
+  // Class-teacher map: active year × sections → userId → section label.
+  const years = trpc.academicYear.list.useQuery(undefined, { enabled: canReadSections });
+  const activeYearId = years.data?.find((y) => y.status === "ACTIVE")?.id;
+  const classes = trpc.class.list.useQuery(undefined, { enabled: canReadSections });
+  const sectionLists = trpc.useQueries((t) =>
+    canReadSections ? (classes.data ?? []).map((c) => t.section.list({ classId: c.id })) : [],
+  );
+  const allSections = useMemo(() => {
+    const className = new Map((classes.data ?? []).map((c) => [c.id, c.name]));
+    return sectionLists.flatMap((q) =>
+      (q.data ?? []).map((s) => ({
+        id: s.id,
+        label: `${className.get(s.classId) ?? ""} ${s.name}`.trim(),
+      })),
+    );
+  }, [classes.data, sectionLists]);
+  const classTeacherQueries = trpc.useQueries((t) =>
+    activeYearId
+      ? allSections.map((s) =>
+          t.classTeacher.get({ academicYearId: activeYearId, sectionId: s.id }),
+        )
+      : [],
+  );
+  const classTeacherOf = useMemo(() => {
+    const map = new Map<string, string>();
+    classTeacherQueries.forEach((q, i) => {
+      const section = allSections[i];
+      const dto = q.data;
+      if (section && dto) map.set(dto.teacherId, section.label);
+    });
+    return map;
+  }, [classTeacherQueries, allSections]);
+
   const create = trpc.teacherProfile.create.useMutation({
     onSuccess: () => {
       invalidate();
-      show("success", "Profile created");
+      show("success", "Profile saved");
     },
     onError: (e) => show("error", e.message),
   });
   const update = trpc.teacherProfile.update.useMutation({
     onSuccess: () => {
       invalidate();
-      show("success", "Profile updated");
+      show("success", "Profile saved");
     },
     onError: (e) => show("error", e.message),
   });
@@ -67,116 +110,169 @@ export default function TeacherProfilesPage() {
     profiles.data,
     useCallback(
       (profile: StaffDto, q: string) =>
+        profile.name.toLowerCase().includes(q) ||
         profile.employeeId.toLowerCase().includes(q) ||
         (profile.department ?? "").toLowerCase().includes(q),
       [],
     ),
   );
 
-  const columns: Column<StaffDto>[] = [
-    {
-      key: "teacher",
-      header: "Teacher",
-      render: (p) => (
-        <div className="flex items-center gap-3">
-          <Avatar name={p.name} size="sm" />
-          <div className="flex flex-col">
-            <span className="font-medium text-neutral-800">{p.name}</span>
-            <span className="text-caption text-neutral-500">{p.employeeId}</span>
-          </div>
-        </div>
-      ),
-    },
-    { key: "department", header: "Department", render: (p) => p.department ?? "—" },
-    { key: "qualification", header: "Qualification", render: (p) => p.qualification ?? "—" },
-    {
-      key: "experience",
-      header: "Experience",
-      render: (p) => (p.experienceYears != null ? `${p.experienceYears} yrs` : "—"),
-    },
-    { key: "joined", header: "Joined", render: (p) => p.joiningDate ?? "—" },
-    {
-      key: "actions",
-      header: "Actions",
-      render: (p) =>
-        canManage ? (
-          <div className="flex gap-1">
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={() => {
-                create.reset();
-                update.reset();
-                setEditing(p);
-              }}
-            >
-              Edit
-            </Button>
-            <Button
-              variant="ghost"
-              size="sm"
-              className="text-danger-600 hover:bg-danger-50"
-              onClick={() => {
-                remove.reset();
-                setDeleting(p);
-              }}
-            >
-              Delete
-            </Button>
-          </div>
-        ) : (
-          <span className="text-neutral-500">—</span>
-        ),
-    },
-  ];
+  const openEdit = (p: StaffDto) => {
+    create.reset();
+    update.reset();
+    setEditing(p);
+  };
 
   return (
-    <section className="flex flex-col gap-4">
-      <PageHeader
-        title="Teacher profiles"
-        action={
-          canManage ? (
-            <Button
-              icon={GraduationCap}
-              onClick={() => {
-                create.reset();
-                update.reset();
-                setEditing("new");
-              }}
-            >
-              New profile
-            </Button>
-          ) : undefined
-        }
-      />
+    <section className="flex flex-col gap-3.5">
+      <div className="flex flex-wrap items-end gap-3">
+        <SearchInput
+          placeholder="Search name or employee id…"
+          value={paged.query}
+          onChange={(e) => paged.setQuery(e.target.value)}
+          aria-label="Search teacher profiles"
+          className="min-w-[260px]"
+        />
+        <div className="flex-1" />
+        {canManage ? (
+          <Button
+            size="sm"
+            icon={Plus}
+            onClick={() => {
+              create.reset();
+              update.reset();
+              setEditing("new");
+            }}
+          >
+            New profile
+          </Button>
+        ) : null}
+      </div>
 
-      <DataTable
-        columns={columns}
-        rows={paged.pageItems}
-        rowKey={(p) => p.id}
-        loading={profiles.isLoading}
-        error={profiles.isError}
-        onRetry={() => void profiles.refetch()}
-        empty={<EmptyState icon={GraduationCap} title="No teacher profiles yet." />}
-        toolbar={
-          <TableToolbar
-            search={
-              <SearchInput
-                value={paged.query}
-                onChange={(e) => paged.setQuery(e.target.value)}
-                aria-label="Search teacher profiles"
-              />
+      {profiles.isLoading ? (
+        <div className="grid grid-cols-1 gap-3.5 lg:grid-cols-2">
+          <Skeleton className="h-52 rounded-card" />
+          <Skeleton className="h-52 rounded-card" />
+        </div>
+      ) : profiles.isError ? (
+        <div className="rounded-card border border-subtle bg-white shadow-sm">
+          <ErrorState onRetry={() => void profiles.refetch()} />
+        </div>
+      ) : paged.pageItems.length === 0 ? (
+        <div className="rounded-card border border-subtle bg-white shadow-sm">
+          <EmptyState
+            icon={GraduationCap}
+            title={paged.total === 0 ? "No teacher profiles yet." : "No profiles match."}
+            message={
+              paged.total === 0 && canManage
+                ? "Create a profile for each teaching account — it powers assignments and timetables."
+                : undefined
+            }
+            action={
+              paged.total === 0 && canManage ? (
+                <Button size="sm" icon={Plus} onClick={() => setEditing("new")}>
+                  New profile
+                </Button>
+              ) : undefined
             }
           />
-        }
-        footer={
-          <Paginator
-            page={paged.page}
-            pageCount={paged.pageCount}
-            total={paged.total}
-            onPage={paged.setPage}
-          />
-        }
+        </div>
+      ) : (
+        <div className="grid grid-cols-1 gap-3.5 lg:grid-cols-2">
+          {paged.pageItems.map((p) => {
+            const section = classTeacherOf.get(p.userId);
+            const hasDetails =
+              p.qualification != null || p.experienceYears != null || p.joiningDate != null;
+            return (
+              <div
+                key={p.id}
+                className="flex flex-col gap-3.5 rounded-card border border-subtle bg-white p-5 shadow-sm transition-[transform,box-shadow] duration-base hover:-translate-y-1 hover:shadow-md"
+              >
+                <div className="flex items-center gap-3">
+                  <Avatar name={p.name} size="lg" />
+                  <span className="flex min-w-0 flex-1 flex-col gap-0.5">
+                    <span className="truncate font-display text-[17px] font-semibold text-ink-900">
+                      {p.name}
+                    </span>
+                    <span className="truncate text-[12.5px] text-ink-500">
+                      {p.employeeId}
+                      {p.department ? ` · ${p.department}` : ""}
+                    </span>
+                  </span>
+                  {section ? <StatusChip tone="gold" label={`Class teacher · ${section}`} /> : null}
+                </div>
+
+                {hasDetails ? (
+                  <div className="flex flex-wrap gap-x-[18px] gap-y-2 border-t border-cream-100 pt-3.5">
+                    <Stat label="Qualification" value={p.qualification ?? "—"} />
+                    <Stat
+                      label="Experience"
+                      value={p.experienceYears != null ? `${p.experienceYears} years` : "—"}
+                    />
+                    <Stat label="Joined" value={p.joiningDate ? fmtJoined(p.joiningDate) : "—"} />
+                  </div>
+                ) : (
+                  <div className="border-t border-cream-100 pt-3.5">
+                    <span className="text-[13px] text-ink-400">
+                      Qualification, experience and joining date not recorded yet
+                      {canManage ? (
+                        <>
+                          {" — "}
+                          <button
+                            type="button"
+                            onClick={() => openEdit(p)}
+                            className="cursor-pointer font-semibold text-maroon-700 hover:text-maroon-800"
+                          >
+                            complete the profile
+                          </button>
+                        </>
+                      ) : null}
+                      .
+                    </span>
+                  </div>
+                )}
+
+                <div className="flex items-center gap-2 border-t border-cream-100 pt-3.5">
+                  {canManage ? (
+                    <button
+                      type="button"
+                      onClick={() => openEdit(p)}
+                      className="cursor-pointer rounded-full border border-subtle bg-white px-4 py-2 text-[12.5px] font-semibold text-maroon-700 transition-colors duration-fast hover:border-maroon-200 hover:bg-maroon-50"
+                    >
+                      Edit profile
+                    </button>
+                  ) : null}
+                  <Link
+                    href="/timetable/teachers"
+                    className="rounded-full border border-subtle bg-white px-4 py-2 text-[12.5px] font-semibold text-maroon-700 transition-colors duration-fast hover:border-maroon-200 hover:bg-maroon-50"
+                  >
+                    View timetable
+                  </Link>
+                  <span className="flex-1" />
+                  {canManage ? (
+                    <button
+                      type="button"
+                      onClick={() => {
+                        remove.reset();
+                        setDeleting(p);
+                      }}
+                      className="cursor-pointer px-2 py-2 text-[12.5px] font-semibold text-red-600 transition-colors duration-fast hover:text-maroon-900"
+                    >
+                      Delete
+                    </button>
+                  ) : null}
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      )}
+
+      <Paginator
+        page={paged.page}
+        pageCount={paged.pageCount}
+        total={paged.total}
+        onPage={paged.setPage}
       />
 
       {editing !== null ? (
@@ -224,9 +320,9 @@ export default function TeacherProfilesPage() {
 
       {deleting !== null ? (
         <ConfirmDialog
-          title="Delete teacher profile"
-          objectName={deleting.employeeId}
-          message="Permanently delete this profile? The user account is NOT deleted — only the employment profile:"
+          title={`Delete ${deleting.name}?`}
+          message="Permanently delete this profile? The user account is NOT deleted — only the employment profile."
+          confirmLabel="Delete profile"
           busy={remove.isPending}
           error={remove.error?.message ?? null}
           onCancel={() => setDeleting(null)}
@@ -236,6 +332,15 @@ export default function TeacherProfilesPage() {
         />
       ) : null}
     </section>
+  );
+}
+
+function Stat({ label, value }: { label: string; value: string }) {
+  return (
+    <span className="flex flex-col gap-px">
+      <span className="text-[11px] font-bold uppercase tracking-[0.1em] text-ink-400">{label}</span>
+      <span className="text-[13.5px] font-semibold text-ink-900">{value}</span>
+    </span>
   );
 }
 
@@ -275,7 +380,7 @@ function StaffFormModal({
   const [bio, setBio] = useState(profile?.bio ?? "");
 
   return (
-    <Dialog title={profile ? "Edit teacher profile" : "New teacher profile"} onClose={onClose}>
+    <Dialog title="Teacher profile" onClose={onClose} size="lg">
       <form
         onSubmit={(e) => {
           e.preventDefault();
@@ -290,42 +395,44 @@ function StaffFormModal({
             bio: bio.trim(),
           });
         }}
-        className="flex max-h-[70vh] flex-col gap-4 overflow-y-auto pr-1"
+        className="flex flex-col gap-[18px]"
       >
         <Input
-          label="User id (the teacher’s account)"
+          label="User account id"
           value={userId}
           onChange={(e) => setUserId(e.target.value)}
           required
           disabled={profile !== null}
-          placeholder="From the user admin list"
+          helper="The teacher’s sign-in account id — from the user admin list. Fixed once set."
+          placeholder="usr_…"
+          className="font-mono"
         />
-        <Input
-          label="Full name"
-          value={name}
-          onChange={(e) => setName(e.target.value)}
-          required
-          placeholder="e.g. Anaswer Rajan"
-        />
-        <Input
-          label="Employee id"
-          value={employeeId}
-          onChange={(e) => setEmployeeId(e.target.value)}
-          required
-        />
-        <div className="grid grid-cols-2 gap-4">
+        <div className="grid grid-cols-2 gap-3.5">
+          <Input
+            label="Full name"
+            value={name}
+            onChange={(e) => setName(e.target.value)}
+            required
+          />
+          <Input
+            label="Employee id"
+            value={employeeId}
+            onChange={(e) => setEmployeeId(e.target.value)}
+            placeholder="T-002"
+            required
+          />
           <Input
             label="Department"
             value={department}
             onChange={(e) => setDepartment(e.target.value)}
+            placeholder="Primary"
           />
           <Input
             label="Qualification"
             value={qualification}
             onChange={(e) => setQualification(e.target.value)}
+            placeholder="B.Ed"
           />
-        </div>
-        <div className="grid grid-cols-2 gap-4">
           <Input
             label="Experience (years)"
             type="number"
@@ -341,24 +448,26 @@ function StaffFormModal({
             onChange={(e) => setJoiningDate(e.target.value)}
           />
         </div>
-        <label className="flex flex-col gap-1 text-sm font-medium text-neutral-800">
-          Bio
+        <div className="flex flex-col gap-1.5">
+          <span className="text-[13px] font-semibold text-ink-900">
+            Bio <span className="font-normal text-ink-400">(shown on the school website)</span>
+          </span>
           <textarea
             value={bio}
             onChange={(e) => setBio(e.target.value)}
-            className="min-h-20 w-full rounded-md border border-neutral-300 bg-white px-3 py-2 text-body text-neutral-800 focus:border-primary-600 focus:outline-none focus:ring-2 focus:ring-primary-600"
-            rows={3}
+            rows={2}
+            className="resize-y rounded-xl border border-subtle bg-white px-3 py-2.5 text-sm text-ink-900 outline-none placeholder:text-ink-400 focus:border-gold-500 focus:ring-[3px] focus:ring-gold-100"
           />
-        </label>
+        </div>
 
-        {error ? <p className="text-sm text-danger-600">{error}</p> : null}
+        {error ? <p className="text-sm text-red-600">{error}</p> : null}
 
-        <div className="mt-2 flex justify-end gap-2">
+        <div className="mt-1 flex justify-end gap-2.5">
           <Button type="button" variant="secondary" onClick={onClose}>
             Cancel
           </Button>
           <Button type="submit" loading={busy}>
-            Save
+            Save profile
           </Button>
         </div>
       </form>

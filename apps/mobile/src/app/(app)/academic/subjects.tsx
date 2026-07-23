@@ -17,7 +17,7 @@ export default function SubjectsScreen() {
       emptyText="No subjects yet."
       renderItem={(subject) => (
         <ListRow>
-          <Text className="font-medium text-foreground">{subject.name}</Text>
+          <Text className="font-sans text-body font-semibold text-neutral-900">{subject.name}</Text>
         </ListRow>
       )}
     />

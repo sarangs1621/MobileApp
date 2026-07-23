@@ -50,18 +50,19 @@ export const uiPreset = {
         input: "hsl(var(--input))",
         ring: "hsl(var(--ring))",
       },
-      // Web loads Inter via next/font as `--font-sans`; mobile applies
+      // Web loads Hanken Grotesk (sans) + Newsreader (display serif) via
+      // next/font as `--font-sans` / `--font-display`; mobile applies
       // `fontFamily.sans` through expo-font (Step 2/3). Fallbacks match tokens.
       fontFamily: {
         sans: [
           "var(--font-sans)",
+          "system-ui",
           "-apple-system",
           '"Segoe UI"',
           "Roboto",
-          '"Helvetica Neue"',
-          "Arial",
           "sans-serif",
         ],
+        display: ["var(--font-display)", "Georgia", '"Times New Roman"', "serif"],
       },
       // `secondary` (14/20) is omitted — it collides with the `secondary` color
       // and equals Tailwind's default `text-sm`; use `text-sm` for that role.

@@ -14,8 +14,10 @@ export function OfflineBanner({ message }: { message?: string }): React.JSX.Elem
     return null;
   }
   return (
-    <View className="rounded-md border border-border bg-muted px-3 py-2">
-      <Text className="text-sm font-medium text-foreground">{message ?? dict.sync.offline}</Text>
+    <View className="rounded-xl border border-subtle bg-neutral-100 px-3 py-2.5">
+      <Text className="font-sans text-sm font-semibold text-neutral-700">
+        {message ?? dict.sync.offline}
+      </Text>
     </View>
   );
 }

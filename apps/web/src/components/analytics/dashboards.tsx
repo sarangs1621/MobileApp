@@ -10,7 +10,6 @@ import { INVOICE_STATUS_LABEL } from "../fees/ui";
 import { downloadCsv } from "./csv";
 import { AreaTrend, BarSeries, Kpi, LineTrend, Panel, StatusPie, formatPaise } from "./ui";
 
-
 const pct = (v: number | null): string => (v === null ? "—" : `${v}%`);
 
 function RecentAnnouncements() {
@@ -26,7 +25,7 @@ function RecentAnnouncements() {
           {(rows.data ?? []).slice(0, 4).map((a) => (
             <li key={a.id}>
               <Link
-                href={`/announcements/${a.id}`}
+                href="/announcements"
                 className="text-sm font-medium text-foreground hover:underline"
               >
                 {a.title}

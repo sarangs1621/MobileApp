@@ -39,13 +39,15 @@ export default function TimetableScreen() {
   return (
     <ScreenScaffold title="Timetable">
       {query.isLoading ? (
-        <ActivityIndicator />
+        <ActivityIndicator color="#7A3414" />
       ) : entries.length === 0 ? (
-        <Text className="text-muted-foreground">No timetable has been published yet.</Text>
+        <Text className="font-sans text-neutral-500">No timetable has been published yet.</Text>
       ) : (
         byDay.map(({ day, rows }) => (
           <View key={day} className="gap-2">
-            <Text className="text-sm font-medium text-muted-foreground">{WEEKDAY_LABEL[day]}</Text>
+            <Text className="font-sans text-caption font-semibold uppercase tracking-eyebrow text-neutral-500">
+              {WEEKDAY_LABEL[day]}
+            </Text>
             {rows.map((e) => (
               <EntryRow key={e.id} entry={e} isParent={isParent} />
             ))}
@@ -62,14 +64,16 @@ function EntryRow({ entry, isParent }: { entry: TimetableEntryDto; isParent: boo
     .filter(Boolean)
     .join(" · ");
   return (
-    <View className="flex-row gap-3 rounded-md border border-border bg-card p-4">
-      <View className="w-20">
-        <Text className="font-medium text-foreground">{entry.startTime}</Text>
-        <Text className="text-xs text-muted-foreground">{entry.endTime}</Text>
+    <View className="flex-row gap-3 rounded-card border border-subtle bg-card p-4 shadow-sm">
+      <View className="w-16">
+        <Text className="font-sans text-body font-bold text-primary-700">{entry.startTime}</Text>
+        <Text className="font-sans text-caption text-neutral-400">{entry.endTime}</Text>
       </View>
-      <View className="flex-1">
-        <Text className="font-medium text-foreground">{entry.subjectName}</Text>
-        {secondary ? <Text className="text-sm text-muted-foreground">{secondary}</Text> : null}
+      <View className="flex-1 border-l border-subtle pl-3">
+        <Text className="font-sans text-body font-semibold text-neutral-900">
+          {entry.subjectName}
+        </Text>
+        {secondary ? <Text className="font-sans text-sm text-neutral-500">{secondary}</Text> : null}
       </View>
     </View>
   );

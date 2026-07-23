@@ -1,9 +1,12 @@
 import { useTranslation } from "@repo/i18n";
 import type { NotificationDto } from "@repo/types";
 import { useRouter, type Href } from "expo-router";
+import { Archive } from "phosphor-react-native";
 import { ActivityIndicator, FlatList, Pressable, RefreshControl, Text, View } from "react-native";
 
+import { Header } from "../../../components/behaviour-ui";
 import { deepLinkForType, timeAgo } from "../../../components/notifications-ui";
+import { Button } from "../../../components/ui";
 import { trpc } from "../../../lib/trpc";
 
 /**
@@ -44,33 +47,25 @@ export default function NotificationsScreen() {
   };
 
   return (
-    <View className="flex-1 bg-background">
-      <View className="flex-row items-center gap-3 border-b border-border px-4 py-3">
-        <Pressable
-          accessibilityRole="button"
-          accessibilityLabel={t.goBack}
-          onPress={() => {
-            router.back();
-          }}
-          className="min-h-11 min-w-11 items-center justify-center rounded-md"
-        >
-          <Text className="text-lg text-foreground">←</Text>
-        </Pressable>
-        <Text className="flex-1 text-xl font-semibold text-foreground">{t.title}</Text>
-        {hasUnread ? (
-          <Pressable
-            accessibilityRole="button"
-            onPress={() => markAllRead.mutate()}
-            className="min-h-11 justify-center rounded-md px-2"
-          >
-            <Text className="font-medium text-primary">{t.markAllRead}</Text>
-          </Pressable>
-        ) : null}
-      </View>
+    <View className="flex-1 bg-neutral-50">
+      <Header
+        title={t.title}
+        onBack={() => router.back()}
+        action={
+          hasUnread ? (
+            <Button
+              size="sm"
+              variant="ghost"
+              label={t.markAllRead}
+              onPress={() => markAllRead.mutate()}
+            />
+          ) : undefined
+        }
+      />
 
       {list.isLoading ? (
         <View className="flex-1 items-center justify-center">
-          <ActivityIndicator />
+          <ActivityIndicator color="#7A3414" />
         </View>
       ) : (
         <FlatList
@@ -80,7 +75,7 @@ export default function NotificationsScreen() {
           refreshControl={
             <RefreshControl refreshing={list.isRefetching} onRefresh={() => list.refetch()} />
           }
-          ListEmptyComponent={<Text className="text-muted-foreground">{t.empty}</Text>}
+          ListEmptyComponent={<Text className="font-sans text-neutral-500">{t.empty}</Text>}
           renderItem={({ item }) => (
             <NotificationRow
               item={item}
@@ -105,24 +100,32 @@ function NotificationRow({
 }) {
   const { dict } = useTranslation();
   return (
-    <View className="flex-row items-start gap-3 rounded-md border border-border bg-card p-4">
-      <View className="mt-1 w-2">
-        {!item.isRead ? <View className="h-2 w-2 rounded-full bg-primary" /> : null}
+    <View
+      className={`flex-row items-start gap-3 rounded-card border p-4 shadow-sm ${
+        item.isRead ? "border-subtle bg-card" : "border-primary-100 bg-primary-50"
+      }`}
+    >
+      <View className="mt-1.5 w-2">
+        {!item.isRead ? <View className="size-2 rounded-full bg-primary-600" /> : null}
       </View>
       <Pressable accessibilityRole="button" onPress={onOpen} className="flex-1 gap-1">
-        <Text className={item.isRead ? "text-foreground" : "font-semibold text-foreground"}>
+        <Text
+          className={`font-sans text-body ${
+            item.isRead ? "text-neutral-800" : "font-semibold text-neutral-900"
+          }`}
+        >
           {item.title}
         </Text>
-        <Text className="text-sm text-muted-foreground">{item.body}</Text>
-        <Text className="text-xs text-muted-foreground">{timeAgo(item.createdAt)}</Text>
+        <Text className="font-sans text-sm text-neutral-500">{item.body}</Text>
+        <Text className="font-sans text-caption text-neutral-400">{timeAgo(item.createdAt)}</Text>
       </Pressable>
       <Pressable
         accessibilityRole="button"
         accessibilityLabel={dict.notifications.archive}
         onPress={onArchive}
-        className="min-h-11 justify-center px-1"
+        className="size-9 items-center justify-center rounded-xl active:bg-neutral-100"
       >
-        <Text className="text-sm text-muted-foreground">{dict.notifications.archive}</Text>
+        <Archive size={17} color="#6E6052" weight="regular" />
       </Pressable>
     </View>
   );

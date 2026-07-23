@@ -1,5 +1,5 @@
 import Constants from "expo-constants";
-import * as Notifications from "expo-notifications";
+import type * as ExpoNotifications from "expo-notifications";
 import { useEffect } from "react";
 import { Platform } from "react-native";
 
@@ -17,8 +17,17 @@ import { trpc } from "./trpc";
  * config is an operator step (like the SMS provider), not code.
  */
 
+// Remote push was removed from Expo Go in SDK 53 — importing expo-notifications
+// there throws at startup on Android, so the module only loads in real builds.
+const isExpoGo = Constants.executionEnvironment === "storeClient";
+
+const Notifications: typeof ExpoNotifications | null = isExpoGo
+  ? null
+  : // eslint-disable-next-line @typescript-eslint/no-require-imports
+    (require("expo-notifications") as typeof ExpoNotifications);
+
 // Foreground display: without this, a push arriving while the app is open is silent.
-Notifications.setNotificationHandler({
+Notifications?.setNotificationHandler({
   handleNotification: async () => ({
     shouldShowAlert: true,
     shouldPlaySound: true,
@@ -31,8 +40,12 @@ Notifications.setNotificationHandler({
 const platform = (): "ios" | "android" => (Platform.OS === "ios" ? "ios" : "android");
 
 async function getExpoPushToken(): Promise<
-  { token: string } | { token: null; status: "no-project-id" | "permission-denied" | "token-error" }
+  | { token: string }
+  | { token: null; status: "no-project-id" | "permission-denied" | "token-error" | "expo-go" }
 > {
+  if (!Notifications) {
+    return { token: null, status: "expo-go" };
+  }
   const existing = await Notifications.getPermissionsAsync();
   const granted = existing.granted || (await Notifications.requestPermissionsAsync()).granted;
   if (!granted) {

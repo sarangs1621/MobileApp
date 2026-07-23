@@ -1,6 +1,8 @@
 import { useRouter } from "expo-router";
+import { CaretLeft } from "phosphor-react-native";
 import type { ReactElement, ReactNode } from "react";
 import { ActivityIndicator, FlatList, Pressable, Text, View } from "react-native";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 /**
  * Read-only list scaffold shared by the M2 academic placeholder screens
@@ -26,36 +28,42 @@ export function AcademicListScreen<T>({
   emptyText: string;
 }) {
   const router = useRouter();
+  const insets = useSafeAreaInsets();
 
   return (
-    <View className="flex-1 bg-background">
-      <View className="flex-row items-center gap-3 border-b border-border px-4 py-3">
+    <View className="flex-1 bg-neutral-50">
+      <View
+        style={{ paddingTop: insets.top + 12 }}
+        className="flex-row items-center gap-2 border-b border-subtle bg-white px-3 pb-3"
+      >
         <Pressable
           accessibilityRole="button"
           accessibilityLabel="Go back"
           onPress={() => {
             router.back();
           }}
-          className="min-h-11 min-w-11 items-center justify-center rounded-md"
+          className="size-11 items-center justify-center rounded-xl active:bg-primary-50"
         >
-          <Text className="text-lg text-foreground">←</Text>
+          <CaretLeft size={22} color="#44382C" weight="bold" />
         </Pressable>
-        <Text className="text-xl font-semibold text-foreground">{title}</Text>
+        <Text className="flex-1 font-display text-title text-neutral-900" numberOfLines={1}>
+          {title}
+        </Text>
       </View>
 
       {isError ? (
         <View className="flex-1 items-center justify-center p-6">
-          <Text className="text-center text-destructive">
+          <Text className="text-center font-sans text-danger-600">
             Couldn’t load this list. You may not have access, or the server is unreachable.
           </Text>
         </View>
       ) : isLoading || items === undefined ? (
         <View className="flex-1 items-center justify-center">
-          <ActivityIndicator />
+          <ActivityIndicator color="#7A3414" />
         </View>
       ) : items.length === 0 ? (
         <View className="flex-1 items-center justify-center p-6">
-          <Text className="text-center text-muted-foreground">{emptyText}</Text>
+          <Text className="text-center font-sans text-neutral-500">{emptyText}</Text>
         </View>
       ) : (
         <FlatList
@@ -63,13 +71,18 @@ export function AcademicListScreen<T>({
           keyExtractor={keyExtractor}
           renderItem={({ item }) => renderItem(item)}
           contentContainerClassName="p-4 gap-3"
+          contentContainerStyle={{ paddingBottom: insets.bottom + 24 }}
         />
       )}
     </View>
   );
 }
 
-/** A bordered, card-style row (UI_DESIGN_SYSTEM.md §10). */
+/** A card-style row (design handoff). */
 export function ListRow({ children }: { children: ReactNode }) {
-  return <View className="gap-1 rounded-md border border-border bg-card p-4">{children}</View>;
+  return (
+    <View className="gap-1 rounded-card border border-subtle bg-card p-4 shadow-sm">
+      {children}
+    </View>
+  );
 }

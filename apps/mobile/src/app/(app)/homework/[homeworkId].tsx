@@ -6,6 +6,7 @@ import { ActivityIndicator, Pressable, Text, TextInput, View } from "react-nativ
 
 import { ScreenScaffold } from "../../../components/attendance-ui";
 import { AttachmentList, HW_STATUS_LABEL, SUB_STATUS_LABEL } from "../../../components/homework-ui";
+import { StatusChip } from "../../../components/ui";
 import {
   pickDocument,
   pickImage,
@@ -14,6 +15,10 @@ import {
   type PickedFile,
 } from "../../../lib/attachments";
 import { trpc } from "../../../lib/trpc";
+
+const inputClass =
+  "rounded-[10px] border border-subtle bg-white px-3 py-2.5 font-sans text-body text-neutral-900";
+const eyebrow = "font-sans text-caption font-semibold uppercase tracking-eyebrow text-neutral-500";
 
 /**
  * Homework detail (M6, mobile), role-aware. Teacher/admin: lifecycle actions
@@ -39,14 +44,14 @@ export default function HomeworkDetailScreen() {
   if (hw.isLoading) {
     return (
       <ScreenScaffold title={tr.title}>
-        <ActivityIndicator />
+        <ActivityIndicator color="#7A3414" />
       </ScreenScaffold>
     );
   }
   if (hw.data === undefined) {
     return (
       <ScreenScaffold title={tr.title}>
-        <Text className="text-muted-foreground">{tr.notFound}</Text>
+        <Text className="font-sans text-neutral-500">{tr.notFound}</Text>
       </ScreenScaffold>
     );
   }
@@ -54,15 +59,20 @@ export default function HomeworkDetailScreen() {
 
   return (
     <ScreenScaffold title={tr.title}>
-      <View className="gap-1 rounded-md border border-border bg-card p-4">
-        <Text className="text-lg font-semibold text-foreground">{h.title}</Text>
-        <Text className="text-sm text-muted-foreground">
-          {tr.due} {h.dueDate} · {HW_STATUS_LABEL[h.status]}
-        </Text>
-        {h.description ? <Text className="mt-2 text-foreground">{h.description}</Text> : null}
+      <View className="gap-1.5 rounded-card border border-subtle bg-card p-4 shadow-sm">
+        <Text className="font-display text-title text-neutral-900">{h.title}</Text>
+        <View className="flex-row items-center gap-2">
+          <StatusChip status={h.status} label={HW_STATUS_LABEL[h.status]} dot />
+          <Text className="font-sans text-sm text-neutral-500">
+            {tr.due} {h.dueDate}
+          </Text>
+        </View>
+        {h.description ? (
+          <Text className="mt-1 font-sans text-body text-neutral-800">{h.description}</Text>
+        ) : null}
       </View>
 
-      <Text className="text-sm font-medium text-muted-foreground">{tr.teacherFiles}</Text>
+      <Text className={eyebrow}>{tr.teacherFiles}</Text>
       <AttachmentList
         attachments={attachments.data ?? []}
         onMint={(attachmentId) => dl.mutateAsync({ attachmentId })}
@@ -101,9 +111,9 @@ function TeacherActions({ homeworkId, status }: { homeworkId: string; status: st
       >
         <Pressable
           accessibilityRole="button"
-          className="min-h-11 items-center justify-center rounded-md border border-border px-4 py-3"
+          className="min-h-12 items-center justify-center rounded-pill border border-strong bg-white px-4 active:bg-primary-50"
         >
-          <Text className="font-medium text-foreground">{tr.reviewSubmissions}</Text>
+          <Text className="font-sans font-semibold text-primary-700">{tr.reviewSubmissions}</Text>
         </Pressable>
       </Link>
 
@@ -136,7 +146,8 @@ function TeacherActions({ homeworkId, status }: { homeworkId: string; status: st
             value={reason}
             onChangeText={setReason}
             placeholder={tr.reasonToReopen}
-            className="min-h-11 rounded-md border border-border px-3 text-foreground"
+            placeholderTextColor="#948676"
+            className={inputClass}
           />
           <ActionButton
             label={tr.reopen}
@@ -146,7 +157,7 @@ function TeacherActions({ homeworkId, status }: { homeworkId: string; status: st
           />
         </>
       ) : null}
-      {err ? <Text className="text-sm text-destructive">{err.message}</Text> : null}
+      {err ? <Text className="font-sans text-sm text-danger-600">{err.message}</Text> : null}
     </View>
   );
 }
@@ -157,10 +168,10 @@ function ParentSubmit({ homeworkId, canSubmit }: { homeworkId: string; canSubmit
   const rows = ctxQuery.data ?? [];
 
   if (ctxQuery.isLoading) {
-    return <ActivityIndicator />;
+    return <ActivityIndicator color="#7A3414" />;
   }
   if (rows.length === 0) {
-    return <Text className="text-muted-foreground">{dict.homework.notForYourChildren}</Text>;
+    return <Text className="font-sans text-neutral-500">{dict.homework.notForYourChildren}</Text>;
   }
   return (
     <View className="gap-3">
@@ -260,15 +271,15 @@ function ChildSubmitCard({
   };
 
   return (
-    <View className="gap-2 rounded-md border border-border bg-card p-4">
-      <Text className="font-medium text-foreground">{row.studentName}</Text>
+    <View className="gap-2 rounded-card border border-subtle bg-card p-4 shadow-sm">
+      <Text className="font-sans text-body font-semibold text-neutral-900">{row.studentName}</Text>
       {sub ? (
-        <Text className="text-sm text-muted-foreground">
+        <Text className="font-sans text-sm text-neutral-500">
           {tr.attempt(sub.attempt)} · {SUB_STATUS_LABEL[sub.status]}
           {sub.isLate ? tr.lateSuffix : ""}
         </Text>
       ) : (
-        <Text className="text-sm text-muted-foreground">{tr.notSubmitted}</Text>
+        <Text className="font-sans text-sm text-neutral-500">{tr.notSubmitted}</Text>
       )}
 
       {sub ? (
@@ -280,7 +291,9 @@ function ChildSubmitCard({
           asChild
         >
           <Pressable accessibilityRole="button" className="min-h-9 justify-center">
-            <Text className="text-sm text-primary">{tr.viewSubmissionFeedback}</Text>
+            <Text className="font-sans text-sm font-semibold text-primary-700">
+              {tr.viewSubmissionFeedback}
+            </Text>
           </Pressable>
         </Link>
       ) : null}
@@ -291,16 +304,18 @@ function ChildSubmitCard({
             value={note}
             onChangeText={setNote}
             placeholder={isResubmit ? tr.noteResubmission : tr.addNote}
+            placeholderTextColor="#948676"
             multiline
-            className="min-h-16 rounded-md border border-border px-3 py-2 text-foreground"
+            textAlignVertical="top"
+            className={`${inputClass} min-h-16`}
           />
 
           {files.map((file, i) => (
             <View
               key={`${file.uri}-${i}`}
-              className="flex-row items-center justify-between rounded-md border border-border bg-background px-3 py-2"
+              className="flex-row items-center justify-between rounded-xl border border-subtle bg-neutral-50 px-3 py-2"
             >
-              <Text className="flex-1 text-sm text-foreground" numberOfLines={1}>
+              <Text className="flex-1 font-sans text-sm text-neutral-900" numberOfLines={1}>
                 {file.fileName}
               </Text>
               <Pressable
@@ -308,7 +323,7 @@ function ChildSubmitCard({
                 disabled={pending}
                 onPress={() => setFiles((prev) => prev.filter((_, idx) => idx !== i))}
               >
-                <Text className="text-sm font-medium text-destructive">{tr.remove}</Text>
+                <Text className="font-sans text-sm font-semibold text-danger-600">{tr.remove}</Text>
               </Pressable>
             </View>
           ))}
@@ -318,17 +333,19 @@ function ChildSubmitCard({
               accessibilityRole="button"
               disabled={pending || files.length >= 10}
               onPress={addFile(pickImage)}
-              className="min-h-11 flex-1 items-center justify-center rounded-md border border-border px-3 py-2"
+              className="min-h-11 flex-1 items-center justify-center rounded-pill border border-strong bg-white px-3 active:bg-primary-50"
             >
-              <Text className="text-sm font-medium text-foreground">{tr.addPhoto}</Text>
+              <Text className="font-sans text-sm font-semibold text-primary-700">
+                {tr.addPhoto}
+              </Text>
             </Pressable>
             <Pressable
               accessibilityRole="button"
               disabled={pending || files.length >= 10}
               onPress={addFile(pickDocument)}
-              className="min-h-11 flex-1 items-center justify-center rounded-md border border-border px-3 py-2"
+              className="min-h-11 flex-1 items-center justify-center rounded-pill border border-strong bg-white px-3 active:bg-primary-50"
             >
-              <Text className="text-sm font-medium text-foreground">{tr.addFile}</Text>
+              <Text className="font-sans text-sm font-semibold text-primary-700">{tr.addFile}</Text>
             </Pressable>
           </View>
 
@@ -338,21 +355,27 @@ function ChildSubmitCard({
             onPress={() => {
               void onSend();
             }}
-            className={`min-h-11 items-center justify-center rounded-md px-4 py-3 ${
-              pending || !canSend ? "bg-primary/40" : "bg-primary"
+            className={`min-h-12 items-center justify-center rounded-pill px-4 ${
+              pending || !canSend ? "bg-neutral-200" : "bg-primary-600 active:bg-primary-700"
             }`}
           >
-            <Text className="font-medium text-primary-foreground">
+            <Text
+              className={`font-sans font-semibold ${
+                pending || !canSend ? "text-neutral-400" : "text-neutral-50"
+              }`}
+            >
               {uploading ? tr.uploading : isResubmit ? tr.resubmit : tr.submit}
             </Text>
           </Pressable>
-          <Text className="text-xs text-muted-foreground">{tr.addNoteHint}</Text>
-          {uploadErr ? <Text className="text-sm text-destructive">{uploadErr}</Text> : null}
+          <Text className="font-sans text-caption text-neutral-400">{tr.addNoteHint}</Text>
+          {uploadErr ? (
+            <Text className="font-sans text-sm text-danger-600">{uploadErr}</Text>
+          ) : null}
         </>
       ) : reviewed ? (
-        <Text className="text-sm text-success">{tr.reviewedNoChanges}</Text>
+        <Text className="font-sans text-sm text-success-600">{tr.reviewedNoChanges}</Text>
       ) : null}
-      {err ? <Text className="text-sm text-destructive">{err.message}</Text> : null}
+      {err ? <Text className="font-sans text-sm text-danger-600">{err.message}</Text> : null}
     </View>
   );
 }
@@ -375,21 +398,27 @@ function ActionButton({
   const off = pending || disabled;
   const base = primary
     ? off
-      ? "bg-primary/40"
-      : "bg-primary"
+      ? "bg-neutral-200"
+      : "bg-primary-600 active:bg-primary-700"
     : destructive
-      ? "border border-destructive"
-      : "border border-border";
+      ? "border border-danger-600 bg-white active:bg-danger-100"
+      : "border border-strong bg-white active:bg-primary-50";
   return (
     <Pressable
       accessibilityRole="button"
       disabled={off}
       onPress={onPress}
-      className={`min-h-11 items-center justify-center rounded-md px-4 py-3 ${base}`}
+      className={`min-h-12 items-center justify-center rounded-pill px-4 ${base}`}
     >
       <Text
-        className={`font-medium ${
-          primary ? "text-primary-foreground" : destructive ? "text-destructive" : "text-foreground"
+        className={`font-sans font-semibold ${
+          primary
+            ? off
+              ? "text-neutral-400"
+              : "text-neutral-50"
+            : destructive
+              ? "text-danger-600"
+              : "text-primary-700"
         }`}
       >
         {label}

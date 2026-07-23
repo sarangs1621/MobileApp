@@ -1,13 +1,13 @@
 "use client";
 
 import { cn } from "@repo/ui";
-import type { LucideIcon } from "lucide-react";
-import type { ReactNode } from "react";
+import type { ComponentType, ReactNode } from "react";
 
 /**
- * Card (ADR-UX1 §3) — white surface on the neutral-50 app background, subtle
- * border + shadow, radius 12. `interactive` adds hover/press affordance; the
- * optional `accent` domain colour renders as a left border so modules scan fast.
+ * Card (design handoff) — white surface on the parchment page, 1px sand hairline,
+ * 16px radius, soft warm shadow. `interactive` adds the handoff's hover lift.
+ * The optional `accent` domain colour renders as a left border so modules scan
+ * fast (legacy screens; the handoff look mostly drops it).
  */
 type Accent = "attendance" | "exams" | "homework" | "fees" | "calendar" | "messages";
 
@@ -35,10 +35,10 @@ export function Card({
   return (
     <div
       className={cn(
-        "rounded-card border border-neutral-200 bg-card p-5 shadow-sm",
+        "rounded-card border border-subtle bg-white p-5 shadow-sm",
         accent && ACCENT_BORDER[accent],
         interactive &&
-          "cursor-pointer transition-shadow duration-fast hover:shadow-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-600",
+          "cursor-pointer transition-[transform,box-shadow] duration-base hover:-translate-y-1 hover:shadow-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
         className,
       )}
       {...props}
@@ -48,7 +48,7 @@ export function Card({
   );
 }
 
-/** Stat card — label + value (+ optional delta + icon). Values use tabular-nums. */
+/** Stat card — uppercase label + serif value (+ optional delta + icon tile). */
 export function StatCard({
   label,
   value,
@@ -59,21 +59,29 @@ export function StatCard({
   label: string;
   value: ReactNode;
   delta?: { value: string; positive?: boolean } | undefined;
-  icon?: LucideIcon | undefined;
+  icon?: ComponentType<{ className?: string; "aria-hidden"?: boolean }> | undefined;
   accent?: Accent | undefined;
 }) {
   return (
-    <Card accent={accent} className="flex flex-col gap-1">
+    <Card accent={accent} className="flex flex-col gap-2">
       <div className="flex items-center justify-between">
-        <p className="text-sm text-neutral-500">{label}</p>
-        {Icon && <Icon aria-hidden strokeWidth={1.75} className="size-5 text-neutral-400" />}
+        <p className="text-[11.5px] font-semibold uppercase tracking-[0.1em] text-ink-500">
+          {label}
+        </p>
+        {Icon && (
+          <span className="flex size-[34px] items-center justify-center rounded-[10px] bg-maroon-50 text-maroon-700">
+            <Icon aria-hidden className="size-[18px]" />
+          </span>
+        )}
       </div>
-      <p className="text-display font-semibold tabular-nums text-neutral-900">{value}</p>
+      <p className="font-display text-[34px] font-medium leading-none tabular-nums text-ink-900">
+        {value}
+      </p>
       {delta && (
         <p
           className={cn(
             "text-caption font-medium",
-            delta.positive ? "text-success-700" : "text-danger-600",
+            delta.positive ? "text-green-600" : "text-red-600",
           )}
         >
           {delta.value}

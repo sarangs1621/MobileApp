@@ -1,9 +1,20 @@
 "use client";
 
+import {
+  EnvelopeSimple,
+  Info,
+  PencilSimple,
+  Phone,
+  Plus,
+  Trash,
+  Users,
+  WhatsappLogo,
+  type Icon,
+} from "@phosphor-icons/react";
 import { PERMISSIONS } from "@repo/constants";
 import { can } from "@repo/core";
 import type { ParentDto, PreferredContactKey } from "@repo/types";
-import { Users } from "lucide-react";
+import { cn } from "@repo/ui";
 import { useCallback, useState } from "react";
 
 import { Paginator, usePagedSearch } from "@/src/components/academic/ui";
@@ -11,33 +22,34 @@ import {
   Avatar,
   Button,
   ConfirmDialog,
-  DataTable,
   Dialog,
   EmptyState,
+  ErrorState,
+  IconButton,
   Input,
-  PageHeader,
-  Select,
   SearchInput,
-  StatusChip,
-  TableToolbar,
+  Skeleton,
   useToast,
-  type Column,
 } from "@/src/components/ui";
 import { trpc } from "@/src/trpc/react";
 
 const CONTACTS: readonly PreferredContactKey[] = ["PHONE", "EMAIL", "WHATSAPP"];
-
 const CONTACT_LABEL: Record<PreferredContactKey, string> = {
   PHONE: "Phone",
   EMAIL: "Email",
   WHATSAPP: "WhatsApp",
 };
+const CONTACT_ICON: Record<PreferredContactKey, Icon> = {
+  PHONE: Phone,
+  EMAIL: EnvelopeSimple,
+  WHATSAPP: WhatsappLogo,
+};
 
 /**
- * Parent/guardian records CRUD. Linking a parent to a student happens on the
- * student detail page (the StudentParent junction). Deleting is blocked by the
- * service/DB while links exist. The PARENT role sees only their own record
- * (service row scope) with no actions.
+ * Parent/guardian records (M3; design handoff §6 — Parents tab). Linking a parent
+ * to a student happens on the student detail page (the StudentParent junction);
+ * deleting is blocked by the service while links exist (surfaced on confirm). The
+ * PARENT role sees only their own record (service row scope) with no actions.
  */
 export default function ParentsPage() {
   const me = trpc.auth.me.useQuery();
@@ -51,14 +63,14 @@ export default function ParentsPage() {
   const create = trpc.parent.create.useMutation({
     onSuccess: () => {
       invalidate();
-      show("success", "Parent created");
+      show("success", "Parent saved");
     },
     onError: (e) => show("error", e.message),
   });
   const update = trpc.parent.update.useMutation({
     onSuccess: () => {
       invalidate();
-      show("success", "Parent updated");
+      show("success", "Parent saved");
     },
     onError: (e) => show("error", e.message),
   });
@@ -84,110 +96,127 @@ export default function ParentsPage() {
     ),
   );
 
-  const columns: Column<ParentDto>[] = [
-    {
-      key: "name",
-      header: "Name",
-      render: (p) => (
-        <div className="flex items-center gap-3">
-          <Avatar name={p.name} size="sm" />
-          <span className="font-medium text-neutral-800">{p.name}</span>
-        </div>
-      ),
-    },
-    { key: "phone", header: "Phone", render: (p) => p.phone },
-    { key: "email", header: "Email", render: (p) => p.email ?? "—" },
-    { key: "occupation", header: "Occupation", render: (p) => p.occupation ?? "—" },
-    {
-      key: "preferredContact",
-      header: "Preferred contact",
-      render: (p) => (
-        <StatusChip status={p.preferredContact} label={CONTACT_LABEL[p.preferredContact]} />
-      ),
-    },
-    {
-      key: "actions",
-      header: "Actions",
-      render: (p) =>
-        canManage ? (
-          <div className="flex gap-1">
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={() => {
-                create.reset();
-                update.reset();
-                setEditing(p);
-              }}
-            >
-              Edit
-            </Button>
-            <Button
-              variant="ghost"
-              size="sm"
-              className="text-danger-600 hover:bg-danger-50"
-              onClick={() => {
-                remove.reset();
-                setDeleting(p);
-              }}
-            >
-              Delete
-            </Button>
-          </div>
-        ) : (
-          <span className="text-neutral-500">—</span>
-        ),
-    },
-  ];
-
   return (
-    <section className="flex flex-col gap-4">
-      <PageHeader
-        title="Parents"
-        action={
-          canManage ? (
-            <Button
-              icon={Users}
-              onClick={() => {
-                create.reset();
-                update.reset();
-                setEditing("new");
-              }}
-            >
-              New parent
-            </Button>
-          ) : undefined
-        }
-      />
+    <section className="flex flex-col gap-3.5">
+      <div className="flex flex-wrap items-end gap-3">
+        <SearchInput
+          placeholder="Search name or phone…"
+          value={paged.query}
+          onChange={(e) => paged.setQuery(e.target.value)}
+          aria-label="Search parents"
+          className="min-w-[260px]"
+        />
+        <div className="flex-1" />
+        {canManage ? (
+          <Button
+            size="sm"
+            icon={Plus}
+            onClick={() => {
+              create.reset();
+              update.reset();
+              setEditing("new");
+            }}
+          >
+            New parent
+          </Button>
+        ) : null}
+      </div>
 
-      <DataTable
-        columns={columns}
-        rows={paged.pageItems}
-        rowKey={(p) => p.id}
-        loading={parents.isLoading}
-        error={parents.isError}
-        onRetry={() => void parents.refetch()}
-        empty={<EmptyState icon={Users} title="No parents yet." />}
-        toolbar={
-          <TableToolbar
-            search={
-              <SearchInput
-                value={paged.query}
-                onChange={(e) => paged.setQuery(e.target.value)}
-                aria-label="Search parents"
-              />
+      <div className="overflow-hidden rounded-card border border-subtle bg-white shadow-sm">
+        <div className="grid grid-cols-[1.4fr_1.6fr_1fr_auto] items-center gap-3 border-b border-cream-100 px-5 py-2.5 text-[11px] font-bold uppercase tracking-[0.1em] text-ink-400">
+          <span>Parent</span>
+          <span>Contact</span>
+          <span>Prefers</span>
+          <span className="w-[76px] text-right">Actions</span>
+        </div>
+
+        {parents.isLoading ? (
+          <div className="flex flex-col gap-3 p-5">
+            <Skeleton className="h-12" />
+            <Skeleton className="h-12" />
+          </div>
+        ) : parents.isError ? (
+          <ErrorState onRetry={() => void parents.refetch()} />
+        ) : paged.pageItems.length === 0 ? (
+          <EmptyState
+            icon={Users}
+            title={paged.total === 0 ? "No parents yet." : "No parents match."}
+            message={
+              paged.total === 0 && canManage
+                ? "Add a parent, or import them alongside students from CSV."
+                : undefined
+            }
+            action={
+              paged.total === 0 && canManage ? (
+                <Button size="sm" icon={Plus} onClick={() => setEditing("new")}>
+                  New parent
+                </Button>
+              ) : undefined
             }
           />
-        }
-        footer={
-          <Paginator
-            page={paged.page}
-            pageCount={paged.pageCount}
-            total={paged.total}
-            onPage={paged.setPage}
-          />
-        }
-      />
+        ) : (
+          paged.pageItems.map((p) => {
+            const PrefIcon = CONTACT_ICON[p.preferredContact];
+            return (
+              <div
+                key={p.id}
+                className="grid grid-cols-[1.4fr_1.6fr_1fr_auto] items-center gap-3 border-b border-cream-100 px-5 py-3 transition-colors duration-fast last:border-0 hover:bg-cream-50"
+              >
+                <span className="flex items-center gap-3">
+                  <Avatar name={p.name} size="sm" />
+                  <span className="truncate text-sm font-semibold text-ink-900">{p.name}</span>
+                </span>
+                <span className="flex min-w-0 flex-col gap-px">
+                  <span className="truncate text-[13px] text-ink-900">{p.phone}</span>
+                  <span className="truncate text-xs text-ink-400">{p.email ?? "No email"}</span>
+                </span>
+                <span className="flex items-center gap-1.5 text-[13px] text-ink-500">
+                  <PrefIcon aria-hidden size={16} className="text-maroon-700" />
+                  {CONTACT_LABEL[p.preferredContact]}
+                </span>
+                <span className="flex w-[76px] justify-end gap-1.5">
+                  {canManage ? (
+                    <>
+                      <IconButton
+                        label="Edit"
+                        icon={PencilSimple}
+                        onClick={() => {
+                          create.reset();
+                          update.reset();
+                          setEditing(p);
+                        }}
+                      />
+                      <IconButton
+                        label="Delete"
+                        tone="danger"
+                        icon={Trash}
+                        onClick={() => {
+                          remove.reset();
+                          setDeleting(p);
+                        }}
+                      />
+                    </>
+                  ) : (
+                    <span className="text-ink-400">—</span>
+                  )}
+                </span>
+              </div>
+            );
+          })
+        )}
+
+        <Paginator
+          page={paged.page}
+          pageCount={paged.pageCount}
+          total={paged.total}
+          onPage={paged.setPage}
+        />
+      </div>
+
+      <p className="flex items-center gap-1.5 text-[12.5px] text-ink-400">
+        <Info aria-hidden size={15} />
+        Parents linked to a student can’t be deleted — unlink them from the student record first.
+      </p>
 
       {editing !== null ? (
         <ParentFormModal
@@ -229,9 +258,9 @@ export default function ParentsPage() {
 
       {deleting !== null ? (
         <ConfirmDialog
-          title="Delete parent"
-          objectName={deleting.name}
-          message="Permanently delete this parent? Parents still linked to a student cannot be deleted — unlink them first:"
+          title={`Delete ${deleting.name}?`}
+          message="Permanently delete this parent? Parents still linked to a student cannot be deleted — unlink them first."
+          confirmLabel="Delete parent"
           busy={remove.isPending}
           error={remove.error?.message ?? null}
           onCancel={() => setDeleting(null)}
@@ -270,13 +299,14 @@ function ParentFormModal({
   const [phone, setPhone] = useState(parent?.phone ?? "");
   const [email, setEmail] = useState(parent?.email ?? "");
   const [occupation, setOccupation] = useState(parent?.occupation ?? "");
-  const [address, setAddress] = useState(parent?.address ?? "");
+  // Address isn't in the design's parent modal; preserve the existing value on edit.
+  const address = parent?.address ?? "";
   const [preferredContact, setPreferredContact] = useState<PreferredContactKey>(
     parent?.preferredContact ?? "PHONE",
   );
 
   return (
-    <Dialog title={parent ? "Edit parent" : "New parent"} onClose={onClose}>
+    <Dialog title="Parent record" onClose={onClose}>
       <form
         onSubmit={(e) => {
           e.preventDefault();
@@ -289,15 +319,16 @@ function ParentFormModal({
             preferredContact,
           });
         }}
-        className="flex flex-col gap-4"
+        className="flex flex-col gap-[18px]"
       >
-        <Input label="Name" value={name} onChange={(e) => setName(e.target.value)} required />
-        <div className="grid grid-cols-2 gap-4">
+        <Input label="Full name" value={name} onChange={(e) => setName(e.target.value)} required />
+        <div className="grid grid-cols-2 gap-3.5">
           <Input
             label="Phone"
             value={phone}
             onChange={(e) => setPhone(e.target.value)}
             inputMode="tel"
+            placeholder="+91"
             required
           />
           <Input
@@ -312,35 +343,46 @@ function ParentFormModal({
           value={occupation}
           onChange={(e) => setOccupation(e.target.value)}
         />
-        <label className="flex flex-col gap-1 text-sm font-medium text-neutral-800">
-          Address
-          <textarea
-            value={address}
-            onChange={(e) => setAddress(e.target.value)}
-            className="min-h-20 w-full rounded-md border border-neutral-300 bg-white px-3 py-2 text-body text-neutral-800 focus:border-primary-600 focus:outline-none focus:ring-2 focus:ring-primary-600"
-            rows={3}
-          />
-        </label>
-        <Select
-          label="Preferred contact"
-          value={preferredContact}
-          onChange={(e) => setPreferredContact(e.target.value as PreferredContactKey)}
-        >
-          {CONTACTS.map((c) => (
-            <option key={c} value={c}>
-              {CONTACT_LABEL[c]}
-            </option>
-          ))}
-        </Select>
 
-        {error ? <p className="text-sm text-danger-600">{error}</p> : null}
+        {/* Preferred contact choice tiles (design handoff §Choice pills) */}
+        <div className="flex flex-col gap-1.5">
+          <span className="text-[13px] font-semibold text-ink-900">Preferred contact</span>
+          <div className="flex gap-2">
+            {CONTACTS.map((c) => {
+              const selected = preferredContact === c;
+              const TileIcon = CONTACT_ICON[c];
+              return (
+                <button
+                  key={c}
+                  type="button"
+                  aria-pressed={selected}
+                  onClick={() => setPreferredContact(c)}
+                  className={cn(
+                    "flex flex-1 cursor-pointer flex-col items-center gap-1 rounded-xl border px-2 py-[11px] text-[13px] font-semibold transition-colors duration-fast",
+                    selected
+                      ? "border-maroon-700 bg-maroon-50 text-maroon-800"
+                      : "border-subtle bg-white text-ink-500 hover:border-strong",
+                  )}
+                >
+                  <TileIcon aria-hidden size={18} />
+                  {CONTACT_LABEL[c]}
+                </button>
+              );
+            })}
+          </div>
+          <span className="text-caption text-ink-400">
+            Announcements and fee reminders go to this channel first.
+          </span>
+        </div>
 
-        <div className="mt-2 flex justify-end gap-2">
+        {error ? <p className="text-sm text-red-600">{error}</p> : null}
+
+        <div className="mt-1 flex justify-end gap-2.5">
           <Button type="button" variant="secondary" onClick={onClose}>
             Cancel
           </Button>
           <Button type="submit" loading={busy}>
-            Save
+            Save parent
           </Button>
         </div>
       </form>

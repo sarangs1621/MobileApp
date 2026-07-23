@@ -17,7 +17,7 @@ export default function ClassesScreen() {
       emptyText="No classes yet."
       renderItem={(item) => (
         <ListRow>
-          <Text className="font-medium text-foreground">{item.name}</Text>
+          <Text className="font-sans text-body font-semibold text-neutral-900">{item.name}</Text>
         </ListRow>
       )}
     />

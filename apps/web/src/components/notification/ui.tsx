@@ -1,5 +1,6 @@
 "use client";
 
+import { Bell } from "@phosphor-icons/react";
 import type { NotificationDto, NotificationTypeKey } from "@repo/types";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
@@ -82,35 +83,35 @@ export function NotificationBell() {
         aria-label={count > 0 ? `Notifications, ${count} unread` : "Notifications"}
         aria-expanded={open}
         onClick={() => setOpen((v) => !v)}
-        className="relative min-h-11 min-w-11 rounded-md text-2xl hover:bg-accent"
+        className="relative flex size-10 cursor-pointer items-center justify-center rounded-full border border-subtle bg-white text-maroon-700 transition-colors duration-fast hover:border-maroon-200 hover:bg-maroon-50"
       >
-        🔔
+        <Bell aria-hidden size={19} />
         {count > 0 ? (
-          <span className="absolute right-1 top-1 min-w-5 rounded-full bg-destructive px-1 text-xs font-semibold text-destructive-foreground">
+          <span className="absolute -right-[3px] -top-[3px] flex h-[18px] min-w-[18px] items-center justify-center rounded-[9px] border-2 border-cream-50 bg-maroon-700 px-1 text-[10.5px] font-bold text-cream-50">
             {count > 99 ? "99+" : count}
           </span>
         ) : null}
       </button>
 
       {open ? (
-        <div className="absolute right-0 z-50 mt-2 w-80 rounded-lg border border-border bg-card shadow-lg">
-          <div className="flex items-center justify-between border-b border-border px-4 py-2">
-            <span className="text-sm font-medium text-foreground">Notifications</span>
+        <div className="absolute right-0 top-12 z-50 w-[360px] animate-pop-in overflow-hidden rounded-card border border-subtle bg-white shadow-lg">
+          <div className="flex items-center justify-between border-b border-subtle px-[18px] py-3.5">
+            <span className="font-display text-base font-semibold text-ink-900">Notifications</span>
             {count > 0 ? (
               <button
                 type="button"
                 onClick={() => markAllRead.mutate()}
-                className="text-sm font-medium text-primary hover:underline"
+                className="cursor-pointer text-[12.5px] font-semibold text-maroon-700 hover:text-maroon-900"
               >
-                Mark all read
+                Mark all as read
               </button>
             ) : null}
           </div>
           <div className="max-h-96 overflow-y-auto">
             {recent.isLoading ? (
-              <p className="px-4 py-6 text-center text-sm text-muted-foreground">Loading…</p>
+              <p className="px-4 py-6 text-center text-sm text-ink-500">Loading…</p>
             ) : items.length === 0 ? (
-              <p className="px-4 py-6 text-center text-sm text-muted-foreground">
+              <p className="px-4 py-6 text-center text-sm text-ink-500">
                 You have no notifications.
               </p>
             ) : (
@@ -119,21 +120,21 @@ export function NotificationBell() {
                   key={n.id}
                   type="button"
                   onClick={() => openNotification(n)}
-                  className="flex w-full items-start gap-2 border-b border-border px-4 py-3 text-left last:border-0 hover:bg-accent"
+                  className="flex w-full cursor-pointer items-start gap-3 border-b border-cream-100 px-[18px] py-3 text-left last:border-0 hover:bg-cream-50"
                 >
-                  <span className="mt-1.5 w-2">
-                    {!n.isRead ? <span className="block h-2 w-2 rounded-full bg-primary" /> : null}
+                  <span className="mt-1.5 w-2 shrink-0">
+                    {!n.isRead ? (
+                      <span className="block size-2 rounded-full bg-maroon-700" />
+                    ) : null}
                   </span>
-                  <span className="flex-1">
+                  <span className="flex min-w-0 flex-1 flex-col gap-0.5">
                     <span
-                      className={`block ${n.isRead ? "text-foreground" : "font-semibold text-foreground"}`}
+                      className={`block text-[13.5px] text-ink-900 ${n.isRead ? "" : "font-semibold"}`}
                     >
                       {n.title}
                     </span>
-                    <span className="block text-sm text-muted-foreground">{n.body}</span>
-                    <span className="block text-xs text-muted-foreground">
-                      {timeAgo(n.createdAt)}
-                    </span>
+                    <span className="block text-[12.5px] text-ink-500">{n.body}</span>
+                    <span className="block text-[11.5px] text-ink-400">{timeAgo(n.createdAt)}</span>
                   </span>
                 </button>
               ))
@@ -142,9 +143,9 @@ export function NotificationBell() {
           <Link
             href="/notifications"
             onClick={() => setOpen(false)}
-            className="block border-t border-border px-4 py-2 text-center text-sm font-medium text-primary hover:bg-accent"
+            className="block border-t border-subtle bg-cream-50 px-4 py-3 text-center text-[13px] font-semibold text-maroon-700 hover:bg-cream-100"
           >
-            See all
+            See all notifications
           </Link>
         </div>
       ) : null}

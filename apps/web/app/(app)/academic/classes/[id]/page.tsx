@@ -1,9 +1,9 @@
 "use client";
 
+import { PencilSimple, Plus, Trash } from "@phosphor-icons/react";
 import { PERMISSIONS } from "@repo/constants";
 import { can } from "@repo/core";
 import type { SectionDto } from "@repo/types";
-import { Plus } from "lucide-react";
 import Link from "next/link";
 import { useParams } from "next/navigation";
 import { useState } from "react";
@@ -16,6 +16,7 @@ import {
   Dialog,
   EmptyState,
   ErrorState,
+  IconButton,
   Input,
   PageHeader,
   useToast,
@@ -77,7 +78,7 @@ export default function ClassDetailPage() {
       key: "name",
       header: "Name",
       render: (sectionRow) => (
-        <span className="font-medium text-neutral-800">{sectionRow.name}</span>
+        <span className="text-[14.5px] font-semibold text-ink-900">{sectionRow.name}</span>
       ),
     },
     {
@@ -86,32 +87,28 @@ export default function ClassDetailPage() {
       align: "right",
       render: (sectionRow) =>
         canManage ? (
-          <div className="flex justify-end gap-1">
-            <Button
-              variant="ghost"
-              size="sm"
+          <div className="flex justify-end gap-1.5">
+            <IconButton
+              label="Edit"
+              icon={PencilSimple}
               onClick={() => {
                 create.reset();
                 update.reset();
                 setEditing(sectionRow);
               }}
-            >
-              Edit
-            </Button>
-            <Button
-              variant="ghost"
-              size="sm"
-              className="text-danger-600 hover:bg-danger-50"
+            />
+            <IconButton
+              label="Delete"
+              tone="danger"
+              icon={Trash}
               onClick={() => {
                 remove.reset();
                 setDeleting(sectionRow);
               }}
-            >
-              Delete
-            </Button>
+            />
           </div>
         ) : (
-          <span className="text-neutral-400">—</span>
+          <span className="text-ink-400">—</span>
         ),
     },
   ];
@@ -120,7 +117,10 @@ export default function ClassDetailPage() {
     <section className="flex flex-col gap-4">
       <PageHeader
         breadcrumb={
-          <Link href="/academic/classes" className="text-primary-700 hover:underline">
+          <Link
+            href="/academic/classes"
+            className="font-semibold text-maroon-700 hover:text-maroon-800"
+          >
             ← Classes
           </Link>
         }
@@ -128,6 +128,7 @@ export default function ClassDetailPage() {
         action={
           canManage ? (
             <Button
+              size="sm"
               icon={Plus}
               onClick={() => {
                 create.reset();

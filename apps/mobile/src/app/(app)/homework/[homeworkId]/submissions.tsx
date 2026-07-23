@@ -39,9 +39,9 @@ export default function SubmissionsQueueScreen() {
   return (
     <ScreenScaffold title={tr.submissions}>
       {subs.isLoading || hw.isLoading ? (
-        <ActivityIndicator />
+        <ActivityIndicator color="#7A3414" />
       ) : rows.length === 0 ? (
-        <Text className="text-muted-foreground">{tr.noSubmissions}</Text>
+        <Text className="font-sans text-neutral-500">{tr.noSubmissions}</Text>
       ) : (
         rows.map((s) => (
           <Link
@@ -54,12 +54,16 @@ export default function SubmissionsQueueScreen() {
           >
             <Pressable
               accessibilityRole="button"
-              className="gap-1 rounded-md border border-border bg-card p-4"
+              className="gap-1 rounded-card border border-subtle bg-card p-4 shadow-sm active:bg-neutral-50"
             >
-              <Text className="font-medium text-foreground">{nameOf(s.enrollmentId)}</Text>
-              <Text className="text-sm text-muted-foreground">
+              <Text className="font-sans text-body font-semibold text-neutral-900">
+                {nameOf(s.enrollmentId)}
+              </Text>
+              <Text className="font-sans text-sm text-neutral-500">
                 {tr.attempt(s.attempt)} ·{" "}
-                <Text className={SUB_STATUS_CLASS[s.status]}>{SUB_STATUS_LABEL[s.status]}</Text>
+                <Text className={`font-semibold ${SUB_STATUS_CLASS[s.status]}`}>
+                  {SUB_STATUS_LABEL[s.status]}
+                </Text>
                 {s.isLate ? tr.lateSuffix : ""}
               </Text>
             </Pressable>

@@ -2,24 +2,25 @@
 @tailwind components;
 @tailwind utilities;
 
-/* Design tokens (UI_DESIGN_SYSTEM.md), shared names with @repo/ui + web. */
+/* Design tokens (UI_DESIGN_SYSTEM.md), shared names with @repo/ui + web.
+   Values mirror the heritage identity (crest maroon, gold, parchment). */
 @layer base {
   :root {
-    --background: 0 0% 100%;
-    --foreground: 222 47% 11%;
+    --background: 40 60% 97%;
+    --foreground: 28 36% 10%;
     --card: 0 0% 100%;
-    --card-foreground: 222 47% 11%;
-    --primary: 221 83% 53%;
-    --primary-foreground: 0 0% 100%;
-    --secondary: 210 40% 96%;
-    --secondary-foreground: 222 47% 11%;
-    --muted: 210 40% 96%;
-    --muted-foreground: 215 16% 47%;
-    --accent: 210 40% 96%;
-    --accent-foreground: 222 47% 11%;
-    --destructive: 0 84% 60%;
-    --destructive-foreground: 0 0% 100%;
-    --border: 214 32% 91%;
+    --card-foreground: 28 36% 10%;
+    --primary: 19 72% 28%;
+    --primary-foreground: 40 60% 97%;
+    --secondary: 40 46% 94%;
+    --secondary-foreground: 28 36% 10%;
+    --muted: 40 46% 94%;
+    --muted-foreground: 30 15% 38%;
+    --accent: 43 67% 92%;
+    --accent-foreground: 38 71% 25%;
+    --destructive: 8 63% 43%;
+    --destructive-foreground: 40 60% 97%;
+    --border: 36 35% 81%;
     --radius: 0.5rem;
   }
 }

@@ -4,12 +4,16 @@ import { useTranslation } from "@repo/i18n";
 import type { AnnouncementScopeKey } from "@repo/types";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import { useEffect, useState } from "react";
-import { Pressable, ScrollView, Text, TextInput, View } from "react-native";
+import { ScrollView, Text, TextInput, View } from "react-native";
 
 import { Loading, SCOPE_LABEL } from "../../../components/announcements-ui";
+import { Chip, Field, Header } from "../../../components/behaviour-ui";
+import { Button } from "../../../components/ui";
 import { trpc } from "../../../lib/trpc";
 
 const ADMIN_SCOPES: AnnouncementScopeKey[] = ["WHOLE_SCHOOL", "TEACHERS", "PARENTS"];
+const inputClass =
+  "rounded-[10px] border border-subtle bg-white px-3 py-2.5 font-sans text-body text-neutral-900";
 
 /**
  * Create / edit an announcement DRAFT (M11 Step 6). Admins pick a school-wide scope
@@ -75,7 +79,7 @@ export default function AnnouncementFormScreen() {
 
   if (isEdit && existing.isLoading) {
     return (
-      <View className="flex-1 bg-background">
+      <View className="flex-1 bg-neutral-50">
         <Header title={t.editDraft} onBack={() => router.back()} />
         <Loading />
       </View>
@@ -83,7 +87,7 @@ export default function AnnouncementFormScreen() {
   }
 
   return (
-    <View className="flex-1 bg-background">
+    <View className="flex-1 bg-neutral-50">
       <Header title={isEdit ? t.editDraft : t.newAnnouncement} onBack={() => router.back()} />
       <ScrollView contentContainerClassName="p-4 gap-4">
         <Field label={t.titleLabel}>
@@ -91,7 +95,8 @@ export default function AnnouncementFormScreen() {
             value={title}
             onChangeText={setTitle}
             placeholder={t.titlePlaceholder}
-            className="min-h-11 rounded-md border border-border bg-background px-3 py-2 text-foreground"
+            placeholderTextColor="#948676"
+            className={inputClass}
           />
         </Field>
 
@@ -100,8 +105,9 @@ export default function AnnouncementFormScreen() {
             value={body}
             onChangeText={setBody}
             placeholder={t.messagePlaceholder}
+            placeholderTextColor="#948676"
             multiline
-            className="min-h-32 rounded-md border border-border bg-background px-3 py-2 text-foreground"
+            className={`${inputClass} min-h-32`}
             textAlignVertical="top"
           />
         </Field>
@@ -126,7 +132,7 @@ export default function AnnouncementFormScreen() {
               {targets.isLoading ? (
                 <Loading />
               ) : sections.length === 0 ? (
-                <Text className="text-sm text-muted-foreground">{t.noAssignedSections}</Text>
+                <Text className="font-sans text-sm text-neutral-500">{t.noAssignedSections}</Text>
               ) : (
                 <View className="flex-row flex-wrap gap-2">
                   {sections.map((s) => (
@@ -146,59 +152,13 @@ export default function AnnouncementFormScreen() {
           )
         ) : null}
 
-        <Pressable
-          accessibilityRole="button"
-          disabled={!valid || saving}
+        <Button
+          label={saving ? t.saving : isEdit ? t.saveDraft : t.createDraft}
+          loading={saving}
+          disabled={!valid}
           onPress={save}
-          className={`min-h-11 items-center justify-center rounded-md px-4 py-3 ${
-            valid && !saving ? "bg-primary" : "bg-muted"
-          }`}
-        >
-          <Text className="font-medium text-primary-foreground">
-            {saving ? t.saving : isEdit ? t.saveDraft : t.createDraft}
-          </Text>
-        </Pressable>
+        />
       </ScrollView>
     </View>
-  );
-}
-
-function Header({ title, onBack }: { title: string; onBack: () => void }) {
-  const { dict } = useTranslation();
-  return (
-    <View className="flex-row items-center gap-3 border-b border-border px-4 py-3">
-      <Pressable
-        accessibilityRole="button"
-        accessibilityLabel={dict.announcements.goBack}
-        onPress={onBack}
-        className="min-h-11 min-w-11 items-center justify-center rounded-md"
-      >
-        <Text className="text-lg text-foreground">←</Text>
-      </Pressable>
-      <Text className="flex-1 text-xl font-semibold text-foreground">{title}</Text>
-    </View>
-  );
-}
-
-function Field({ label, children }: { label: string; children: React.ReactNode }) {
-  return (
-    <View className="gap-2">
-      <Text className="text-sm font-medium text-muted-foreground">{label}</Text>
-      {children}
-    </View>
-  );
-}
-
-function Chip({ label, active, onPress }: { label: string; active: boolean; onPress: () => void }) {
-  return (
-    <Pressable
-      accessibilityRole="button"
-      onPress={onPress}
-      className={`min-h-11 justify-center rounded-md px-3 ${
-        active ? "bg-primary" : "border border-border bg-background"
-      }`}
-    >
-      <Text className={active ? "text-primary-foreground" : "text-foreground"}>{label}</Text>
-    </Pressable>
   );
 }

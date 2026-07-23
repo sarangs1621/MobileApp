@@ -5,16 +5,18 @@ import { Link, useLocalSearchParams, useRouter } from "expo-router";
 import { ActivityIndicator, Pressable, ScrollView, Text, View } from "react-native";
 
 import { ListRow } from "../../../../components/academic-list";
+import { Header } from "../../../../components/behaviour-ui";
+import { Avatar, StatusChip, titleCase, type Tone } from "../../../../components/ui";
 import { trpc } from "../../../../lib/trpc";
 
-const ENROLLMENT_STATUS_CLASS: Record<EnrollmentStatusKey, string> = {
-  ADMITTED: "text-info",
-  ACTIVE: "text-success",
-  PROMOTED: "text-muted-foreground",
-  RETAINED: "text-muted-foreground",
-  TRANSFERRED: "text-muted-foreground",
-  DROPPED: "text-destructive",
-  ALUMNI: "text-muted-foreground",
+const ENROLLMENT_TONE: Record<EnrollmentStatusKey, Tone> = {
+  ADMITTED: "info",
+  ACTIVE: "success",
+  PROMOTED: "neutral",
+  RETAINED: "neutral",
+  TRANSFERRED: "neutral",
+  DROPPED: "danger",
+  ALUMNI: "neutral",
 };
 
 const RELATIONSHIP_LABEL: Record<StudentRelationshipKey, string> = {
@@ -48,44 +50,41 @@ export default function StudentProfileScreen() {
   const parentName = new Map((parents.data ?? []).map((p) => [p.id, p.name]));
 
   return (
-    <View className="flex-1 bg-background">
-      <View className="flex-row items-center gap-3 border-b border-border px-4 py-3">
-        <Pressable
-          accessibilityRole="button"
-          accessibilityLabel="Go back"
-          onPress={() => {
-            router.back();
-          }}
-          className="min-h-11 min-w-11 items-center justify-center rounded-md"
-        >
-          <Text className="text-lg text-foreground">←</Text>
-        </Pressable>
-        <Text className="text-xl font-semibold text-foreground">Student profile</Text>
-      </View>
+    <View className="flex-1 bg-neutral-50">
+      <Header title="Student profile" onBack={() => router.back()} />
 
       {student.isError ? (
         <View className="flex-1 items-center justify-center p-6">
-          <Text className="text-center text-destructive">
+          <Text className="text-center font-sans text-danger-600">
             Couldn’t load this student. You may not have access, or the server is unreachable.
           </Text>
         </View>
       ) : student.isLoading || student.data === undefined ? (
         <View className="flex-1 items-center justify-center">
-          <ActivityIndicator />
+          <ActivityIndicator color="#7A3414" />
         </View>
       ) : (
         <ScrollView contentContainerClassName="p-4 gap-3">
           <ListRow>
-            <Text className="text-lg font-semibold text-foreground">
-              {student.data.firstName} {student.data.lastName}
-            </Text>
-            <Field label="Admission no" value={student.data.admissionNo} />
-            <Field label="Status" value={student.data.status} />
-            <Field label="Date of birth" value={student.data.dob} />
-            <Field label="Gender" value={student.data.gender} />
-            <Field label="Blood group" value={student.data.bloodGroup} />
-            <Field label="Nationality" value={student.data.nationality} />
-            <Field label="Address" value={student.data.address} />
+            <View className="flex-row items-center gap-3">
+              <Avatar name={`${student.data.firstName} ${student.data.lastName}`} size="lg" />
+              <View className="flex-1">
+                <Text className="font-display text-title text-neutral-900">
+                  {student.data.firstName} {student.data.lastName}
+                </Text>
+                <Text className="font-sans text-sm text-neutral-500">
+                  Admission no {student.data.admissionNo}
+                </Text>
+              </View>
+              <StatusChip status={student.data.status} label={titleCase(student.data.status)} dot />
+            </View>
+            <View className="mt-3 gap-2">
+              <Field label="Date of birth" value={student.data.dob} />
+              <Field label="Gender" value={student.data.gender} />
+              <Field label="Blood group" value={student.data.bloodGroup} />
+              <Field label="Nationality" value={student.data.nationality} />
+              <Field label="Address" value={student.data.address} />
+            </View>
           </ListRow>
 
           {canReadBehaviour ? (
@@ -98,33 +97,41 @@ export default function StudentProfileScreen() {
             >
               <Pressable
                 accessibilityRole="button"
-                className="min-h-11 justify-center rounded-md border border-border bg-card px-4 py-3"
+                className="min-h-12 justify-center rounded-xl border border-subtle bg-white px-4 active:bg-primary-50"
               >
-                <Text className="font-medium text-primary">Behaviour incidents</Text>
+                <Text className="font-sans font-semibold text-primary-700">
+                  Behaviour incidents
+                </Text>
               </Pressable>
             </Link>
           ) : null}
 
-          <Text className="text-sm font-medium text-muted-foreground">Enrollment history</Text>
+          <Text className="mt-1 font-sans text-caption font-semibold uppercase tracking-eyebrow text-neutral-500">
+            Enrollment history
+          </Text>
           {enrollments.data === undefined ? (
-            <ActivityIndicator />
+            <ActivityIndicator color="#7A3414" />
           ) : enrollments.data.length === 0 ? (
-            <Text className="text-sm text-muted-foreground">No enrollments yet.</Text>
+            <Text className="font-sans text-sm text-neutral-500">No enrollments yet.</Text>
           ) : (
             enrollments.data.map((enrollment) => (
               <ListRow key={enrollment.id}>
-                <Text className="font-medium text-foreground">{enrollment.academicYearName}</Text>
-                <Text className="text-sm text-muted-foreground">
+                <View className="flex-row items-center gap-2">
+                  <Text className="flex-1 font-sans text-body font-semibold text-neutral-900">
+                    {enrollment.academicYearName}
+                  </Text>
+                  <StatusChip
+                    tone={ENROLLMENT_TONE[enrollment.status]}
+                    label={titleCase(enrollment.status)}
+                    dot
+                  />
+                </View>
+                <Text className="font-sans text-sm text-neutral-500">
                   {enrollment.className}
                   {enrollment.sectionId
                     ? ` · Section ${enrollment.sectionName ?? "—"}`
                     : " · No section"}
                   {enrollment.rollNo != null ? ` · Roll ${enrollment.rollNo}` : ""}
-                </Text>
-                <Text
-                  className={`text-sm font-medium ${ENROLLMENT_STATUS_CLASS[enrollment.status]}`}
-                >
-                  {enrollment.status}
                 </Text>
                 {canReadAttendance ? (
                   <Link
@@ -138,7 +145,9 @@ export default function StudentProfileScreen() {
                     asChild
                   >
                     <Pressable accessibilityRole="button">
-                      <Text className="text-sm text-primary">View attendance</Text>
+                      <Text className="mt-1 font-sans text-sm font-semibold text-primary-700">
+                        View attendance
+                      </Text>
                     </Pressable>
                   </Link>
                 ) : null}
@@ -146,23 +155,34 @@ export default function StudentProfileScreen() {
             ))
           )}
 
-          <Text className="text-sm font-medium text-muted-foreground">Guardians</Text>
+          <Text className="mt-1 font-sans text-caption font-semibold uppercase tracking-eyebrow text-neutral-500">
+            Guardians
+          </Text>
           {guardians.data === undefined ? (
-            <ActivityIndicator />
+            <ActivityIndicator color="#7A3414" />
           ) : guardians.data.length === 0 ? (
-            <Text className="text-sm text-muted-foreground">No guardians linked.</Text>
+            <Text className="font-sans text-sm text-neutral-500">No guardians linked.</Text>
           ) : (
-            guardians.data.map((guardian) => (
-              <ListRow key={`${guardian.parentId}:${guardian.relationship}`}>
-                <Text className="font-medium text-foreground">
-                  {parentName.get(guardian.parentId) ?? RELATIONSHIP_LABEL[guardian.relationship]}
-                </Text>
-                <Text className="text-sm text-muted-foreground">
-                  {RELATIONSHIP_LABEL[guardian.relationship]}
-                  {guardian.isPrimary ? " · Primary contact" : ""}
-                </Text>
-              </ListRow>
-            ))
+            guardians.data.map((guardian) => {
+              const label =
+                parentName.get(guardian.parentId) ?? RELATIONSHIP_LABEL[guardian.relationship];
+              return (
+                <ListRow key={`${guardian.parentId}:${guardian.relationship}`}>
+                  <View className="flex-row items-center gap-3">
+                    <Avatar name={label} size="sm" />
+                    <View className="flex-1">
+                      <Text className="font-sans text-body font-semibold text-neutral-900">
+                        {label}
+                      </Text>
+                      <Text className="font-sans text-sm text-neutral-500">
+                        {RELATIONSHIP_LABEL[guardian.relationship]}
+                        {guardian.isPrimary ? " · Primary contact" : ""}
+                      </Text>
+                    </View>
+                  </View>
+                </ListRow>
+              );
+            })
           )}
         </ScrollView>
       )}
@@ -174,8 +194,8 @@ export default function StudentProfileScreen() {
 function Field({ label, value }: { label: string; value: string | null | undefined }) {
   return (
     <View className="flex-row justify-between gap-3">
-      <Text className="text-sm text-muted-foreground">{label}</Text>
-      <Text className="flex-1 text-right text-sm text-foreground">{value ?? "—"}</Text>
+      <Text className="font-sans text-sm text-neutral-500">{label}</Text>
+      <Text className="flex-1 text-right font-sans text-sm text-neutral-900">{value ?? "—"}</Text>
     </View>
   );
 }

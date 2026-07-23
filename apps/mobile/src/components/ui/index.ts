@@ -16,8 +16,9 @@ export {
   titleCase,
   type Tone,
 } from "./feedback";
-export { Card, StatCard } from "./card";
+export { Card, SectionCard, IconTile, StatCard } from "./card";
 export { Avatar, ListRow } from "./list-row";
 export { BottomSheet, ConfirmDialog } from "./sheet";
 export { ToastProvider, useToast } from "./toast";
-export { ScreenScaffold, SegmentedControl } from "./scaffold";
+export { ScreenScaffold, SectionTitle, SegmentedControl } from "./scaffold";
+export type { PhosphorIcon } from "./icon";

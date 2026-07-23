@@ -33,14 +33,14 @@ export interface ChartPoint {
  * both modes for v1 — the dark steps exist in the ref if we tune later.
  */
 const CATEGORICAL = [
-  "#2a78d6",
-  "#1baf7a",
-  "#eda100",
-  "#008300",
-  "#4a3aa7",
-  "#e34948",
-  "#e87ba4",
-  "#eb6834",
+  "#2E5E8C", // heritage blue
+  "#3E7A4F", // heritage green
+  "#C29A45", // heritage gold
+  "#244F31", // deep green
+  "#5B4A8C", // muted violet
+  "#B23A28", // heritage red
+  "#C68299", // muted rose
+  "#C0703F", // sienna
 ];
 
 const PRIMARY = "hsl(var(--primary))";
@@ -69,16 +69,14 @@ export function Panel({
   children: React.ReactNode;
 }) {
   return (
-    <section className="flex flex-col gap-3 rounded-card border border-neutral-200 bg-card p-5 shadow-sm">
+    <section className="flex flex-col gap-4 rounded-card border border-subtle bg-white p-6 shadow-sm">
       <div className="flex items-center justify-between gap-2">
-        <h2 className="text-caption font-semibold uppercase tracking-wide text-neutral-500">
-          {title}
-        </h2>
+        <h2 className="font-display text-lg font-semibold text-ink-900">{title}</h2>
         {onExport ? (
           <button
             type="button"
             onClick={onExport}
-            className="cursor-pointer rounded-md border border-neutral-300 px-2.5 py-1 text-caption font-medium text-neutral-700 hover:bg-neutral-50"
+            className="cursor-pointer rounded-full border border-subtle bg-white px-3.5 py-1.5 text-[12.5px] font-semibold text-maroon-700 transition-colors duration-fast hover:border-maroon-200 hover:bg-maroon-50"
           >
             Export CSV
           </button>
@@ -91,9 +89,13 @@ export function Panel({
 
 export function Kpi({ label, value }: { label: string; value: string }) {
   return (
-    <div className="flex flex-col gap-1 rounded-card border border-neutral-200 bg-card p-5 shadow-sm">
-      <span className="text-sm text-neutral-500">{label}</span>
-      <span className="text-display font-semibold tabular-nums text-neutral-900">{value}</span>
+    <div className="flex flex-col gap-3 rounded-card border border-subtle bg-white p-5 shadow-sm">
+      <span className="text-[11.5px] font-semibold uppercase tracking-[0.1em] text-ink-500">
+        {label}
+      </span>
+      <span className="font-display text-[34px] font-medium leading-none tabular-nums text-ink-900">
+        {value}
+      </span>
     </div>
   );
 }

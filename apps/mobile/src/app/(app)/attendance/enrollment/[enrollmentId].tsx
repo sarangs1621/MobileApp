@@ -2,7 +2,7 @@ import { PERMISSIONS } from "@repo/constants";
 import { can } from "@repo/core";
 import { useTranslation } from "@repo/i18n";
 import { Link, useLocalSearchParams } from "expo-router";
-import { ActivityIndicator, Pressable, Text } from "react-native";
+import { ActivityIndicator, Pressable, Text, View } from "react-native";
 
 import { ListRow } from "../../../../components/academic-list";
 import {
@@ -59,17 +59,17 @@ export default function EnrollmentAttendanceScreen() {
 
   return (
     <ScreenScaffold title={t.attendance}>
-      <Text className="text-sm text-muted-foreground">
+      <Text className="font-sans text-sm text-neutral-500">
         {from} → {to}
       </Text>
 
       {summary.data ? (
         <ListRow>
-          <Text className="font-medium text-foreground">
+          <Text className="font-display text-title text-neutral-900">
             {summary.data.percentage == null ? "—" : `${summary.data.percentage}%`}{" "}
             {t.presentSuffix}
           </Text>
-          <Text className="text-sm text-muted-foreground">
+          <Text className="font-sans text-sm text-neutral-500">
             {t.summaryBreakdown(
               summary.data.present,
               summary.data.absent,
@@ -80,29 +80,39 @@ export default function EnrollmentAttendanceScreen() {
           </Text>
         </ListRow>
       ) : (
-        <ActivityIndicator />
+        <ActivityIndicator color="#7A3414" />
       )}
 
-      <Text className="text-sm font-medium text-muted-foreground">{t.calendar}</Text>
+      <Text className="font-sans text-caption font-semibold uppercase tracking-eyebrow text-neutral-500">
+        {t.calendar}
+      </Text>
       {history.isLoading ? (
-        <ActivityIndicator />
+        <ActivityIndicator color="#7A3414" />
       ) : rows.length === 0 ? (
-        <Text className="text-sm text-muted-foreground">{t.noRecords}</Text>
+        <Text className="font-sans text-sm text-neutral-500">{t.noRecords}</Text>
       ) : (
         rows.map((row) =>
           row.kind === "holiday" ? (
             <ListRow key={`h:${row.date}`}>
-              <Text className="font-medium text-foreground">{row.date}</Text>
-              <Text className="text-sm text-info">{t.holiday(row.name)}</Text>
+              <View className="flex-row items-center justify-between gap-2">
+                <Text className="font-sans text-body font-semibold text-neutral-900">
+                  {row.date}
+                </Text>
+                <Text className="font-sans text-sm text-info-600">{t.holiday(row.name)}</Text>
+              </View>
             </ListRow>
           ) : (
             <ListRow key={row.recordId}>
-              <Text className="font-medium text-foreground">{row.date}</Text>
-              <Text
-                className={`text-sm font-medium ${STATUS_CLASS[row.status as keyof typeof STATUS_CLASS]}`}
-              >
-                {STATUS_LABEL[row.status as keyof typeof STATUS_LABEL]}
-              </Text>
+              <View className="flex-row items-center justify-between gap-2">
+                <Text className="font-sans text-body font-semibold text-neutral-900">
+                  {row.date}
+                </Text>
+                <Text
+                  className={`font-sans text-sm font-semibold ${STATUS_CLASS[row.status as keyof typeof STATUS_CLASS]}`}
+                >
+                  {STATUS_LABEL[row.status as keyof typeof STATUS_LABEL]}
+                </Text>
+              </View>
               {canCorrect ? (
                 <Link
                   href={{
@@ -112,7 +122,9 @@ export default function EnrollmentAttendanceScreen() {
                   asChild
                 >
                   <Pressable accessibilityRole="button">
-                    <Text className="text-sm text-primary">{t.requestCorrection}</Text>
+                    <Text className="font-sans text-sm font-semibold text-primary-700">
+                      {t.requestCorrection}
+                    </Text>
                   </Pressable>
                 </Link>
               ) : null}

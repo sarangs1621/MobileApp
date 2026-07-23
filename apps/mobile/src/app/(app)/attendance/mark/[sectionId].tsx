@@ -80,7 +80,7 @@ export default function MarkAttendanceScreen() {
   if (years.isLoading || (activeYearId !== undefined && sessionQuery.isLoading)) {
     return (
       <ScreenScaffold title={t.markAttendance}>
-        <ActivityIndicator />
+        <ActivityIndicator color="#7A3414" />
       </ScreenScaffold>
     );
   }
@@ -88,7 +88,7 @@ export default function MarkAttendanceScreen() {
   if (activeYearId === undefined) {
     return (
       <ScreenScaffold title={t.markAttendance}>
-        <Text className="text-muted-foreground">{t.noActiveYear}</Text>
+        <Text className="font-sans text-neutral-500">{t.noActiveYear}</Text>
       </ScreenScaffold>
     );
   }
@@ -96,8 +96,8 @@ export default function MarkAttendanceScreen() {
   if (session === null) {
     return (
       <ScreenScaffold title={t.markAttendance}>
-        <Text className="text-foreground">{t.noRegisterToday}</Text>
-        <Text className="text-sm text-muted-foreground">{date}</Text>
+        <Text className="font-sans text-body text-neutral-900">{t.noRegisterToday}</Text>
+        <Text className="font-sans text-sm text-neutral-500">{date}</Text>
         <Pressable
           accessibilityRole="button"
           disabled={openSession.isPending}
@@ -112,12 +112,12 @@ export default function MarkAttendanceScreen() {
               date,
             });
           }}
-          className="min-h-11 items-center justify-center rounded-md bg-primary px-4 py-3"
+          className="min-h-12 items-center justify-center rounded-pill bg-primary-600 px-4 active:bg-primary-700"
         >
-          <Text className="font-medium text-primary-foreground">{t.openTodaysRegister}</Text>
+          <Text className="font-sans font-semibold text-neutral-50">{t.openTodaysRegister}</Text>
         </Pressable>
         {openSession.isError ? (
-          <Text className="text-sm text-destructive">{openSession.error.message}</Text>
+          <Text className="font-sans text-sm text-danger-600">{openSession.error.message}</Text>
         ) : null}
       </ScreenScaffold>
     );
@@ -128,22 +128,22 @@ export default function MarkAttendanceScreen() {
 
   return (
     <ScreenScaffold title={t.markAttendance}>
-      <Text className="text-sm text-muted-foreground">
+      <Text className="font-sans text-sm text-neutral-500">
         {date} · {session.status}
       </Text>
       <OfflineBanner message={t.offlineMarks} />
       <SyncQueueIndicator />
 
       {roster.isLoading ? (
-        <ActivityIndicator />
+        <ActivityIndicator color="#7A3414" />
       ) : rows.length === 0 ? (
-        <Text className="text-muted-foreground">{t.noActiveStudents}</Text>
+        <Text className="font-sans text-neutral-500">{t.noActiveStudents}</Text>
       ) : (
         rows.map((row) => {
           const status = edits[row.enrollmentId] ?? row.currentStatus ?? row.suggestedStatus;
           return (
             <ListRow key={row.enrollmentId}>
-              <Text className="font-medium text-foreground">
+              <Text className="font-sans text-body font-semibold text-neutral-900">
                 {studentName.get(row.studentId) ?? row.studentId}
                 {row.rollNo != null ? t.roll(row.rollNo) : ""}
               </Text>
@@ -155,7 +155,7 @@ export default function MarkAttendanceScreen() {
                   }}
                 />
               ) : (
-                <Text className={`text-sm font-medium ${STATUS_CLASS[status]}`}>
+                <Text className={`font-sans text-sm font-semibold ${STATUS_CLASS[status]}`}>
                   {STATUS_LABEL[status]}
                 </Text>
               )}
@@ -188,9 +188,9 @@ export default function MarkAttendanceScreen() {
               }
               mark.mutate({ sessionId: session.id, marks });
             }}
-            className="min-h-11 items-center justify-center rounded-md bg-primary px-4 py-3"
+            className="min-h-12 items-center justify-center rounded-pill bg-primary-600 px-4 active:bg-primary-700"
           >
-            <Text className="font-medium text-primary-foreground">
+            <Text className="font-sans font-semibold text-neutral-50">
               {online ? t.saveMarks : t.saveOffline}
             </Text>
           </Pressable>
@@ -200,9 +200,9 @@ export default function MarkAttendanceScreen() {
             onPress={() => {
               transition.mutate({ sessionId: session.id });
             }}
-            className="min-h-11 items-center justify-center rounded-md border border-border px-4 py-3"
+            className="min-h-12 items-center justify-center rounded-pill border border-strong bg-white px-4 active:bg-primary-50"
           >
-            <Text className="font-medium text-foreground">{t.submitRegister}</Text>
+            <Text className="font-sans font-semibold text-primary-700">{t.submitRegister}</Text>
           </Pressable>
         </>
       ) : null}
@@ -214,13 +214,15 @@ export default function MarkAttendanceScreen() {
           onPress={() => {
             lock.mutate({ sessionId: session.id });
           }}
-          className="min-h-11 items-center justify-center rounded-md border border-border px-4 py-3"
+          className="min-h-12 items-center justify-center rounded-pill border border-strong bg-white px-4 active:bg-primary-50"
         >
-          <Text className="font-medium text-foreground">{t.lockRegister}</Text>
+          <Text className="font-sans font-semibold text-primary-700">{t.lockRegister}</Text>
         </Pressable>
       ) : null}
 
-      {mark.isError ? <Text className="text-sm text-destructive">{mark.error.message}</Text> : null}
+      {mark.isError ? (
+        <Text className="font-sans text-sm text-danger-600">{mark.error.message}</Text>
+      ) : null}
     </ScreenScaffold>
   );
 }

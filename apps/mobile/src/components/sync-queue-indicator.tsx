@@ -24,37 +24,43 @@ export function SyncQueueIndicator(): React.JSX.Element | null {
 
   const failed = queue.filter((e) => e.state === "FAILED").length;
   const pending = queue.length - failed;
-  const tone = failed > 0 ? "text-destructive" : "text-info";
+  const tone = failed > 0 ? "text-danger-600" : "text-info-600";
 
   return (
-    <View className="rounded-md border border-border bg-card">
+    <View className="overflow-hidden rounded-card border border-subtle bg-card shadow-sm">
       <Pressable
         accessibilityRole="button"
         onPress={() => setOpen((v) => !v)}
-        className="min-h-11 flex-row items-center justify-between px-3 py-2"
+        className="min-h-11 flex-row items-center justify-between px-3 py-2.5"
       >
-        <Text className={`text-sm font-medium ${tone}`}>
+        <Text className={`font-sans text-sm font-semibold ${tone}`}>
           {failed > 0 ? t.needReview(failed) : t.waiting(pending)}
         </Text>
-        <Text className="text-sm text-muted-foreground">{open ? t.hide : t.view}</Text>
+        <Text className="font-sans text-sm font-semibold text-primary-700">
+          {open ? t.hide : t.view}
+        </Text>
       </Pressable>
 
       {open
         ? queue.map((entry) => (
-            <View key={entry.id} className="border-t border-border px-3 py-2">
-              <Text className="text-sm font-medium text-foreground">
+            <View key={entry.id} className="border-t border-subtle px-3 py-2.5">
+              <Text className="font-sans text-sm font-semibold text-neutral-900">
                 {entry.dateIST} · {t.studentCount(entry.marks.length)} · {entry.state}
               </Text>
               {entry.reason ? (
-                <Text className="mt-1 text-xs text-destructive">{entry.reason}</Text>
+                <Text className="mt-1 font-sans text-caption text-danger-600">{entry.reason}</Text>
               ) : null}
               {entry.state !== "SYNCING" ? (
-                <View className="mt-2 flex-row gap-3">
+                <View className="mt-2 flex-row gap-4">
                   <Pressable accessibilityRole="button" onPress={() => retry(entry.id)}>
-                    <Text className="text-sm font-medium text-primary">{dict.common.retry}</Text>
+                    <Text className="font-sans text-sm font-semibold text-primary-700">
+                      {dict.common.retry}
+                    </Text>
                   </Pressable>
                   <Pressable accessibilityRole="button" onPress={() => discard(entry.id)}>
-                    <Text className="text-sm font-medium text-destructive">{t.discard}</Text>
+                    <Text className="font-sans text-sm font-semibold text-danger-600">
+                      {t.discard}
+                    </Text>
                   </Pressable>
                 </View>
               ) : null}
