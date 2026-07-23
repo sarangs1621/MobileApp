@@ -1,0 +1,199 @@
+/* ============================================================
+   Sri Gujarati Vidyalaya — design tokens.
+   Ported from the Claude Design project "Sri Gujarati Vidyalaya
+   Design System" (tokens/colors.css, typography.css, spacing.css).
+   ============================================================ */
+
+:root {
+  /* ---- Brand: maroon / sienna (sampled from the school crest) ---- */
+  --maroon-950: #3a1607;
+  --maroon-900: #4f1e0c;
+  --maroon-800: #642811;
+  --maroon-700: #7a3414; /* primary brand */
+  --maroon-600: #8f4019;
+  --maroon-500: #a65326;
+  --maroon-400: #c0703f;
+  --maroon-300: #d89a72;
+  --maroon-200: #ecc6ac;
+  --maroon-100: #f6e3d5;
+  --maroon-50: #fbf1e9;
+
+  /* ---- Accent: heritage gold / ochre ---- */
+  --gold-800: #6f4e13;
+  --gold-700: #8a661f;
+  --gold-600: #a67d2c;
+  --gold-500: #c29a45; /* accent */
+  --gold-400: #d6b36a;
+  --gold-300: #e7ce9a;
+  --gold-200: #f2e4c4;
+  --gold-100: #f8f0dc;
+
+  /* ---- Warm neutrals / parchment ---- */
+  --cream-50: #fcf9f3;
+  --cream-100: #f6f1e7;
+  --cream-200: #ede4d5;
+  --sand-300: #e0d3bf;
+  --sand-400: #c9b89e;
+
+  /* ---- Ink (warm dark) ---- */
+  --ink-950: #160f09;
+  --ink-900: #241a11;
+  --ink-800: #33271b;
+  --ink-700: #44382c;
+  --ink-500: #6e6052;
+  --ink-400: #948676;
+  --ink-300: #b6a998;
+  --white: #ffffff;
+
+  /* ---- Status ---- */
+  --green-600: #3e7a4f;
+  --green-100: #e4efe6;
+  --amber-600: #b07a1e;
+  --amber-100: #f6ecd4;
+  --red-600: #b23a28;
+  --red-100: #f6e2dc;
+  --blue-600: #2e5e8c;
+  --blue-100: #dee9f2;
+
+  /* ---- Semantic aliases — prefer these in components ---- */
+  --brand: var(--maroon-700);
+  --brand-hover: var(--maroon-800);
+  --brand-active: var(--maroon-900);
+  --brand-strong: var(--maroon-900);
+  --brand-soft: var(--maroon-100);
+  --brand-tint: var(--maroon-50);
+
+  --accent: var(--gold-500);
+  --accent-strong: var(--gold-700);
+  --accent-soft: var(--gold-100);
+
+  --surface-page: var(--cream-50);
+  --surface-card: var(--white);
+  --surface-raised: var(--cream-100);
+  --surface-sunken: var(--cream-200);
+  --surface-inverse: var(--maroon-900);
+  --surface-brand: var(--maroon-700);
+  --surface-accent: var(--gold-100);
+
+  --text-primary: var(--ink-900);
+  --text-secondary: var(--ink-500);
+  --text-muted: var(--ink-400);
+  --text-brand: var(--maroon-700);
+  --text-accent: var(--gold-700);
+  --text-on-brand: var(--cream-50);
+  --text-on-accent: var(--ink-900);
+
+  --border-subtle: var(--sand-300);
+  --border-strong: var(--sand-400);
+  --border-brand: var(--maroon-200);
+  --border-on-dark: rgba(252, 249, 243, 0.16);
+
+  --focus-ring: var(--gold-500);
+  --overlay-scrim: rgba(36, 26, 17, 0.55);
+
+  /* ---- Families ---- */
+  --font-display: "Newsreader", "Georgia", "Times New Roman", serif;
+  --font-serif: "Newsreader", "Georgia", serif;
+  --font-sans: "Hanken Grotesk", system-ui, -apple-system, "Segoe UI", sans-serif;
+  --font-mono: "IBM Plex Mono", ui-monospace, "SF Mono", Menlo, monospace;
+
+  /* ---- Type scale ---- */
+  --text-7xl: 4.5rem;
+  --text-6xl: 3.75rem;
+  --text-5xl: 3rem;
+  --text-4xl: 2.25rem;
+  --text-3xl: 1.875rem;
+  --text-2xl: 1.5rem;
+  --text-xl: 1.25rem;
+  --text-lg: 1.125rem;
+  --text-base: 1rem;
+  --text-sm: 0.875rem;
+  --text-xs: 0.75rem;
+
+  /* ---- Fluid display sizes (hero / section headers) ---- */
+  --text-hero: clamp(2.75rem, 1.6rem + 5.2vw, 5rem);
+  --text-section: clamp(2rem, 1.3rem + 3vw, 3.25rem);
+  --text-lead: clamp(1.125rem, 1rem + 0.6vw, 1.375rem);
+
+  /* ---- Weights ---- */
+  --weight-light: 300;
+  --weight-regular: 400;
+  --weight-medium: 500;
+  --weight-semibold: 600;
+  --weight-bold: 700;
+
+  /* ---- Line height ---- */
+  --leading-none: 1;
+  --leading-tight: 1.08;
+  --leading-snug: 1.2;
+  --leading-normal: 1.5;
+  --leading-relaxed: 1.65;
+
+  /* ---- Letter spacing ---- */
+  --tracking-tighter: -0.03em;
+  --tracking-tight: -0.015em;
+  --tracking-normal: 0;
+  --tracking-wide: 0.04em;
+  --tracking-eyebrow: 0.16em;
+
+  /* ---- Spacing (4px base) ---- */
+  --space-0: 0;
+  --space-1: 0.25rem;
+  --space-2: 0.5rem;
+  --space-3: 0.75rem;
+  --space-4: 1rem;
+  --space-5: 1.25rem;
+  --space-6: 1.5rem;
+  --space-8: 2rem;
+  --space-10: 2.5rem;
+  --space-12: 3rem;
+  --space-16: 4rem;
+  --space-20: 5rem;
+  --space-24: 6rem;
+  --space-32: 8rem;
+  --section-y: clamp(4rem, 2rem + 7vw, 8rem);
+
+  /* ---- Radius (moderate, heritage-modern) ---- */
+  --radius-xs: 4px;
+  --radius-sm: 8px;
+  --radius-md: 12px;
+  --radius-lg: 16px;
+  --radius-xl: 24px;
+  --radius-2xl: 32px;
+  --radius-pill: 999px;
+  --radius-circle: 50%;
+
+  /* ---- Elevation (warm shadows over parchment) ---- */
+  --shadow-xs: 0 1px 2px rgba(36, 22, 10, 0.06);
+  --shadow-sm: 0 2px 8px rgba(36, 22, 10, 0.07);
+  --shadow-md: 0 8px 24px -6px rgba(36, 22, 10, 0.12);
+  --shadow-lg: 0 20px 48px -14px rgba(36, 22, 10, 0.18);
+  --shadow-xl: 0 36px 72px -20px rgba(36, 22, 10, 0.22);
+  --shadow-brand: 0 18px 44px -14px rgba(122, 52, 20, 0.4);
+  --shadow-inset-hairline: inset 0 0 0 1px rgba(36, 22, 10, 0.06);
+
+  /* ---- Motion ---- */
+  --ease-out: cubic-bezier(0.22, 1, 0.36, 1);
+  --ease-in-out: cubic-bezier(0.65, 0, 0.35, 1);
+  --ease-spring: cubic-bezier(0.34, 1.4, 0.64, 1);
+  --dur-fast: 150ms;
+  --dur: 240ms;
+  --dur-slow: 420ms;
+  --dur-slower: 720ms;
+
+  /* ---- Layout ---- */
+  --container-sm: 720px;
+  --container-md: 960px;
+  --container-lg: 1200px;
+  --container-xl: 1440px;
+  --gutter: clamp(1.25rem, 4vw, 3rem);
+  --header-h: 76px;
+
+  /* ---- Z-index ---- */
+  --z-base: 0;
+  --z-sticky: 100;
+  --z-header: 200;
+  --z-overlay: 800;
+  --z-modal: 900;
+  --z-toast: 1000;
+}

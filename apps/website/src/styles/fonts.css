@@ -1,0 +1,8 @@
+/* ============================================================
+   Fonts — loaded from Google Fonts CDN, per the design system's
+   tokens/fonts.css. Newsreader (editorial serif) + Hanken Grotesk
+   (UI sans) + IBM Plex Mono. Swap for self-hosted files if a
+   specific licence or offline use is required.
+   ============================================================ */
+
+@import url("https://fonts.googleapis.com/css2?family=Newsreader:ital,opsz,wght@0,6..72,300;0,6..72,400;0,6..72,500;0,6..72,600;1,6..72,400;1,6..72,500&family=Hanken+Grotesk:wght@400;500;600;700;800&family=IBM+Plex+Mono:wght@400;500&display=swap");

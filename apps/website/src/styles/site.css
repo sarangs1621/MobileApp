@@ -1,0 +1,156 @@
+/* ============================================================
+   Site-level rules ported from the UI kit's index.html <style>
+   block, plus hover interactions promoted from JS handlers to
+   CSS classes (.stage-card, .fac-item, .news-card, .gallery-tile).
+   ============================================================ */
+
+/* ---- Responsive collapses ---- */
+@media (max-width: 900px) {
+  .desk-nav {
+    display: none !important;
+  }
+  .burger {
+    display: block !important;
+  }
+  .about-grid,
+  .fac-layout,
+  .principal-grid,
+  .enq-grid,
+  .contact-grid {
+    grid-template-columns: 1fr !important;
+  }
+  .cards-4,
+  .glance-grid,
+  .trust-grid {
+    grid-template-columns: repeat(2, 1fr) !important;
+  }
+  .cards-3,
+  .cards-2,
+  .cards-6 {
+    grid-template-columns: 1fr !important;
+  }
+  .masonry {
+    column-count: 2 !important;
+  }
+  .ft-grid {
+    grid-template-columns: 1fr 1fr !important;
+  }
+}
+@media (min-width: 901px) {
+  .mobile-nav {
+    display: none !important;
+  }
+}
+@media (max-width: 560px) {
+  .cards-4,
+  .glance-grid,
+  .trust-grid,
+  .fac-grid,
+  .ft-grid {
+    grid-template-columns: 1fr !important;
+  }
+  .masonry {
+    column-count: 1 !important;
+  }
+  .hero-strip {
+    grid-template-columns: 1fr !important;
+  }
+}
+
+/* ---- Keyframes ---- */
+@keyframes kenburns {
+  from {
+    transform: scale(1.08);
+  }
+  to {
+    transform: scale(1);
+  }
+}
+@keyframes revealUp {
+  from {
+    transform: translateY(24px);
+  }
+  to {
+    transform: translateY(0);
+  }
+}
+@keyframes scrollcue {
+  0%,
+  100% {
+    transform: translateY(0);
+    opacity: 0.5;
+  }
+  50% {
+    transform: translateY(7px);
+    opacity: 1;
+  }
+}
+
+.hero-bg {
+  animation: kenburns 14s var(--ease-out) forwards;
+}
+article img,
+.fac-layout img {
+  transition: transform var(--dur-slow) var(--ease-out);
+}
+.scroll-cue {
+  animation: scrollcue 1.8s ease-in-out infinite;
+}
+@media (prefers-reduced-motion: reduce) {
+  .hero-bg,
+  .scroll-cue {
+    animation: none !important;
+  }
+}
+
+/* ---- Card lift hovers (Academics stages, News) ---- */
+.stage-card,
+.news-card {
+  transition:
+    transform var(--dur) var(--ease-out),
+    box-shadow var(--dur) var(--ease-out),
+    border-color var(--dur);
+}
+.stage-card:hover {
+  transform: translateY(-6px);
+  box-shadow: var(--shadow-lg);
+  border-color: var(--maroon-200) !important;
+}
+.news-card:hover {
+  transform: translateY(-6px);
+  box-shadow: var(--shadow-lg) !important;
+}
+.news-card:hover img {
+  transform: scale(1.06);
+}
+
+/* ---- Facilities tiles ---- */
+.fac-item {
+  transition:
+    background var(--dur),
+    border-color var(--dur);
+}
+.fac-item .fac-i,
+.fac-item .fac-t {
+  transition: color var(--dur);
+}
+.fac-item:hover {
+  background: var(--maroon-700) !important;
+  border-color: var(--maroon-700) !important;
+}
+.fac-item:hover .fac-i {
+  color: var(--gold-300) !important;
+}
+.fac-item:hover .fac-t {
+  color: var(--cream-50) !important;
+}
+
+/* ---- Gallery tiles: maroon gradient caption on hover ---- */
+.gallery-tile .tile-cap {
+  opacity: 0;
+  transition: opacity var(--dur);
+}
+.gallery-tile:hover .tile-cap,
+.gallery-tile:focus-visible .tile-cap {
+  opacity: 1;
+}
