@@ -211,3 +211,68 @@ UI (web/mobile) → tRPC routers (api) → business services → repositories (d
 - `docs/STATE_MANAGEMENT_PLAN.md` — Query/Zustand/RHF ownership, keys, cache policy.
 - `docs/OFFLINE_STRATEGY.md` — baseline caching + `offline` attendance queue design.
 - `docs/ANALYTICS_LOGGING_PLAN.md` — PostHog/Sentry/logging taxonomy + DPDP privacy rules.
+
+## QA testing with seed data (temporary — remove before production)
+
+For a coworker to test every role against a **throwaway QA database**. All seeded data lives
+under `schoolId = "seed-demo-school"` and is fully removable — the final step wipes it so real
+school data can be loaded.
+
+### 1. Point at a QA database + Supabase project
+
+Set these env vars (a **dedicated QA** Supabase project — never production):
+
+```
+DATABASE_URL=postgres://…            # the QA Postgres
+NEXT_PUBLIC_SUPABASE_URL=https://…   # QA Supabase project URL
+SUPABASE_SERVICE_ROLE=…              # QA service-role key (server-only secret)
+```
+
+Deploy the schema, then seed:
+
+```bash
+pnpm --filter @repo/db migrate:deploy   # create tables
+pnpm --filter @repo/db seed             # create demo school + accounts (idempotent)
+```
+
+### 2. Test accounts (created by the seed)
+
+| Role | Login | Credentials |
+|------|-------|-------------|
+| Super Admin | `super@sgv.seed` | password `Test@12345` |
+| Office Admin | `office@sgv.seed` | password `Test@12345` |
+| Accountant | `accountant@sgv.seed` | password `Test@12345` |
+| Teacher | `teacher@sgv.seed` | password `Test@12345` |
+| Parent | phone `+91 90000 00001` | SMS OTP (see below) |
+
+Seeded structure: academic year **2026–27** (active), **Grade 1 A/B-less A** + **Grade 2 A**, subjects
+(Gujarati/Maths/English/EVS), 5 students, the teacher assigned to Grade 1 A (and its class teacher),
+and the parent linked to **Aarav Shah (Grade 1 A)**. Testers then *exercise* the app (mark attendance,
+set homework, generate invoices, post announcements) to create the rest of the data.
+
+**Parent login without a real SMS provider:** in the QA Supabase project, add a **test phone number**
+under *Authentication → Providers → Phone → Test OTP* (e.g. `+919000000001` → `123456`). The tester
+then enters that fixed code — no SMS/DLT needed for QA.
+
+### 3. Run the apps
+
+- **Mobile:** `cd apps/mobile && npx expo start` → open on a **real iOS and Android** device (Expo Go
+  or a dev build). Test all three role apps.
+- **Web:** `pnpm --filter web dev` → sign in as staff/admin.
+
+Suggested coverage per role: **Staff/Admin** — sign in, dashboard, mark attendance, enter marks, set
+homework, record incident, generate invoices, post an announcement, approve leave/corrections.
+**Parent** — phone OTP sign-in, Home (fees + attendance tiles), Attendance ring/calendar, Fees, Homework,
+Marks, Messages. Test **offline** attendance + resync, and **both platforms**.
+
+### 4. Wipe everything before production
+
+When QA is done, remove **all** seeded + QA-created data so real data can be swapped in:
+
+```bash
+SEED_WIPE_CONFIRM=yes pnpm --filter @repo/db seed:teardown
+```
+
+This TRUNCATEs every application table and deletes the seeded Supabase auth users. It is **destructive
+and refuses to run without `SEED_WIPE_CONFIRM=yes`** — only ever point it at the QA database. After this,
+provision the real production Supabase/env and load the school's actual data.
