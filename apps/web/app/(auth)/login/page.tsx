@@ -11,7 +11,6 @@ import {
   Users,
 } from "lucide-react";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
 import { useState } from "react";
 
 import { Button, Input } from "@/src/components/ui";
@@ -31,7 +30,6 @@ const HIGHLIGHTS = [
 ] as const;
 
 export default function LoginPage() {
-  const router = useRouter();
   const [mode, setMode] = useState<Mode>("staff");
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -48,13 +46,18 @@ export default function LoginPage() {
     try {
       await action();
       if (navigate) {
-        // The browser client set the session cookie; refresh so the server sees it.
-        router.replace("/dashboard");
-        router.refresh();
+        // Hard navigation (not router.replace): the browser client has just written
+        // the Supabase auth cookies, and a client-side transition races their
+        // propagation — the server-rendered (app) layout's auth gate then runs before
+        // the cookies are readable and bounces back to /login (BUG-2). A full document
+        // load guarantees the request carries the fresh cookies. Leave `busy` true so
+        // the button stays disabled through unload (prevents the multi-click retry).
+        window.location.assign("/dashboard");
+        return;
       }
+      setBusy(false);
     } catch (caught) {
       setError(caught instanceof Error ? caught.message : "Something went wrong");
-    } finally {
       setBusy(false);
     }
   }

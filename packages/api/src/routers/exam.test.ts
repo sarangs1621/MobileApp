@@ -79,13 +79,7 @@ describe("exam routers — Zod input validation (BAD_REQUEST, before the resolve
  * granted cells further and is enforced + tested in @repo/business. Any drift
  * between the router gates and the permissions matrix fails here.
  */
-const ROLE_KEYS: readonly RoleKey[] = [
-  "SUPER_ADMIN",
-  "OFFICE_ADMIN",
-  "TEACHER",
-  "PARENT",
-  "ACCOUNTANT",
-];
+const ROLE_KEYS: readonly RoleKey[] = ["SUPER_ADMIN", "OFFICE_ADMIN", "TEACHER", "PARENT"];
 const principalFor = (role: RoleKey): Principal => ({
   userId: `u-${role}`,
   schoolId: "s-1",

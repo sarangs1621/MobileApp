@@ -39,13 +39,6 @@ const STAFF = [
     emp: "EMP-002",
   },
   {
-    key: "acct",
-    email: "accountant@sgv.seed",
-    role: "ACCOUNTANT",
-    name: "Suresh Rao",
-    emp: "EMP-003",
-  },
-  {
     key: "teacher",
     email: "teacher@sgv.seed",
     role: "TEACHER",
@@ -326,11 +319,180 @@ async function main(): Promise<void> {
       update: { isPrimary: true },
     });
 
+    // 10) Grade scale (default) — a resolvable scale is required so an exam
+    // register can LOCK and a report card can generate. Exam.gradeScaleId is
+    // nullable (falls back to the school's isDefault scale), but we wire it
+    // explicitly for clarity. Bands are half-open [minPercent, maxPercent); the
+    // top band uses a >100 sentinel so a perfect 100 still lands in a band.
+    await prisma.gradeScale.upsert({
+      where: { schoolId_name: { schoolId: SCHOOL_ID, name: "Default Grade Scale" } },
+      create: {
+        id: "seed-gradescale-1",
+        schoolId: SCHOOL_ID,
+        name: "Default Grade Scale",
+        isDefault: true,
+      },
+      update: { isDefault: true },
+    });
+    const gradeBands = [
+      ["seed-gradeband-aplus", "A+", 90, 100.01, 10],
+      ["seed-gradeband-a", "A", 75, 90, 9],
+      ["seed-gradeband-b", "B", 60, 75, 8],
+      ["seed-gradeband-c", "C", 45, 60, 7],
+      ["seed-gradeband-d", "D", 35, 45, 6],
+      ["seed-gradeband-f", "F", 0, 35, 0],
+    ] as const;
+    for (const [id, grade, minPercent, maxPercent, gradePoint] of gradeBands) {
+      await prisma.gradeBand.upsert({
+        where: { gradeScaleId_grade: { gradeScaleId: "seed-gradescale-1", grade } },
+        create: {
+          id,
+          gradeScaleId: "seed-gradescale-1",
+          grade,
+          minPercent,
+          maxPercent,
+          gradePoint,
+        },
+        update: {},
+      });
+    }
+
+    // 11) Exam (unpublished) + assessments for the teacher's assigned subjects.
+    await prisma.exam.upsert({
+      where: { academicYearId_name: { academicYearId: YEAR_ID, name: "Term 1 Unit Test" } },
+      create: {
+        id: "seed-exam-1",
+        schoolId: SCHOOL_ID,
+        academicYearId: YEAR_ID,
+        gradeScaleId: "seed-gradescale-1",
+        name: "Term 1 Unit Test",
+        type: "UNIT_TEST",
+        displayOrder: 1,
+        isPublished: false,
+      },
+      update: {},
+    });
+    await prisma.assessment.upsert({
+      where: { examId_subjectId: { examId: "seed-exam-1", subjectId: "seed-sub-math" } },
+      create: {
+        id: "seed-assess-math",
+        schoolId: SCHOOL_ID,
+        examId: "seed-exam-1",
+        subjectId: "seed-sub-math",
+        maxTheory: 100,
+        maxPractical: null, // theory-only
+        passMark: 35,
+        displayOrder: 1,
+      },
+      update: {},
+    });
+    await prisma.assessment.upsert({
+      where: { examId_subjectId: { examId: "seed-exam-1", subjectId: "seed-sub-guj" } },
+      create: {
+        id: "seed-assess-guj",
+        schoolId: SCHOOL_ID,
+        examId: "seed-exam-1",
+        subjectId: "seed-sub-guj",
+        maxTheory: 100,
+        maxPractical: null, // theory-only
+        passMark: 35,
+        displayOrder: 2,
+      },
+      update: {},
+    });
+
+    // 12) Exam register (Assessment × Section) — left DRAFT + EMPTY so the
+    // teacher enters marks during QA. Do NOT pre-create Mark rows.
+    await prisma.examSection.upsert({
+      where: {
+        assessmentId_sectionId: {
+          assessmentId: "seed-assess-math",
+          sectionId: "seed-sec-1a",
+        },
+      },
+      create: {
+        id: "seed-examsec-math-1a",
+        schoolId: SCHOOL_ID,
+        assessmentId: "seed-assess-math",
+        sectionId: "seed-sec-1a",
+        status: "DRAFT",
+        createdByStaffId: superStaff.id,
+      },
+      update: {},
+    });
+
+    // 13) Fee structure (per-year template) + line-item components. Amounts are
+    // in PAISE (₹5000 = 500000, ₹500 = 50000).
+    await prisma.feeStructure.upsert({
+      where: { id: "seed-fee-struct-1" },
+      create: {
+        id: "seed-fee-struct-1",
+        schoolId: SCHOOL_ID,
+        academicYearId: YEAR_ID,
+        name: "Grade 1 — Term 1 Fees",
+        description: "Term 1 tuition and activity fees for Grade 1.",
+        active: true,
+      },
+      update: {},
+    });
+    const feeComponents = [
+      ["seed-fee-comp-tuition", "Tuition", 500000, 1, true],
+      ["seed-fee-comp-activity", "Activity", 50000, 2, false],
+    ] as const;
+    for (const [id, name, amount, order, mandatory] of feeComponents) {
+      await prisma.feeComponent.upsert({
+        where: { id },
+        create: {
+          id,
+          feeStructureId: "seed-fee-struct-1",
+          name,
+          amount,
+          order,
+          mandatory,
+        },
+        update: {},
+      });
+    }
+
+    // 14) Invoices — one ISSUED (unpaid) invoice per Grade 1 A student, so an
+    // office/super admin can record a payment against them during QA. totalAmount
+    // snapshots the structure total (500000 + 50000 = 550000 paise); balance =
+    // total while unpaid. (OVERDUE is compute-on-read, never stored.)
+    const INVOICE_TOTAL = 550000; // paise
+    const invoices = [
+      ["seed-inv-1", "seed-stu-1", "seed-enr-seed-stu-1", "INV-SEED-001"],
+      ["seed-inv-2", "seed-stu-2", "seed-enr-seed-stu-2", "INV-SEED-002"],
+      ["seed-inv-3", "seed-stu-3", "seed-enr-seed-stu-3", "INV-SEED-003"],
+    ] as const;
+    for (const [id, studentId, enrollmentId, invoiceNumber] of invoices) {
+      await prisma.invoice.upsert({
+        where: { id },
+        create: {
+          id,
+          schoolId: SCHOOL_ID,
+          studentId,
+          enrollmentId,
+          feeStructureId: "seed-fee-struct-1",
+          invoiceNumber,
+          issueDate: new Date("2026-04-05"),
+          dueDate: new Date("2026-04-30"),
+          status: "ISSUED",
+          totalAmount: INVOICE_TOTAL,
+          paidAmount: 0,
+          balanceAmount: INVOICE_TOTAL,
+          createdByStaffId: superStaff.id,
+        },
+        update: {},
+      });
+    }
+
     console.warn(
-      `[seed] done. Staff logins: super/office/accountant/teacher@sgv.seed (password ${PASSWORD}). ` +
+      `[seed] done. Staff logins: super/office/teacher@sgv.seed (password ${PASSWORD}). ` +
         `Parent: sign in via the STAFF PORTAL with ${PARENT_EMAIL} / ${PASSWORD} (QA bypass — loads the ` +
         `parent app; no OTP needed). Real parent login is phone ${PARENT_PHONE} once phone OTP is set up. ` +
-        `Parent's child = Aarav Shah, Grade 1 A.`,
+        `Parent's child = Aarav Shah, Grade 1 A. ` +
+        `Exam "Term 1 Unit Test" (DRAFT Maths register for Grade 1 A — teacher enters marks) + ` +
+        `3 ISSUED unpaid invoices (₹5,500 each) for Grade 1 A students, ready for a QA payment.`,
     );
   } finally {
     await prisma.$disconnect();

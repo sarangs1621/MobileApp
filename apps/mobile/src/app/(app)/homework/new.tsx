@@ -1,6 +1,6 @@
 import { useTranslation } from "@repo/i18n";
 import { useRouter } from "expo-router";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { ActivityIndicator, Text, TextInput, View } from "react-native";
 
 import { ScreenScaffold, todayIst } from "../../../components/attendance-ui";
@@ -12,10 +12,11 @@ const inputClass =
   "rounded-[10px] border border-subtle bg-white px-3 py-2.5 font-sans text-body text-neutral-900";
 
 /**
- * Teacher: create a DRAFT homework (M6). Pick one of your (subject × section)
- * targets, set a title, optional description, and a due date (YYYY-MM-DD). The
- * service stamps the active year and derives ownership; the draft is then published
- * from the detail screen. Files are added on web (mobile has no picker).
+ * Teacher: create a homework (M6). Pick one of your (subject × section) targets,
+ * set a title, optional description, and a due date (YYYY-MM-DD). The service stamps
+ * the active year and derives ownership. "Publish" creates then publishes in one step
+ * (reaching parents immediately, same as web); "Create draft" leaves it unpublished to
+ * finish later. Files are added on web (mobile has no picker).
  */
 export default function NewHomeworkScreen() {
   const { dict } = useTranslation();
@@ -30,15 +31,51 @@ export default function NewHomeworkScreen() {
   const [description, setDescription] = useState("");
   const [dueDate, setDueDate] = useState(todayIst());
 
-  const create = trpc.homework.create.useMutation({
-    onSuccess: () => {
-      void utils.homework.list.invalidate();
-      router.back();
-    },
-  });
+  // M-3: pre-select the first (subject × section) chip so the primary button is
+  // enabled by default (matches web, which defaults to targets[0]).
+  useEffect(() => {
+    if (pair === null && rows[0]) {
+      setPair(`${rows[0].subjectId}:${rows[0].sectionId}`);
+    }
+  }, [rows, pair]);
+
+  const create = trpc.homework.create.useMutation();
+  const publish = trpc.homework.publish.useMutation();
+
+  const done = () => {
+    void utils.homework.list.invalidate();
+    router.back();
+  };
+  const busy = create.isPending || publish.isPending;
 
   const selected = rows.find((t) => `${t.subjectId}:${t.sectionId}` === pair);
-  const canSubmit = selected !== undefined && title.trim() !== "" && !create.isPending;
+  const canSubmit = selected !== undefined && title.trim() !== "" && !busy;
+
+  // Same create → optional publish flow the web create modal uses: publish is a
+  // separate mutation run after create succeeds (ADR-018 §3), not a create flag.
+  const submit = (publishNow: boolean) => {
+    if (!selected || title.trim() === "" || busy) return;
+    create.mutate(
+      {
+        subjectId: selected.subjectId,
+        sectionId: selected.sectionId,
+        title: title.trim(),
+        description: description.trim() === "" ? null : description.trim(),
+        dueDate,
+      },
+      {
+        onSuccess: (created) => {
+          if (publishNow && created?.id) {
+            publish.mutate({ homeworkId: created.id }, { onSuccess: done });
+          } else {
+            done();
+          }
+        },
+      },
+    );
+  };
+
+  const err = create.error ?? publish.error;
 
   if (targets.isLoading) {
     return (
@@ -102,23 +139,19 @@ export default function NewHomeworkScreen() {
           </Field>
 
           <Button
-            label={tr.createDraft}
-            loading={create.isPending}
+            label={tr.publish}
+            loading={publish.isPending}
             disabled={!canSubmit}
-            onPress={() => {
-              if (!selected) return;
-              create.mutate({
-                subjectId: selected.subjectId,
-                sectionId: selected.sectionId,
-                title: title.trim(),
-                description: description.trim() === "" ? null : description.trim(),
-                dueDate,
-              });
-            }}
+            onPress={() => submit(true)}
           />
-          {create.isError ? (
-            <Text className="font-sans text-sm text-danger-600">{create.error.message}</Text>
-          ) : null}
+          <Button
+            label={tr.createDraft}
+            variant="secondary"
+            loading={busy && !publish.isPending}
+            disabled={!canSubmit}
+            onPress={() => submit(false)}
+          />
+          {err ? <Text className="font-sans text-sm text-danger-600">{err.message}</Text> : null}
         </>
       )}
     </ScreenScaffold>

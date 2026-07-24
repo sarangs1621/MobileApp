@@ -27,12 +27,6 @@ const teacher: Principal = {
   status: "ACTIVE",
 };
 const parent: Principal = { userId: "u-parent", schoolId: "s-1", role: "PARENT", status: "ACTIVE" };
-const accountant: Principal = {
-  userId: "u-acc",
-  schoolId: "s-1",
-  role: "ACCOUNTANT",
-  status: "ACTIVE",
-};
 const disabled: Principal = { ...teacher, status: "DISABLED" };
 
 const slot = { academicYearId: "y-1", sectionId: "sec-1", teacherId: "u-t2" };
@@ -74,13 +68,6 @@ describe("classTeacher router — permission gates (fail in the service before a
   });
   it("a PARENT cannot read the class teacher (FORBIDDEN — no academic:read)", async () => {
     await expect(createCaller({ user: parent }).classTeacher.get(section)).rejects.toMatchObject({
-      code: "FORBIDDEN",
-    });
-  });
-  it("an ACCOUNTANT cannot read the class teacher (FORBIDDEN)", async () => {
-    await expect(
-      createCaller({ user: accountant }).classTeacher.get(section),
-    ).rejects.toMatchObject({
       code: "FORBIDDEN",
     });
   });

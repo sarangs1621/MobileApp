@@ -272,7 +272,7 @@ describe("class-teacher assignment management (admin-only, academic:manage)", ()
   it("rejects a non-teacher assignee (ValidationError)", async () => {
     const repos = makeRepos();
     repos.classTeacherAssignments.findBySectionYear.mockResolvedValueOnce(null);
-    repos.users.findById.mockResolvedValueOnce({ ...classTeacherUser, role: "ACCOUNTANT" });
+    repos.users.findById.mockResolvedValueOnce({ ...classTeacherUser, role: "PARENT" });
     const { ctx } = makeCtx(officeAdmin, repos);
     await expect(assignClassTeacher(ctx, input)).rejects.toThrow(ValidationError);
   });

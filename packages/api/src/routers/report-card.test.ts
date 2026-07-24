@@ -27,12 +27,6 @@ const teacher: Principal = {
   status: "ACTIVE",
 };
 const parent: Principal = { userId: "u-parent", schoolId: "s-1", role: "PARENT", status: "ACTIVE" };
-const accountant: Principal = {
-  userId: "u-acc",
-  schoolId: "s-1",
-  role: "ACCOUNTANT",
-  status: "ACTIVE",
-};
 const disabled: Principal = { ...teacher, status: "DISABLED" };
 
 const genInput = { enrollmentId: "e-1", kind: "ANNUAL" as const };
@@ -60,7 +54,7 @@ describe("reportCard router — route protection", () => {
 });
 
 describe("reportCard router — permission gates (fail in the service before any repo call)", () => {
-  // Lifecycle (REPORT_CARD_MANAGE) — admin-only. Teacher/parent/accountant refused at assertCan.
+  // Lifecycle (REPORT_CARD_MANAGE) — admin-only. Teacher/parent refused at assertCan.
   it("a TEACHER cannot generate (FORBIDDEN — no report_card:manage)", async () => {
     await expect(
       createCaller({ user: teacher }).reportCard.generate(genInput),
@@ -96,26 +90,15 @@ describe("reportCard router — permission gates (fail in the service before any
       createCaller({ user: parent }).reportCard.correct({ reportCardId: "rc-1" }),
     ).rejects.toMatchObject({ code: "FORBIDDEN" });
   });
-  // Remark/submit (REPORT_CARD_REMARK) — teacher capability; parent/accountant refused.
+  // Remark/submit (REPORT_CARD_REMARK) — teacher capability; parent refused.
   it("a PARENT cannot draft a remark (FORBIDDEN — no report_card:remark)", async () => {
     await expect(
       createCaller({ user: parent }).reportCard.draftRemark({ reportCardId: "rc-1", remark: "ok" }),
     ).rejects.toMatchObject({ code: "FORBIDDEN" });
   });
-  it("an ACCOUNTANT cannot submit (FORBIDDEN)", async () => {
+  it("a PARENT cannot submit (FORBIDDEN — no report_card:remark)", async () => {
     await expect(
-      createCaller({ user: accountant }).reportCard.submit({ reportCardId: "rc-1" }),
-    ).rejects.toMatchObject({ code: "FORBIDDEN" });
-  });
-  // Reads (REPORT_CARD_READ) — held by admin/teacher/parent, NOT accountant.
-  it("an ACCOUNTANT cannot read a card (FORBIDDEN — no report_card:read)", async () => {
-    await expect(
-      createCaller({ user: accountant }).reportCard.get({ id: "rc-1" }),
-    ).rejects.toMatchObject({ code: "FORBIDDEN" });
-  });
-  it("an ACCOUNTANT cannot list an enrollment's cards (FORBIDDEN)", async () => {
-    await expect(
-      createCaller({ user: accountant }).reportCard.listForEnrollment({ enrollmentId: "e-1" }),
+      createCaller({ user: parent }).reportCard.submit({ reportCardId: "rc-1" }),
     ).rejects.toMatchObject({ code: "FORBIDDEN" });
   });
 });

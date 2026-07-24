@@ -27,12 +27,6 @@ const teacher: Principal = {
   status: "ACTIVE",
 };
 const parent: Principal = { userId: "u-parent", schoolId: "s-1", role: "PARENT", status: "ACTIVE" };
-const accountant: Principal = {
-  userId: "u-acc",
-  schoolId: "s-1",
-  role: "ACCOUNTANT",
-  status: "ACTIVE",
-};
 const disabled: Principal = { ...teacher, status: "DISABLED" };
 
 const entryInput = {
@@ -88,11 +82,6 @@ describe("timetable routers — permission gates (fail before any repo call)", (
         name: "Regular",
       }),
     ).rejects.toMatchObject({ code: "FORBIDDEN" });
-  });
-  it("an ACCOUNTANT cannot read today's timetable (FORBIDDEN — no timetable:read)", async () => {
-    await expect(createCaller({ user: accountant }).timetable.today({})).rejects.toMatchObject({
-      code: "FORBIDDEN",
-    });
   });
 });
 

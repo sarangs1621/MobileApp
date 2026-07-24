@@ -40,12 +40,29 @@ export default function ExamsLayout({ children }: { children: ReactNode }) {
   }
 
   const role = me.data?.role;
-  if (
-    me.isError ||
-    me.data?.status !== "ACTIVE" ||
-    role === undefined ||
-    !can(role, PERMISSIONS.EXAM_MANAGE)
-  ) {
+  if (me.isError || me.data?.status !== "ACTIVE" || role === undefined) {
+    return (
+      <main className="mx-auto flex min-h-[60vh] max-w-md flex-col justify-center p-6">
+        <p className="text-center text-sm text-ink-500">
+          You don’t have access to examinations. Please contact the school office.
+        </p>
+      </main>
+    );
+  }
+
+  // The teacher marks-entry surface (BUG-4) lives under /exams for nav grouping
+  // but is self-contained — it owns its MARK_ENTER guard and page header, so it
+  // renders outside this admin console chrome.
+  if (pathname === "/exams/marks" || pathname.startsWith("/exams/marks/")) {
+    return <>{children}</>;
+  }
+
+  if (!can(role, PERMISSIONS.EXAM_MANAGE)) {
+    // A teacher (marks:enter, no exam:manage) hitting the console index is bounced
+    // to /exams/marks by the index page — render it so its redirect can run.
+    if (can(role, PERMISSIONS.MARK_ENTER) && pathname === "/exams") {
+      return <>{children}</>;
+    }
     return (
       <main className="mx-auto flex min-h-[60vh] max-w-md flex-col justify-center p-6">
         <p className="text-center text-sm text-ink-500">

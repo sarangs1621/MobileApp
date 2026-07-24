@@ -21,12 +21,6 @@ const superAdmin: Principal = {
   status: "ACTIVE",
 };
 const parent: Principal = { userId: "u-parent", schoolId: "s-1", role: "PARENT", status: "ACTIVE" };
-const accountant: Principal = {
-  userId: "u-acc",
-  schoolId: "s-1",
-  role: "ACCOUNTANT",
-  status: "ACTIVE",
-};
 const disabled: Principal = { ...parent, status: "DISABLED" };
 
 describe("homework routers — route protection", () => {
@@ -52,11 +46,6 @@ describe("homework routers — permission gates (fail in the service before any 
         dueDate: "2026-08-01",
       }),
     ).rejects.toMatchObject({ code: "FORBIDDEN" });
-  });
-  it("an accountant cannot read homework (FORBIDDEN)", async () => {
-    await expect(createCaller({ user: accountant }).homework.list({})).rejects.toMatchObject({
-      code: "FORBIDDEN",
-    });
   });
   it("a parent cannot review a submission (FORBIDDEN)", async () => {
     await expect(

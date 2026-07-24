@@ -27,12 +27,6 @@ const teacher: Principal = {
   role: "TEACHER",
   status: "ACTIVE",
 };
-const accountant: Principal = {
-  userId: "u-acct",
-  schoolId: "s-1",
-  role: "ACCOUNTANT",
-  status: "ACTIVE",
-};
 const invited: Principal = { ...parent, status: "INVITED" };
 const disabled: Principal = { ...parent, status: "DISABLED" };
 
@@ -54,13 +48,6 @@ describe("people routers — route protection", () => {
 });
 
 describe("people routers — permission gates (mapped to FORBIDDEN)", () => {
-  it("denies an ACCOUNTANT the whole people surface (no people permissions)", async () => {
-    const caller = createCaller({ user: accountant });
-    await expect(caller.student.list()).rejects.toMatchObject({ code: "FORBIDDEN" });
-    await expect(caller.parent.list()).rejects.toMatchObject({ code: "FORBIDDEN" });
-    await expect(caller.teacherProfile.list()).rejects.toMatchObject({ code: "FORBIDDEN" });
-  });
-
   it("denies a PARENT student/parent mutations (read-only role)", async () => {
     const caller = createCaller({ user: parent });
     await expect(

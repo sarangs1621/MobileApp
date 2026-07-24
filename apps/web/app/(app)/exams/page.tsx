@@ -1,9 +1,12 @@
 "use client";
 
 import { Exam, GraduationCap, Info, PencilSimple, Plus, Trash } from "@phosphor-icons/react";
+import { PERMISSIONS } from "@repo/constants";
+import { can } from "@repo/core";
 import type { ExamDto, ExamTypeKey } from "@repo/types";
 import { cn } from "@repo/ui";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 
 import { EXAM_TYPE_LABEL, EXAM_TYPES } from "@/src/components/exam/ui";
@@ -85,8 +88,21 @@ function timing(exam: ExamDto): { label: string; live: boolean } | null {
  */
 export default function ExamsDashboardPage() {
   const { show } = useToast();
-  const years = trpc.academicYear.list.useQuery();
-  const scales = trpc.gradeScale.list.useQuery();
+  const router = useRouter();
+  // A teacher (marks:enter, no exam:manage) has no management console — send them
+  // to their marks-entry surface so /exams isn't a dead end (BUG-4).
+  const me = trpc.auth.me.useQuery();
+  const meRole = me.data?.role;
+  const redirectToMarks =
+    meRole !== undefined &&
+    !can(meRole, PERMISSIONS.EXAM_MANAGE) &&
+    can(meRole, PERMISSIONS.MARK_ENTER);
+  useEffect(() => {
+    if (redirectToMarks) router.replace("/exams/marks");
+  }, [redirectToMarks, router]);
+
+  const years = trpc.academicYear.list.useQuery(undefined, { enabled: !redirectToMarks });
+  const scales = trpc.gradeScale.list.useQuery(undefined, { enabled: !redirectToMarks });
   const [yearId, setYearId] = useState("");
   // Default to the active year once loaded.
   useEffect(() => {

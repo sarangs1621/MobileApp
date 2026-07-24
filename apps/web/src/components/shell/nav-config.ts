@@ -30,6 +30,12 @@ export interface NavItem {
   icon: Icon;
   /** Omitted = always visible (Dashboard). */
   permission?: Permission;
+  /**
+   * Roles for which this item is suppressed even if they hold `permission`.
+   * Used to keep staff-oriented routes out of the PARENT sidebar (the parent
+   * portal is mobile-first; those web routes 403/lead to admin views — BUG-5).
+   */
+  hideForRoles?: RoleKey[];
 }
 
 export interface NavGroup {
@@ -58,6 +64,17 @@ const GROUPS: NavGroup[] = [
         permission: PERMISSIONS.EXAM_MANAGE,
       },
       {
+        // Teacher marks-entry surface (BUG-4). Admins manage exams via /exams above
+        // (they hold EXAM_MANAGE); teachers hold marks:enter but not exam:manage, so
+        // this is their only Examinations entry point. Hidden for admins to avoid a
+        // duplicate Examinations link.
+        href: "/exams/marks",
+        label: "Examinations",
+        icon: GraduationCap,
+        permission: PERMISSIONS.MARK_ENTER,
+        hideForRoles: ["SUPER_ADMIN", "OFFICE_ADMIN"],
+      },
+      {
         href: "/homework",
         label: "Homework",
         icon: BookOpen,
@@ -79,6 +96,9 @@ const GROUPS: NavGroup[] = [
         label: "People",
         icon: Users,
         permission: PERMISSIONS.STUDENT_READ,
+        // Parents hold student:read (own child) but this is the admin roster; their
+        // people view lives on mobile (BUG-5).
+        hideForRoles: ["PARENT"],
       },
     ],
   },
@@ -90,6 +110,9 @@ const GROUPS: NavGroup[] = [
         label: "Attendance",
         icon: CalendarCheck,
         permission: PERMISSIONS.ATTENDANCE_READ,
+        // This is the staff marking screen (class.list 403s for parents). Parents
+        // read their child's attendance on mobile (BUG-5).
+        hideForRoles: ["PARENT"],
       },
       {
         href: "/behaviour",
@@ -146,7 +169,9 @@ const GROUPS: NavGroup[] = [
 export function visibleNavGroups(role: RoleKey): NavGroup[] {
   return GROUPS.map((g) => ({
     label: g.label,
-    items: g.items.filter((i) => !i.permission || can(role, i.permission)),
+    items: g.items.filter(
+      (i) => (!i.permission || can(role, i.permission)) && !i.hideForRoles?.includes(role),
+    ),
   })).filter((g) => g.items.length > 0);
 }
 

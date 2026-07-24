@@ -63,12 +63,6 @@ const otherTeacher: Principal = {
   status: "ACTIVE",
 };
 const parent: Principal = { userId: "u-parent", schoolId: "s-1", role: "PARENT", status: "ACTIVE" };
-const accountant: Principal = {
-  userId: "u-acc",
-  schoolId: "s-1",
-  role: "ACCOUNTANT",
-  status: "ACTIVE",
-};
 
 const stamps = { createdAt: new Date("2026-01-01"), updatedAt: new Date("2026-01-01") };
 const isoDate = (s: string) => new Date(`${s}T00:00:00.000Z`);
@@ -269,8 +263,8 @@ describe("homework.service — create + ownership + validity", () => {
     await expect(createHomework(ctx, validCreate)).rejects.toBeInstanceOf(ForbiddenError);
   });
 
-  it("accountant cannot create → Forbidden (no HOMEWORK_MANAGE)", async () => {
-    const { ctx } = makeCtx(accountant);
+  it("a parent cannot create → Forbidden (no HOMEWORK_MANAGE)", async () => {
+    const { ctx } = makeCtx(parent);
     await expect(createHomework(ctx, validCreate)).rejects.toBeInstanceOf(ForbiddenError);
   });
 

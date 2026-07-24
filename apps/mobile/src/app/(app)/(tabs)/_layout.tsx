@@ -48,7 +48,7 @@ export default function TabsLayout() {
 
   const isParent = role === "PARENT";
   const isTeacher = role === "TEACHER";
-  const isAdmin = role === "SUPER_ADMIN" || role === "OFFICE_ADMIN" || role === "ACCOUNTANT";
+  const isAdmin = role === "SUPER_ADMIN" || role === "OFFICE_ADMIN";
 
   // Badges (design: counts sit on Alerts / Messages-in-More). Gated to avoid 403s.
   const unreadMessages =

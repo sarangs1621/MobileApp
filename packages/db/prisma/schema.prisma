@@ -21,7 +21,6 @@ enum Role {
   OFFICE_ADMIN
   TEACHER
   PARENT
-  ACCOUNTANT
 }
 
 enum UserStatus {

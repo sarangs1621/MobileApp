@@ -33,8 +33,17 @@ export const metadata: Metadata = {
 
 export default function RootLayout({ children }: { children: ReactNode }) {
   return (
-    <html lang="en" className={`${sans.variable} ${displaySerif.variable} ${mono.variable}`}>
-      <body className="font-sans">
+    // suppressHydrationWarning: browser extensions inject attributes (bis_register,
+    // bis_skin_checked, __processed_*) onto <html>/<body> before React hydrates,
+    // producing a dev-only attribute mismatch (BUG-7). This silences that one-level
+    // attribute diff only — genuine content/tree mismatches still warn. The app sets
+    // no server/client-divergent attributes here (ThemeProvider is pure context).
+    <html
+      lang="en"
+      className={`${sans.variable} ${displaySerif.variable} ${mono.variable}`}
+      suppressHydrationWarning
+    >
+      <body className="font-sans" suppressHydrationWarning>
         <TRPCProvider>
           <ThemeProvider>
             <LocaleGate>{children}</LocaleGate>

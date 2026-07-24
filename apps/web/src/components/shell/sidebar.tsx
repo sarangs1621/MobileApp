@@ -18,7 +18,6 @@ const ROLE_LABEL: Record<RoleKey, string> = {
   OFFICE_ADMIN: "Office Admin",
   TEACHER: "Teacher",
   PARENT: "Parent",
-  ACCOUNTANT: "Accountant",
 };
 
 /**
