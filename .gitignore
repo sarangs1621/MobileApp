@@ -35,6 +35,26 @@ apps/mobile/.expo/
 apps/mobile/android/
 apps/mobile/ios/
 
+# scratch / previews (throwaway working files)
+.scratch-preview/
+scratch/
+*.tmp
+
+# throwaway / personal docs (keep real project docs tracked; ignore only ephemeral ones)
+*.local.md
+*.draft.md
+*.scratch.md
+*.tmp.md
+NOTES.local.md
+TODO.local.md
+
+# throwaway QA handoff (temporary — untracked at go-live, remove before production)
+QA_E2E_HANDOFF.md
+
+# local-only Claude settings (personal overrides — shared config stays tracked)
+.claude/settings.local.json
+.claude/**/*.local.json
+
 # misc
 .DS_Store
 *.log
@@ -42,3 +62,9 @@ apps/mobile/ios/
 .vscode/*
 !.vscode/extensions.json
 graphify-out/
+
+# OS junk (Windows / macOS)
+Thumbs.db
+ehthumbs.db
+desktop.ini
+$RECYCLE.BIN/
